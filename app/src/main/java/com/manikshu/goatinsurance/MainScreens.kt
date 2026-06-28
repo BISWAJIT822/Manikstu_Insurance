@@ -1,6 +1,6 @@
 package com.manikshu.goatinsurance
 
-import androidx.compose.animation.*
+
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -11,7 +11,35 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Agriculture
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Gavel
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MedicalServices
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.SupportAgent
+import androidx.compose.material.icons.filled.Vaccines
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.FactCheck
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
@@ -26,10 +54,14 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
+
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import coil.compose.AsyncImage
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -40,6 +72,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 
 val LocalWindowSizeClass = staticCompositionLocalOf<WindowSizeClass?> { null }
+val LocalAppLanguage = compositionLocalOf { mutableStateOf(AppLanguage.ENGLISH) }
+val LocalProfileImage = compositionLocalOf { mutableStateOf<Uri?>(null) }
 
 @Composable
 fun AppNavigation(navController: NavHostController) {
@@ -77,6 +111,18 @@ fun AppNavigation(navController: NavHostController) {
         composable("premium_collection") { PremiumCollectionScreen(onComplete = { navController.popBackStack() }) }
         composable("mortality_report") { MortalityReportScreen(onComplete = { navController.popBackStack() }) }
         composable("claim_tracker") { ClaimStatusTracker() }
+        composable("profile") { 
+            ProfileScreen(
+                onLogout = { 
+                    navController.navigate("login") { 
+                        popUpTo("didi_dashboard") { inclusive = true }
+                        popUpTo("farmer_dashboard") { inclusive = true }
+                        popUpTo("coordinator_dashboard") { inclusive = true }
+                    } 
+                },
+                onBack = { navController.popBackStack() }
+            ) 
+        }
     }
 }
 
@@ -91,7 +137,7 @@ private val CardLightRed = Color(0xFFFFEBEE)
 @Composable
 fun ResponsiveLayout(
     compact: @Composable () -> Unit,
-    expanded: @Composable () -> Unit
+    expanded: @Composable () -> Unit,
 ) {
     val window = LocalWindowSizeClass.current
     if (window?.widthSizeClass == WindowWidthSizeClass.Compact) {
@@ -110,19 +156,11 @@ fun SignUpScreen(onSignUpSuccess: (UserRole) -> Unit, onNavigateToLogin: () -> U
     var selectedRole by remember { mutableStateOf<UserRole?>(null) }
     
     val context = LocalContext.current
-    var currentLanguage by remember { mutableStateOf("EN") }
+    val languageState = LocalAppLanguage.current
     var showLanguagePicker by remember { mutableStateOf(false) }
 
     val backgroundColor = Color(0xFFF8F9F5)
     
-    fun getT(en: String, hi: String, or: String): String {
-        return when(currentLanguage) {
-            "HI" -> hi
-            "OR" -> or
-            else -> en
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -154,7 +192,7 @@ fun SignUpScreen(onSignUpSuccess: (UserRole) -> Unit, onNavigateToLogin: () -> U
                 ) {
                     Icon(Icons.Default.Public, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(currentLanguage, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(languageState.value.code, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                 }
 
@@ -165,9 +203,9 @@ fun SignUpScreen(onSignUpSuccess: (UserRole) -> Unit, onNavigateToLogin: () -> U
                         expanded = showLanguagePicker,
                         onDismissRequest = { showLanguagePicker = false }
                     ) {
-                        DropdownMenuItem(text = { Text("English") }, onClick = { currentLanguage = "EN"; showLanguagePicker = false })
-                        DropdownMenuItem(text = { Text("हिन्दी") }, onClick = { currentLanguage = "HI"; showLanguagePicker = false })
-                        DropdownMenuItem(text = { Text("ଓଡ଼ିଆ") }, onClick = { currentLanguage = "OR"; showLanguagePicker = false })
+                        DropdownMenuItem(text = { Text("English") }, onClick = { languageState.value = AppLanguage.ENGLISH; showLanguagePicker = false })
+                        DropdownMenuItem(text = { Text("हिन्दी") }, onClick = { languageState.value = AppLanguage.HINDI; showLanguagePicker = false })
+                        DropdownMenuItem(text = { Text("ଓଡ଼ିଆ") }, onClick = { languageState.value = AppLanguage.ODIA; showLanguagePicker = false })
                     }
                 }
             }
@@ -184,11 +222,11 @@ fun SignUpScreen(onSignUpSuccess: (UserRole) -> Unit, onNavigateToLogin: () -> U
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    getT("GOAT INSURANCE", "बकरी बीमा", "ଛେଳି ବୀମା"),
+                    languageState.value.getT("GOAT INSURANCE", "बकरी बीमा", "ଛେଳି ବୀମା"),
                     style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.Bold, letterSpacing = 1.sp
                 )
                 Text(
-                    getT("Community Livestock Protection", "सामुदायिक पशुधन संरक्षण", "ଗୋଷ୍ଠୀ ପ୍ରାଣୀସମ୍ପଦ ସୁରକ୍ଷା"),
+                    languageState.value.getT("Community Livestock Protection", "सामुदायिक पशुधन संरक्षण", "ଗୋଷ୍ଠୀ ପ୍ରାଣୀସମ୍ପଦ ସୁରକ୍ଷା"),
                     style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f)
                 )
             }
@@ -206,11 +244,11 @@ fun SignUpScreen(onSignUpSuccess: (UserRole) -> Unit, onNavigateToLogin: () -> U
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    getT("Create Account", "खाता बनाएं", "ଖାତା ଖୋଲନ୍ତୁ"),
+                    languageState.value.getT("Create Account", "खाता बनाएं", "ଖାତା ଖୋଲନ୍ତୁ"),
                     style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold
                 )
                 Text(
-                    getT("Register to start protecting livestock", "पशुधन की सुरक्षा शुरू करने के लिए पंजीकरण करें", "ପ୍ରାଣୀସମ୍ପଦ ସୁରକ୍ଷା ଆରମ୍ଭ କରିବାକୁ ପଞ୍ଜିକରଣ କରନ୍ତୁ"),
+                    languageState.value.getT("Register to start protecting livestock", "पशुधन की सुरक्षा शुरू करने के लिए पंजीकरण करें", "ପ୍ରାଣୀସମ୍ପଦ ସୁରକ୍ଷା ଆରମ୍ଭ କରିବାକୁ ପଞ୍ଜିକରଣ କରନ୍ତୁ"),
                     style = MaterialTheme.typography.bodyMedium, color = Color.Gray, textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(32.dp))
@@ -219,7 +257,7 @@ fun SignUpScreen(onSignUpSuccess: (UserRole) -> Unit, onNavigateToLogin: () -> U
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
-                        placeholder = { Text(getT("Full Name", "पूरा नाम", "ପୁରା ନାମ"), color = Color.Gray) },
+                        placeholder = { Text(languageState.value.getT("Full Name", "पूरा नाम", "ପୁରା ନାମ"), color = Color.Gray) },
                         leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = Color.DarkGray) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
@@ -230,7 +268,7 @@ fun SignUpScreen(onSignUpSuccess: (UserRole) -> Unit, onNavigateToLogin: () -> U
                     OutlinedTextField(
                         value = phone,
                         onValueChange = { if (it.length <= 10) phone = it },
-                        placeholder = { Text(getT("Mobile Number", "मोबाइल नंबर", "ମୋବାଇଲ୍ ନମ୍ବର"), color = Color.Gray) },
+                        placeholder = { Text(languageState.value.getT("Mobile Number", "मोबाइल नंबर", "ମୋବାଇଲ୍ ନମ୍ବର"), color = Color.Gray) },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = Color.DarkGray) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         singleLine = true,
@@ -243,26 +281,26 @@ fun SignUpScreen(onSignUpSuccess: (UserRole) -> Unit, onNavigateToLogin: () -> U
                     Button(
                         onClick = { 
                             if (selectedRole == null) {
-                                Toast.makeText(context, getT("Scroll down and choose a role", "नीचे स्क्रॉल करें और एक भूमिका चुनें", "ତଳକୁ ସ୍କ୍ରୋଲ୍ କରନ୍ତୁ ଏବଂ ଏକ ଭୂମିକା ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, languageState.value.getT("Scroll down and choose a role", "नीचे स्क्रॉल करें और एक भूमिका चुनें", "ତଳକୁ ସ୍କ୍ରୋଲ୍ କରନ୍ତୁ ଏବଂ ଏକ ଭୂମିକା ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show()
                             } else {
                                 step = 2 
                             }
                         },
-                        enabled = name.isNotBlank() && phone.length == 10,
+                        enabled = (name.isNotBlank() && phone.length == 10),
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f))
                     ) {
-                        Text(getT("Send OTP", "ओटीपी भेजें", "ଓଟିପି ପଠାନ୍ତୁ"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(languageState.value.getT("Send OTP", "ओटीपी भेजें", "ଓଟିପି ପଠାନ୍ତୁ"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(
-                        text = getT("Already have an account? Login", "पहले से खाता है? लॉगिन करें", "ପୂର୍ବରୁ ଖାତା ଅଛି? ଲଗଇନ୍"),
+                        text = languageState.value.getT("Already have an account? Login", "पहले से खाता है? लॉगिन करें", "ପୂର୍ବରୁ ଖାତା ଅଛି? ଲଗଇନ୍"),
                         color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp,
                         modifier = Modifier.clickable { onNavigateToLogin() }
                     )
                 } else {
-                    Text(getT("Enter 6-digit OTP sent to +91 $phone", "+91 $phone पर भेजा गया ओटीपी दर्ज करें", "+91 $phone କୁ ପଠାଯାଇଥିବା ଓଟିପି ଦିଅନ୍ତୁ"), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+                    Text(languageState.value.getT("Enter 6-digit OTP sent to +91 $phone", "+91 $phone पर भेजा गया ओटीपी दर्ज करें", "+91 $phone କୁ ପଠାଯାଇଥିବା ଓଟିପି ଦିଅନ୍ତୁ"), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
                     Spacer(modifier = Modifier.height(24.dp))
                     OtpInput(otp, { otp = it }, onDone = { if (otp.length == 6) onSignUpSuccess(selectedRole!!) })
                     Spacer(modifier = Modifier.height(24.dp))
@@ -272,9 +310,9 @@ fun SignUpScreen(onSignUpSuccess: (UserRole) -> Unit, onNavigateToLogin: () -> U
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
-                    ) { Text(getT("Verify & Sign Up", "सत्यापित करें और साइन अप", "ଯାଞ୍ଚ ଏବଂ ସାଇନ୍ ଅପ୍"), fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+                    ) { Text(languageState.value.getT("Verify & Sign Up", "सत्यापित करें और साइन अप", "ଯାଞ୍ଚ ଏବଂ ସାଇନ୍ ଅପ୍"), fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                     
-                    TextButton(onClick = { step = 1 }) { Text(getT("Go Back", "वापस जाएं", "ପଛକୁ ଯାଆନ୍ତୁ"), color = PrimaryGreen) }
+                    TextButton(onClick = { step = 1 }) { Text(languageState.value.getT("Go Back", "वापस जाएं", "ପଛକୁ ଯାଆନ୍ତୁ"), color = PrimaryGreen) }
                 }
             }
         }
@@ -283,7 +321,7 @@ fun SignUpScreen(onSignUpSuccess: (UserRole) -> Unit, onNavigateToLogin: () -> U
             // Divider
             Row(modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 HorizontalDivider(modifier = Modifier.weight(1f), color = Color.LightGray.copy(alpha = 0.5f))
-                Text(getT("choose a role", "एक भूमिका चुनें", "ଗୋଟିଏ ଭୂମିକା ବାଛନ୍ତୁ"), modifier = Modifier.padding(horizontal = 16.dp), color = Color.Gray, fontSize = 14.sp)
+                Text(languageState.value.getT("choose a role", "एक भूमिका चुनें", "ଗୋଟିଏ ଭୂମିକା ବାଛନ୍ତୁ"), modifier = Modifier.padding(horizontal = 16.dp), color = Color.Gray, fontSize = 14.sp)
                 HorizontalDivider(modifier = Modifier.weight(1f), color = Color.LightGray.copy(alpha = 0.5f))
             }
 
@@ -291,9 +329,9 @@ fun SignUpScreen(onSignUpSuccess: (UserRole) -> Unit, onNavigateToLogin: () -> U
 
             // Role Selection
             Row(modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                RoleCard(UserRole.SURAKSHA_DIDI, getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି"), Icons.Default.Person, selectedRole == UserRole.SURAKSHA_DIDI, modifier = Modifier.weight(1f)) { selectedRole = it }
-                RoleCard(UserRole.FARMER, getT("Farmer", "किसान", "କୃଷକ"), Icons.Default.Agriculture, selectedRole == UserRole.FARMER, modifier = Modifier.weight(1f)) { selectedRole = it }
-                RoleCard(UserRole.COORDINATOR, getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ"), Icons.Default.Badge, selectedRole == UserRole.COORDINATOR, modifier = Modifier.weight(1f)) { selectedRole = it }
+                RoleCard(UserRole.SURAKSHA_DIDI, languageState.value.getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି"), Icons.Default.Person, selectedRole == UserRole.SURAKSHA_DIDI, modifier = Modifier.weight(1f)) { selectedRole = it }
+                RoleCard(UserRole.FARMER, languageState.value.getT("Farmer", "किसान", "କୃଷକ"), Icons.Default.Agriculture, selectedRole == UserRole.FARMER, modifier = Modifier.weight(1f)) { selectedRole = it }
+                RoleCard(UserRole.COORDINATOR, languageState.value.getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ"), Icons.Default.Badge, selectedRole == UserRole.COORDINATOR, modifier = Modifier.weight(1f)) { selectedRole = it }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -301,12 +339,12 @@ fun SignUpScreen(onSignUpSuccess: (UserRole) -> Unit, onNavigateToLogin: () -> U
 
         // Footer
         Row(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(getT("Version 2.0.4", "संस्करण 2.0.4", "ସଂସ୍କରଣ ୨.୦.୪"), color = Color.Gray, fontSize = 12.sp)
+            Text(languageState.value.getT("Version 2.0.4", "संस्करण 2.0.4", "ସଂସ୍କରଣ ୨.୦.୪"), color = Color.Gray, fontSize = 12.sp)
             Surface(color = Color(0xFFE8F5E9), shape = RoundedCornerShape(16.dp)) {
                 Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF4CAF50)))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(getT("Online", "ऑनलाइन", "ଅନଲାଇନ୍"), color = Color(0xFF4CAF50), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(languageState.value.getT("Online", "ऑनलाइन", "ଅନଲାଇନ୍"), color = Color(0xFF4CAF50), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -323,20 +361,11 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
     var selectedRole by remember { mutableStateOf<UserRole?>(null) }
     
     val context = LocalContext.current
-    var currentLanguage by remember { mutableStateOf("EN") }
+    val languageState = LocalAppLanguage.current
     var showLanguagePicker by remember { mutableStateOf(false) }
 
     val backgroundColor = Color(0xFFF8F9F5)
     
-    // Translation helper
-    fun getT(en: String, hi: String, or: String): String {
-        return when(currentLanguage) {
-            "HI" -> hi
-            "OR" -> or
-            else -> en
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -368,7 +397,7 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                 ) {
                     Icon(Icons.Default.Public, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(currentLanguage, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(languageState.value.code, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                 }
 
@@ -382,21 +411,21 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                         DropdownMenuItem(
                             text = { Text("English") },
                             onClick = {
-                                currentLanguage = "EN"
+                                languageState.value = AppLanguage.ENGLISH
                                 showLanguagePicker = false
                             }
                         )
                         DropdownMenuItem(
                             text = { Text("हिन्दी") },
                             onClick = {
-                                currentLanguage = "HI"
+                                languageState.value = AppLanguage.HINDI
                                 showLanguagePicker = false
                             }
                         )
                         DropdownMenuItem(
                             text = { Text("ଓଡ଼ିଆ") },
                             onClick = {
-                                currentLanguage = "OR"
+                                languageState.value = AppLanguage.ODIA
                                 showLanguagePicker = false
                             }
                         )
@@ -425,14 +454,14 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    getT("GOAT INSURANCE", "बकरी बीमा", "ଛେଳି ବୀମା"),
+                    languageState.value.getT("GOAT INSURANCE", "बकरी बीमा", "ଛେଳି ବୀମା"),
                     style = MaterialTheme.typography.headlineSmall,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 )
                 Text(
-                    getT("Community Livestock Protection", "सामुदायिक पशुधन संरक्षण", "ଗୋଷ୍ଠୀ ପ୍ରାଣୀସମ୍ପଦ ସୁରକ୍ଷା"),
+                    languageState.value.getT("Community Livestock Protection", "सामुदायिक पशुधन संरक्षण", "ଗୋଷ୍ଠୀ ପ୍ରାଣୀସମ୍ପଦ ସୁରକ୍ଷା"),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.8f)
                 )
@@ -454,12 +483,12 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    getT("Welcome Back", "वापसी पर स्वागत है", "ପୁଣି ସ୍ଵାଗତ"),
+                    languageState.value.getT("Welcome Back", "वापसी पर स्वागत है", "ପୁଣି ସ୍ଵାଗତ"),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    getT("Login to your account to continue", "जारी रखने के लिए लॉगिन करें", "ଆଗକୁ ବଢିବା ପାଇଁ ଲଗଇନ୍ କରନ୍ତୁ"),
+                    languageState.value.getT("Login to your account to continue", "जारी रखने के लिए लॉगिन करें", "ଆଗକୁ ବଢିବା ପାଇଁ ଲଗଇନ୍ କରନ୍ତୁ"),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.Gray
                 )
@@ -469,7 +498,7 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                     OutlinedTextField(
                         value = phone,
                         onValueChange = { if (it.length <= 10) phone = it },
-                        placeholder = { Text(getT("Mobile Number", "मोबाइल नंबर", "ମୋବାଇଲ୍ ନମ୍ବର"), color = Color.Gray) },
+                        placeholder = { Text(languageState.value.getT("Mobile Number", "मोबाइल नंबर", "ମୋବାଇଲ୍ ନମ୍ବର"), color = Color.Gray) },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = Color.DarkGray) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         singleLine = true,
@@ -486,7 +515,7 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                     Button(
                         onClick = { 
                             if (selectedRole == null) {
-                                Toast.makeText(context, getT("Scroll down and choose a role", "नीचे स्क्रॉल करें और एक भूमिका चुनें", "ତଳକୁ ସ୍କ୍ରୋଲ୍ କରନ୍ତୁ ଏବଂ ଏକ ଭୂମିକା ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, languageState.value.getT("Scroll down and choose a role", "नीचे स्क्रॉल करें और एक भूमिका चुनें", "ତଳକୁ ସ୍କ୍ରୋଲ୍ କରନ୍ତୁ ଏବଂ ଏକ ଭୂମିକା ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show()
                             } else {
                                 step = 2 
                             }
@@ -501,18 +530,18 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                             disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f)
                         )
                     ) {
-                        Text(getT("Send OTP", "ओटीपी भेजें", "ଓଟିପି ପଠାନ୍ତୁ"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(languageState.value.getT("Send OTP", "ओटीपी भेजें", "ଓଟିପି ପଠାନ୍ତୁ"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(
-                        text = getT("Don't have an account? Sign Up", "खाता नहीं है? साइन अप करें", "ଖାତା ନାହିଁ? ସାଇନ୍ ଅପ୍"),
+                        text = languageState.value.getT("Don't have an account? Sign Up", "खाता नहीं है? साइन अप करें", "ଖାତା ନାହିଁ? ସାଇନ୍ ଅପ୍"),
                         color = PrimaryGreen,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         modifier = Modifier.clickable { onNavigateToSignUp() }
                     )
                 } else {
-                    Text(getT("Enter 6-digit OTP sent to +91 $phone", "+91 $phone पर भेजा गया ओटीपी दर्ज करें", "+91 $phone କୁ ପଠାଯାଇଥିବା ଓଟିପି ଦିଅନ୍ତୁ"), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+                    Text(languageState.value.getT("Enter 6-digit OTP sent to +91 $phone", "+91 $phone पर भेजा गया ओटीपी दर्ज करें", "+91 $phone କୁ ପଠାଯାଇଥିବା ଓଟିପି ଦିଅନ୍ତୁ"), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
                     Spacer(modifier = Modifier.height(24.dp))
                     OtpInput(otp, { otp = it }, onDone = { if (otp.length == 6) onLoginSuccess(selectedRole!!) })
                     Spacer(modifier = Modifier.height(24.dp))
@@ -522,9 +551,9 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
-                    ) { Text(getT("Verify & Login", "सत्यापित करें और लॉगिन", "ଯାଞ୍ଚ ଏବଂ ଲଗଇନ୍"), fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+                    ) { Text(languageState.value.getT("Verify & Login", "सत्यापित करें और लॉगिन", "ଯାଞ୍ଚ ଏବଂ ଲଗଇନ୍"), fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                     
-                    TextButton(onClick = { step = 1 }) { Text(getT("Change Number", "नंबर बदलें", "ନମ୍ବର ବଦଳାନ୍ତୁ"), color = PrimaryGreen) }
+                    TextButton(onClick = { step = 1 }) { Text(languageState.value.getT("Change Number", "नंबर बदलें", "ନମ୍ବର ବଦଳାନ୍ତୁ"), color = PrimaryGreen) }
                 }
             }
         }
@@ -539,7 +568,7 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
             ) {
                 HorizontalDivider(modifier = Modifier.weight(1f), color = Color.LightGray.copy(alpha = 0.5f))
                 Text(
-                    getT("choose a role", "एक भूमिका चुनें", "ଗୋଟିଏ ଭୂମିକା ବାଛନ୍ତୁ"),
+                    languageState.value.getT("choose a role", "एक भूमिका चुनें", "ଗୋଟିଏ ଭୂମିକା ବାଛନ୍ତୁ"),
                     modifier = Modifier.padding(horizontal = 16.dp),
                     color = Color.Gray,
                     fontSize = 14.sp
@@ -556,9 +585,9 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                RoleCard(UserRole.SURAKSHA_DIDI, getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି"), Icons.Default.Person, selectedRole == UserRole.SURAKSHA_DIDI, modifier = Modifier.weight(1f)) { selectedRole = it }
-                RoleCard(UserRole.FARMER, getT("Farmer", "किसान", "କୃଷକ"), Icons.Default.Agriculture, selectedRole == UserRole.FARMER, modifier = Modifier.weight(1f)) { selectedRole = it }
-                RoleCard(UserRole.COORDINATOR, getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ"), Icons.Default.Badge, selectedRole == UserRole.COORDINATOR, modifier = Modifier.weight(1f)) { selectedRole = it }
+                RoleCard(UserRole.SURAKSHA_DIDI, languageState.value.getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି"), Icons.Default.Person, selectedRole == UserRole.SURAKSHA_DIDI, modifier = Modifier.weight(1f)) { selectedRole = it }
+                RoleCard(UserRole.FARMER, languageState.value.getT("Farmer", "किसान", "କୃଷକ"), Icons.Default.Agriculture, selectedRole == UserRole.FARMER, modifier = Modifier.weight(1f)) { selectedRole = it }
+                RoleCard(UserRole.COORDINATOR, languageState.value.getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ"), Icons.Default.Badge, selectedRole == UserRole.COORDINATOR, modifier = Modifier.weight(1f)) { selectedRole = it }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -572,7 +601,7 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(getT("Version 2.0.4", "संस्करण 2.0.4", "ସଂସ୍କରଣ ୨.୦.୪"), color = Color.Gray, fontSize = 12.sp)
+            Text(languageState.value.getT("Version 2.0.4", "संस्करण 2.0.4", "ସଂସ୍କରଣ ୨.୦.୪"), color = Color.Gray, fontSize = 12.sp)
             Surface(
                 color = Color(0xFFE8F5E9),
                 shape = RoundedCornerShape(16.dp)
@@ -583,7 +612,7 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                 ) {
                     Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF4CAF50)))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(getT("Online", "ऑनलाइन", "ଅନଲାଇନ୍"), color = Color(0xFF4CAF50), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(languageState.value.getT("Online", "ऑनलाइन", "ଅନଲାଇନ୍"), color = Color(0xFF4CAF50), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -595,7 +624,7 @@ fun RoleCard(role: UserRole, label: String, icon: ImageVector, isSelected: Boole
     Card(
         onClick = { onClick(role) },
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) Color(0xFFE8F5E9) else Color.White
+            containerColor = if (isSelected) Color(0xFFE8F5E9) else Color.White,
         ),
         modifier = modifier
             .height(110.dp)
@@ -635,65 +664,48 @@ fun RoleCard(role: UserRole, label: String, icon: ImageVector, isSelected: Boole
 @Composable
 fun DidiDashboard(navController: NavHostController) {
     var showNotifications by remember { mutableStateOf(false) }
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-
     if (showNotifications) NotificationSheet { showNotifications = false }
+    val languageState = LocalAppLanguage.current
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ProfileDrawerContent(
-                name = "Sushma Didi",
-                role = "Suraksha Didi",
-                id = "DIDI-12341",
-                onClose = { scope.launch { drawerState.close() } }
-            )
-        }
-    ) {
-        ResponsiveLayout(
-            compact = {
-                Scaffold(
-                    modifier = Modifier.fillMaxSize().navigationBarsPadding(),
-                    bottomBar = { DidiBottomBar(navController) },
-                    contentWindowInsets = WindowInsets(0, 0, 0, 0)
-                ) { padding ->
-                    DidiContent(
-                        padding, 
-                        navController, 
-                        onNotificationClick = { showNotifications = true },
-                        onProfileClick = { scope.launch { drawerState.open() } }
-                    )
-                }
-            },
-            expanded = {
-                Row(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).navigationBarsPadding()) {
-                    NavigationRail {
-                        NavigationRailItem(selected = true, onClick = {}, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
-                        NavigationRailItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Pets, null) }, label = { Text("Goats") })
-                        NavigationRailItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Vaccines, null) }, label = { Text("Vaccines") })
-                    }
-                    DidiContent(
-                        PaddingValues(0.dp), 
-                        navController, 
-                        onNotificationClick = { showNotifications = true },
-                        onProfileClick = { scope.launch { drawerState.open() } }
-                    )
-                }
+    ResponsiveLayout(
+        compact = {
+            Scaffold(
+                modifier = Modifier.fillMaxSize().navigationBarsPadding(),
+                bottomBar = { DidiBottomBar(navController) },
+                contentWindowInsets = WindowInsets(0, 0, 0, 0)
+            ) { padding ->
+                DidiContent(padding, navController) { showNotifications = true }
             }
-        )
-    }
+        },
+        expanded = {
+            Row(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).navigationBarsPadding()) {
+                NavigationRail {
+                    NavigationRailItem(selected = true, onClick = {}, icon = { Icon(Icons.Default.Home, null) }, label = { Text(languageState.value.getT("Home", "होम", "ମୁଖ୍ୟ ପୃଷ୍ଠା")) })
+                    NavigationRailItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Pets, null) }, label = { Text(languageState.value.getT("Goats", "बकरियां", "ଛେଳି")) })
+                    NavigationRailItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Vaccines, null) }, label = { Text(languageState.value.getT("Vaccines", "टीकाकरण", "ଟୀକା")) })
+                }
+                DidiContent(PaddingValues(0.dp), navController) { showNotifications = true }
+            }
+        }
+    )
 }
 
 @Composable
-fun DidiContent(padding: PaddingValues, navController: NavHostController, onNotificationClick: () -> Unit, onProfileClick: () -> Unit) {
+fun DidiContent(padding: PaddingValues, navController: NavHostController, onNotificationClick: () -> Unit) {
+    val languageState = LocalAppLanguage.current
     Column(
         modifier = Modifier
             .padding(bottom = padding.calculateBottomPadding())
             .fillMaxSize()
             .background(Color(0xFFF8F9F5))
     ) {
-        DashboardHeader("Sushma Didi", "Suraksha Didi", onNotificationClick, onProfileClick = onProfileClick, hasNotifications = true)
+        DashboardHeader(
+            languageState.value.getT("Sushma Didi", "सुषमा दीदी", "ସୁଷମା ଦିଦି"),
+            languageState.value.getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି"),
+            onNotificationClick,
+            hasNotifications = true,
+            onProfileClick = { navController.navigate("profile") }
+        )
         
         val window = LocalWindowSizeClass.current
         val isCompact = window?.widthSizeClass == WindowWidthSizeClass.Compact
@@ -710,7 +722,7 @@ fun DidiContent(padding: PaddingValues, navController: NavHostController, onNoti
                 Column {
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(
-                        "This Month Overview",
+                        languageState.value.getT("This Month Overview", "इस महीने का अवलोकन", "ଏହି ମାସର ସମୀକ୍ଷା"),
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.Black,
                         fontWeight = FontWeight.Bold
@@ -722,10 +734,10 @@ fun DidiContent(padding: PaddingValues, navController: NavHostController, onNoti
             val statSpan = if (isCompact) 3 else 3
             items(4, span = { GridItemSpan(statSpan) }) { index ->
                 when(index) {
-                    0 -> StatCard("Goats Enrolled", "128", Icons.Default.Pets, PrimaryGreen, CardLightGreen)
-                    1 -> StatCard("Pending Claims", "12", Icons.Default.Assignment, AccentOrange, CardLightOrange)
-                    2 -> StatCard("Today's Visits", "24", Icons.Default.CalendarToday, InfoBlue, CardLightBlue)
-                    3 -> StatCard("Earnings", "₹8,450", Icons.Default.Payments, Color(0xFF9C27B0), CardLightPurple)
+                    0 -> StatCard(languageState.value.getT("Goats Enrolled", "पंजीकृत बकरियां", "ପଞ୍ଜିକୃତ ଛେଳି"), "128", Icons.Default.Pets, PrimaryGreen, CardLightGreen)
+                    1 -> StatCard(languageState.value.getT("Pending Claims", "लंबित दावे", "ବାକି ରହିଥିବା ଦାବି"), "12", Icons.AutoMirrored.Filled.Assignment, AccentOrange, CardLightOrange)
+                    2 -> StatCard(languageState.value.getT("Today's Visits", "आज की मुलाकात", "ଆଜିର ପରିଦର୍ଶନ"), "24", Icons.Default.CalendarToday, InfoBlue, CardLightBlue)
+                    3 -> StatCard(languageState.value.getT("Earnings", "आय", "ଉପାର୍ଜନ"), "₹8,450", Icons.Default.Payments, Color(0xFF9C27B0), CardLightPurple)
                 }
             }
 
@@ -733,7 +745,7 @@ fun DidiContent(padding: PaddingValues, navController: NavHostController, onNoti
                 Column {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        "Quick Actions",
+                        languageState.value.getT("Quick Actions", "त्वरित कार्रवाइयां", "ତ୍ୱରିତ କାର୍ଯ୍ୟାନୁଷ୍ଠାନ"),
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.Black,
                         fontWeight = FontWeight.Bold
@@ -745,12 +757,12 @@ fun DidiContent(padding: PaddingValues, navController: NavHostController, onNoti
             val actionSpan = if (isCompact) 2 else 2
             items(6, span = { GridItemSpan(actionSpan) }) { index ->
                 when(index) {
-                    0 -> QuickActionGridCard("Enroll Goat", Icons.Default.Pets, PrimaryGreen, CardLightGreen) { navController.navigate("enrollment") }
-                    1 -> QuickActionGridCard("Vaccination", Icons.Default.MedicalServices, InfoBlue, CardLightBlue) { /* TODO */ }
-                    2 -> QuickActionGridCard("Mortality Report", Icons.Default.LocationOn, Color(0xFFD32F2F), CardLightRed) { navController.navigate("mortality_report") }
-                    3 -> QuickActionGridCard("Claims", Icons.Default.Assignment, AccentOrange, CardLightOrange) { navController.navigate("claim_tracker") }
-                    4 -> QuickActionGridCard("Goat List", Icons.Default.FactCheck, Color(0xFF2E7D32), CardLightGreen) { /* TODO */ }
-                    5 -> QuickActionGridCard("AI Assistant", Icons.Default.AccountBox, Color(0xFF7B1FA2), CardLightPurple) { /* TODO */ }
+                    0 -> QuickActionGridCard(languageState.value.getT("Enroll Goat", "बकरी का नामांकन", "ଛେଳି ପଞ୍ଜିକରଣ"), Icons.Default.Pets, PrimaryGreen, CardLightGreen) { navController.navigate("enrollment") }
+                    1 -> QuickActionGridCard(languageState.value.getT("Vaccination", "टीकाकरण", "ଟୀକାକରଣ"), Icons.Default.MedicalServices, InfoBlue, CardLightBlue) { /* TODO */ }
+                    2 -> QuickActionGridCard(languageState.value.getT("Mortality Report", "मृत्यु रिपोर्ट", "ମୃତ୍ୟୁ ରିପୋର୍ଟ"), Icons.Default.LocationOn, Color(0xFFD32F2F), CardLightRed) { navController.navigate("mortality_report") }
+                    3 -> QuickActionGridCard(languageState.value.getT("Claims", "दावे", "ଦାବି"), Icons.AutoMirrored.Filled.Assignment, AccentOrange, CardLightOrange) { navController.navigate("claim_tracker") }
+                    4 -> QuickActionGridCard(languageState.value.getT("Goat List", "बकरियों की सूची", "ଛେଳି ତାଲିକା"), Icons.AutoMirrored.Filled.FactCheck, Color(0xFF2E7D32), CardLightGreen) { /* TODO */ }
+                    5 -> QuickActionGridCard(languageState.value.getT("AI Assistant", "AI सहायक", "AI ସହାୟକ"), Icons.Default.AccountBox, Color(0xFF7B1FA2), CardLightPurple) { /* TODO */ }
                 }
             }
         }
@@ -760,23 +772,24 @@ fun DidiContent(padding: PaddingValues, navController: NavHostController, onNoti
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PremiumCollectionScreen(onComplete: () -> Unit) {
+    val languageState = LocalAppLanguage.current
     Scaffold(
         modifier = Modifier.fillMaxSize().navigationBarsPadding(),
-        topBar = { CenterAlignedTopAppBar(title = { Text("Premium Collection") }) }
+        topBar = { CenterAlignedTopAppBar(title = { Text(languageState.value.getT("Premium Collection", "प्रीमियम संग्रह", "ପ୍ରିମିୟମ ସଂଗ୍ରହ")) }) }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).padding(16.dp)) {
             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Total Premium: ₹350", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Text(languageState.value.getT("Total Premium: ₹350", "कुल प्रीमियम: ₹350", "ମୋଟ ପ୍ରିମିୟମ: ₹୩୫୦"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    BreakdownItem("Insurance Company", "₹240")
-                    BreakdownItem("Vaccination Program", "₹80")
-                    BreakdownItem("Suraksha Didi Fee", "₹20")
-                    BreakdownItem("FPC Corpus Fund", "₹10")
+                    BreakdownItem(languageState.value.getT("Insurance Company", "बीमा कंपनी", "ବୀମା କମ୍ପାନୀ"), "₹240")
+                    BreakdownItem(languageState.value.getT("Vaccination Program", "टीकाकरण कार्यक्रम", "ଟୀକାକରଣ କାର୍ଯ୍ୟକ୍ରମ"), "₹80")
+                    BreakdownItem(languageState.value.getT("Suraksha Didi Fee", "सुरक्षा दीदी शुल्क", "ସୁରକ୍ଷା ଦିଦି ଶୁଳ୍କ"), "₹20")
+                    BreakdownItem(languageState.value.getT("FPC Corpus Fund", "एफपीसी कॉर्पस फंड", "FPC କର୍ପସ ପାଣ୍ଠି"), "₹10")
                 }
             }
             Spacer(modifier = Modifier.weight(1f))
-            Button(onClick = onComplete, modifier = Modifier.fillMaxWidth()) { Text("Confirm Payment & Generate Receipt") }
+            Button(onClick = onComplete, modifier = Modifier.fillMaxWidth()) { Text(languageState.value.getT("Confirm Payment & Generate Receipt", "भुगतान की पुष्टि करें और रसीद उत्पन्न करें", "ଦେୟ ନିଶ୍ଚିତ କରନ୍ତୁ ଏବଂ ରସିଦ ପ୍ରସ୍ତୁତ କରନ୍ତୁ")) }
         }
     }
 }
@@ -785,12 +798,13 @@ fun PremiumCollectionScreen(onComplete: () -> Unit) {
 @Composable
 fun MortalityReportScreen(onComplete: () -> Unit) {
     var currentStep by remember { mutableIntStateOf(1) }
+    val languageState = LocalAppLanguage.current
     Scaffold(
         modifier = Modifier.fillMaxSize().navigationBarsPadding(),
-        topBar = { CenterAlignedTopAppBar(title = { Text("Mortality Verification") }) }
+        topBar = { CenterAlignedTopAppBar(title = { Text(languageState.value.getT("Mortality Verification", "मृत्यु सत्यापन", "ମୃତ୍ୟୁ ଯାଞ୍ଚ")) }) }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).padding(16.dp)) {
-            LinearProgressIndicator(progress = currentStep / 4f, modifier = Modifier.fillMaxWidth())
+            LinearProgressIndicator(progress = { currentStep / 4f }, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(24.dp))
             when (currentStep) {
                 1 -> MortalityStep1()
@@ -800,7 +814,7 @@ fun MortalityReportScreen(onComplete: () -> Unit) {
             }
             Spacer(modifier = Modifier.weight(1f))
             Button(onClick = { if (currentStep < 4) currentStep++ else onComplete() }, modifier = Modifier.fillMaxWidth()) {
-                Text(if (currentStep == 4) "Submit Report" else "Continue")
+                Text(if (currentStep == 4) languageState.value.getT("Submit Report", "रिपोर्ट जमा करें", "ରିପୋର୍ଟ ଦାଖଲ କରନ୍ତୁ") else languageState.value.getT("Continue", "जारी रखें", "ଆଗକୁ ବଢନ୍ତୁ"))
             }
         }
     }
@@ -808,10 +822,17 @@ fun MortalityReportScreen(onComplete: () -> Unit) {
 
 @Composable
 fun ClaimStatusTracker() {
-    val stages = listOf("Death Reported", "Didi Site Visit", "Verification", "Coordinator Review", "Payment Sent")
+    val languageState = LocalAppLanguage.current
+    val stages = listOf(
+        languageState.value.getT("Death Reported", "मृत्यु की सूचना दी गई", "ମୃତ୍ୟୁ ରିପୋର୍ଟ କରାଯାଇଛି"),
+        languageState.value.getT("Didi Site Visit", "दीदी का साइट दौरा", "ଦିଦିଙ୍କ ସାଇଟ୍ ପରିଦର୍ଶନ"),
+        languageState.value.getT("Verification", "सत्यापन", "ଯାଞ୍ଚ"),
+        languageState.value.getT("Coordinator Review", "समन्वयक समीक्षा", "ସମନ୍ଵୟକାରୀ ସମୀକ୍ଷା"),
+        languageState.value.getT("Payment Sent", "भुगतान भेज दिया गया", "ଦେୟ ପଠାଯାଇଛି")
+    )
     val currentStage = 2
     Column(modifier = Modifier.fillMaxSize().navigationBarsPadding().padding(16.dp)) {
-        Text("Claim #CLM7890", style = MaterialTheme.typography.headlineSmall)
+        Text(languageState.value.getT("Claim #CLM7890", "दावा #CLM7890", "ଦାବି #CLM7890"), style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
         stages.forEachIndexed { index, stage ->
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -832,67 +853,72 @@ fun BreakdownItem(label: String, value: String) {
     }
 }
 
-@Composable
-fun VaccinationItem(type: String, farmer: String, due: String) {
-    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Vaccines, null, tint = AccentOrange)
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text("$type Vaccine", fontWeight = FontWeight.Bold)
-                Text(farmer, style = MaterialTheme.typography.bodySmall)
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            Text(due, color = ErrorRed, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-        }
-    }
-}
+
 
 @Composable
 fun MortalityStep1() {
-    Text("Step 1: Carcass Verification", style = MaterialTheme.typography.titleLarge)
-    Text("Capture clear photo of the carcass with the ear tag visible.")
+    val languageState = LocalAppLanguage.current
+    Text(languageState.value.getT("Step 1: Carcass Verification", "चरण 1: शव सत्यापन", "ପଦକ୍ଷେପ ୧: ଶବ ଯାଞ୍ଚ"), style = MaterialTheme.typography.titleLarge)
+    Text(languageState.value.getT("Capture clear photo of the carcass with the ear tag visible.", "कान के टैग के साथ शव की स्पष्ट फोटो लें।", "କାନ ଟ୍ୟାଗ୍ ସହିତ ଶବର ସ୍ପଷ୍ଟ ଫଟୋ ନିଅନ୍ତୁ |"))
     Box(modifier = Modifier.fillMaxWidth().height(200.dp).background(Color.LightGray, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
         Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(48.dp))
     }
 }
 
 @Composable
-fun MortalityStep2() { Text("Step 2: Check Ear Tag & Breed") }
+fun MortalityStep2() { 
+    val languageState = LocalAppLanguage.current
+    Text(languageState.value.getT("Step 2: Check Ear Tag & Breed", "चरण 2: कान का टैग और नस्ल की जाँच करें", "ପଦକ୍ଷେପ ୨: କାନ ଟ୍ୟାଗ୍ ଏବଂ ପ୍ରଜାତି ଯାଞ୍ଚ କରନ୍ତୁ")) 
+}
 @Composable
-fun MortalityStep3() { Text("Step 3: Capture Farmer & Site Photo") }
+fun MortalityStep3() { 
+    val languageState = LocalAppLanguage.current
+    Text(languageState.value.getT("Step 3: Capture Farmer & Site Photo", "चरण 3: किसान और साइट की फोटो लें", "ପଦକ୍ଷେପ ୩: କୃଷକ ଏବଂ ସାଇଟ୍ ଫଟୋ ନିଅନ୍ତୁ")) 
+}
 @Composable
-fun MortalityStep4() { Text("Step 4: Cause of Death & Sign") }
+fun MortalityStep4() { 
+    val languageState = LocalAppLanguage.current
+    Text(languageState.value.getT("Step 4: Cause of Death & Sign", "चरण 4: मृत्यु का कारण और हस्ताक्षर", "ପଦକ୍ଷେପ ୪: ମୃତ୍ୟୁର କାରଣ ଏବଂ ସ୍ଵାକ୍ଷର")) 
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EnrollmentStepper(onComplete: () -> Unit) {
     var currentStep by remember { mutableIntStateOf(1) }
-    val steps = listOf("Farmer Registration", "Goat Details", "Photos", "Ear Tagging", "Vaccination", "Premium", "Policy")
+    val languageState = LocalAppLanguage.current
+    val steps = listOf(
+        languageState.value.getT("Farmer Registration", "किसान पंजीकरण", "କୃଷକ ପଞ୍ଜିକରଣ"),
+        languageState.value.getT("Goat Details", "बकरी का विवरण", "ଛେଳି ବିବରଣୀ"),
+        languageState.value.getT("Photos", "तस्वीरें", "ଫଟୋ"),
+        languageState.value.getT("Ear Tagging", "कान की टैगिंग", "କାନ ଟ୍ୟାଗିଂ"),
+        languageState.value.getT("Vaccination", "टीकाकरण", "ଟୀକାକରଣ"),
+        languageState.value.getT("Premium", "प्रीमियम", "ପ୍ରିମିୟମ"),
+        languageState.value.getT("Policy", "नीति", "ନୀତି")
+    )
 
     Scaffold(
         modifier = Modifier.fillMaxSize().navigationBarsPadding(),
-        topBar = { CenterAlignedTopAppBar(title = { Text("New Enrollment") }) }
+        topBar = { CenterAlignedTopAppBar(title = { Text(languageState.value.getT("New Enrollment", "नया नामांकन", "ନୂତନ ପଞ୍ଜିକରଣ")) }) }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
-            Text("Step $currentStep: ${steps[currentStep-1]}", style = MaterialTheme.typography.headlineSmall, color = PrimaryGreen)
+            Text(languageState.value.getT("Step", "चरण", "ପଦକ୍ଷେପ") + " $currentStep: ${steps[currentStep-1]}", style = MaterialTheme.typography.headlineSmall, color = PrimaryGreen)
             Spacer(modifier = Modifier.height(16.dp))
-            LinearProgressIndicator(progress = currentStep / 7f, modifier = Modifier.fillMaxWidth())
+            LinearProgressIndicator(progress = { currentStep / 7f }, modifier = Modifier.fillMaxWidth())
             
             Box(modifier = Modifier.weight(1f).padding(vertical = 24.dp)) {
                 when(currentStep) {
                     1 -> EnrollmentFarmerForm()
                     2 -> EnrollmentGoatForm()
                     6 -> PremiumCollectionContent()
-                    else -> Text("Field content for ${steps[currentStep-1]} goes here...")
+                    else -> Text(languageState.value.getT("Field content for ${steps[currentStep-1]} goes here...", "${steps[currentStep-1]} के लिए सामग्री यहाँ आती है...", "${steps[currentStep-1]} ପାଇଁ ବିଷୟବସ୍ତୁ ଏଠାରେ ଅଛି ..."))
                 }
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                if (currentStep > 1) OutlinedButton(onClick = { currentStep-- }) { Text("Back") }
+                if (currentStep > 1) OutlinedButton(onClick = { currentStep-- }) { Text(languageState.value.getT("Back", "पीछे", "ପଛକୁ")) }
                 else Spacer(Modifier.width(8.dp))
                 Button(onClick = { if (currentStep < 7) currentStep++ else onComplete() }) {
-                    Text(if (currentStep == 7) "Complete" else "Next Step")
+                    Text(if (currentStep == 7) languageState.value.getT("Complete", "पूरा करें", "ସମ୍ପୂର୍ଣ୍ଣ") else languageState.value.getT("Next Step", "अगला चरण", "ପରବର୍ତ୍ତୀ ପଦକ୍ଷେପ"))
                 }
             }
         }
@@ -901,61 +927,55 @@ fun EnrollmentStepper(onComplete: () -> Unit) {
 
 @Composable
 fun EnrollmentFarmerForm() {
+    val languageState = LocalAppLanguage.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedTextField(value = "", onValueChange = {}, label = { Text("Farmer Name") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(value = "", onValueChange = {}, label = { Text("Aadhaar Number") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(value = "", onValueChange = {}, label = { Text("Village") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = "", onValueChange = {}, label = { Text(languageState.value.getT("Farmer Name", "किसान का नाम", "କୃଷକଙ୍କ ନାମ")) }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = "", onValueChange = {}, label = { Text(languageState.value.getT("Aadhaar Number", "आधार नंबर", "ଆଧାର ନମ୍ବର")) }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = "", onValueChange = {}, label = { Text(languageState.value.getT("Village", "गाँव", "ଗ୍ରାମ")) }, modifier = Modifier.fillMaxWidth())
     }
 }
 
 @Composable
 fun EnrollmentGoatForm() {
+    val languageState = LocalAppLanguage.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedTextField(value = "", onValueChange = {}, label = { Text("Ear Tag Number") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(value = "", onValueChange = {}, label = { Text("Breed") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = "", onValueChange = {}, label = { Text(languageState.value.getT("Ear Tag Number", "कान का टैग नंबर", "କାନ ଟ୍ୟାଗ୍ ନମ୍ବର")) }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = "", onValueChange = {}, label = { Text(languageState.value.getT("Breed", "नस्ल", "ପ୍ରଜାତି")) }, modifier = Modifier.fillMaxWidth())
     }
 }
 
 @Composable
 fun PremiumCollectionContent() {
+    val languageState = LocalAppLanguage.current
     Column {
-        Text("Collect ₹350 from Farmer", style = MaterialTheme.typography.titleLarge)
-        Text("Didi Earning from this: ₹52", color = PrimaryGreen, fontWeight = FontWeight.Bold)
+        Text(languageState.value.getT("Collect ₹350 from Farmer", "किसान से ₹350 लीजिए", "କୃଷକଙ୍କଠାରୁ ₹୩୫୦ ସଂଗ୍ରହ କରନ୍ତୁ"), style = MaterialTheme.typography.titleLarge)
+        Text(languageState.value.getT("Didi Earning from this: ₹52", "इससे दीदी की कमाई: ₹52", "ଏଥିରୁ ଦିଦିଙ୍କ ଉପାର୍ଜନ: ₹୫୨"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
 fun FarmerDashboard(navController: NavHostController) {
-    var showNotifications by remember { mutableStateOf(false) }
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-
+    var showNotifications by remember { mutableStateOf(value = false) }
     if (showNotifications) NotificationSheet { showNotifications = false }
+    val languageState = LocalAppLanguage.current
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ProfileDrawerContent(
-                name = "Farmer Ram",
-                role = "Farmer",
-                id = "FARM-77821",
-                onClose = { scope.launch { drawerState.close() } }
+    Scaffold(
+        modifier = Modifier.fillMaxSize().navigationBarsPadding(),
+        bottomBar = { FarmerBottomBar(navController) },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .padding(bottom = padding.calculateBottomPadding())
+                .fillMaxSize()
+                .background(Color(0xFFF8F9F5))
+        ) {
+            DashboardHeader(
+                languageState.value.getT("Farmer Ram", "किसान राम", "କୃଷକ ରାମ"),
+                languageState.value.getT("Farmer", "किसान", "କୃଷକ"),
+                onNotificationClick = { showNotifications = true },
             )
-        }
-    ) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize().navigationBarsPadding(),
-            bottomBar = { FarmerBottomBar(navController) },
-            contentWindowInsets = WindowInsets(0, 0, 0, 0)
-        ) { padding ->
-            Column(
-                modifier = Modifier
-                    .padding(bottom = padding.calculateBottomPadding())
-                    .fillMaxSize()
-                    .background(Color(0xFFF8F9F5))
-            ) {
-                DashboardHeader("Farmer Ram", "Farmer", onNotificationClick = { showNotifications = true }, onProfileClick = { scope.launch { drawerState.open() } }, hasNotifications = true)
-            
+
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 300.dp),
                 modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -964,18 +984,18 @@ fun FarmerDashboard(navController: NavHostController) {
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text("My Policies", style = MaterialTheme.typography.titleMedium, color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text(languageState.value.getT("My Policies", "मेरी नीतियां", "ମୋର ନୀତିଗୁଡ଼ିକ"), style = MaterialTheme.typography.titleMedium, color = Color.Black, fontWeight = FontWeight.Bold)
                 }
                 
-                item { PolicyCard("TAG-12345", "Active", "Jan 2026") }
-                item { PolicyCard("TAG-67890", "Active", "Feb 2026") }
+                item { PolicyCard("TAG-12345", languageState.value.getT("Active", "सक्रिय", "ସକ୍ରିୟ"), languageState.value.getT("Jan 2026", "जनवरी 2026", "ଜାନୁଆରୀ ୨୦୨୬")) }
+                item { PolicyCard("TAG-67890", languageState.value.getT("Active", "सक्रिय", "ସକ୍ରିୟ"), languageState.value.getT("Feb 2026", "फरवरी 2026", "ଫେବୃଆରୀ ୨୦୨୬")) }
 
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = InfoBlue.copy(alpha = 0.1f))) {
                         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Info, null, tint = InfoBlue)
                             Spacer(modifier = Modifier.width(16.dp))
-                            Text("Report death within 24 hours to ensure claim eligibility.", color = Color.Black)
+                            Text(languageState.value.getT("Report death within 24 hours to ensure claim eligibility.", "दावा पात्रता सुनिश्चित करने के लिए 24 घंटे के भीतर मृत्यु की रिपोर्ट करें।", "ଦାବି ଯୋଗ୍ୟତା ନିଶ୍ଚିତ କରିବାକୁ ୨୪ ଘଣ୍ଟା ମଧ୍ୟରେ ମୃତ୍ୟୁ ରିପୋର୍ଟ କରନ୍ତୁ |"), color = Color.Black)
                         }
                     }
                 }
@@ -987,34 +1007,25 @@ fun FarmerDashboard(navController: NavHostController) {
 @Composable
 fun CoordinatorDashboard(navController: NavHostController) {
     var showNotifications by remember { mutableStateOf(false) }
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-
     if (showNotifications) NotificationSheet { showNotifications = false }
+    val languageState = LocalAppLanguage.current
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ProfileDrawerContent(
-                name = "Cluster Coordinator",
-                role = "Coordinator",
-                id = "COORD-99012",
-                onClose = { scope.launch { drawerState.close() } }
+    Scaffold(
+        modifier = Modifier.fillMaxSize().navigationBarsPadding(),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .padding(bottom = padding.calculateBottomPadding())
+                .fillMaxSize()
+                .background(Color(0xFFF8F9F5))
+        ) {
+            DashboardHeader(
+                languageState.value.getT("Cluster Coordinator", "क्लस्टर समन्वयक", "କ୍ଲଷ୍ଟର ସମନ୍ଵୟକାରୀ"),
+                languageState.value.getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ"),
+                onNotificationClick = { showNotifications = true },
             )
-        }
-    ) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize().navigationBarsPadding(),
-            contentWindowInsets = WindowInsets(0, 0, 0, 0)
-        ) { padding ->
-            Column(
-                modifier = Modifier
-                    .padding(bottom = padding.calculateBottomPadding())
-                    .fillMaxSize()
-                    .background(Color(0xFFF8F9F5))
-            ) {
-                DashboardHeader("Cluster Coordinator", "Coordinator", onNotificationClick = { showNotifications = true }, onProfileClick = { scope.launch { drawerState.open() } }, hasNotifications = true)
-            
+
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 300.dp),
                 modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -1022,16 +1033,18 @@ fun CoordinatorDashboard(navController: NavHostController) {
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                item { StatCard("Pending Approvals", "14", Icons.Default.Gavel, PrimaryGreen, CardLightGreen) }
-                item { StatCard("Corpus Fund", "₹85,000", Icons.Default.AccountBalance, InfoBlue, CardLightBlue) }
-                item { StatCard("Mortality Rate", "2.4%", Icons.Default.TrendingUp, ErrorRed, CardLightRed) }
+                item { StatCard(languageState.value.getT("Pending Approvals", "लंबित स्वीकृतियां", "ବାକି ରହିଥିବା ଅନୁମୋଦନ"), "14", Icons.Default.Gavel, PrimaryGreen, CardLightGreen) }
+                item { StatCard(languageState.value.getT("Corpus Fund", "कॉर्पस फंड", "କର୍ପସ ପାଣ୍ଠି"), "₹85,000", Icons.Default.AccountBalance, InfoBlue, CardLightBlue) }
+                item { StatCard(languageState.value.getT("Mortality Rate", "मृत्यु दर", "ମୃତ୍ୟୁ ହାର"), "2.4%", Icons.AutoMirrored.Filled.TrendingUp, ErrorRed, CardLightRed) }
             }
         }
     }
 }
 
 @Composable
-fun DashboardHeader(name: String, role: String = "Suraksha Didi", onNotificationClick: () -> Unit = {}, onProfileClick: () -> Unit = {}, hasNotifications: Boolean = false) {
+fun DashboardHeader(name: String, role: String, onNotificationClick: () -> Unit = {}, hasNotifications: Boolean = false, onProfileClick: () -> Unit = {}) {
+    val languageState = LocalAppLanguage.current
+    val profileImageState = LocalProfileImage.current
     Surface(
         color = PrimaryGreen,
         modifier = Modifier.fillMaxWidth()
@@ -1050,12 +1063,21 @@ fun DashboardHeader(name: String, role: String = "Suraksha Didi", onNotification
                 modifier = Modifier.size(64.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.Person,
-                        contentDescription = "Profile",
-                        modifier = Modifier.size(40.dp),
-                        tint = Color.White
-                    )
+                    if (profileImageState.value != null) {
+                        AsyncImage(
+                            model = profileImageState.value,
+                            contentDescription = "Profile Settings",
+                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = "Profile Settings",
+                            modifier = Modifier.size(40.dp),
+                            tint = Color.White
+                        )
+                    }
                 }
             }
             
@@ -1063,7 +1085,7 @@ fun DashboardHeader(name: String, role: String = "Suraksha Didi", onNotification
             
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Hello,",
+                    text = languageState.value.getT("Hello,", "नमस्ते,", "ନମସ୍କାର,"),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.8f),
                     fontWeight = FontWeight.Bold
@@ -1177,16 +1199,7 @@ fun QuickActionGridCard(label: String, icon: ImageVector, iconColor: Color, icon
     }
 }
 
-@Composable
-fun QuickActionCard(label: String, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = modifier, colors = CardDefaults.cardColors(containerColor = PrimaryGreen)) {
-        Column(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, null, tint = Color.White)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-        }
-    }
-}
+
 
 @Composable
 fun PolicyCard(id: String, status: String, expiry: String) {
@@ -1217,7 +1230,7 @@ fun OtpInput(value: String, onValueChange: (String) -> Unit, onDone: () -> Unit 
         // Hidden text field to capture input
         BasicTextField(
             value = value,
-            onValueChange = { if (it.length <= 6 && it.all { it.isDigit() }) onValueChange(it) },
+            onValueChange = { input -> if ((input.length <= 6) && input.all { it.isDigit() }) onValueChange(input) },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.NumberPassword,
                 imeAction = ImeAction.Done
@@ -1258,7 +1271,8 @@ fun OtpInput(value: String, onValueChange: (String) -> Unit, onDone: () -> Unit 
 }
 
 @Composable
-fun DidiBottomBar(navController: NavHostController) {
+fun DidiBottomBar(@Suppress("UNUSED_PARAMETER") navController: NavHostController) {
+    val languageState = LocalAppLanguage.current
     NavigationBar(
         containerColor = Color.White,
         tonalElevation = 8.dp
@@ -1267,26 +1281,27 @@ fun DidiBottomBar(navController: NavHostController) {
             selected = true,
             onClick = {},
             icon = { Icon(Icons.Default.Home, null) },
-            label = { Text("Home", fontSize = 9.sp) },
+            label = { Text(languageState.value.getT("Home", "होम", "ମୁଖ୍ୟ ପୃଷ୍ଠା"), fontSize = 9.sp) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = PrimaryGreen,
                 selectedTextColor = PrimaryGreen,
                 indicatorColor = Color.Transparent
             )
         )
-        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Pets, null) }, label = { Text("Goats", fontSize = 9.sp) })
-        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.MedicalServices, null) }, label = { Text("Vaccination", fontSize = 9.sp) })
-        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Assignment, null) }, label = { Text("Claims", fontSize = 9.sp) })
-        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.MoreHoriz, null) }, label = { Text("More", fontSize = 9.sp) })
+        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Pets, null) }, label = { Text(languageState.value.getT("Goats", "बकरियां", "ଛେଳି"), fontSize = 9.sp) })
+        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.MedicalServices, null) }, label = { Text(languageState.value.getT("Vaccines", "टीकाकरण", "ଟୀକା"), fontSize = 9.sp) })
+        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null) }, label = { Text(languageState.value.getT("Claims", "दावे", "ଦାବି"), fontSize = 9.sp) })
+        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.MoreHoriz, null) }, label = { Text(languageState.value.getT("More", "अधिक", "ଅଧିକ"), fontSize = 9.sp) })
     }
 }
 
 @Composable
 fun FarmerBottomBar(navController: NavHostController) {
+    val languageState = LocalAppLanguage.current
     NavigationBar {
-        NavigationBarItem(selected = true, onClick = {}, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
-        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.History, null) }, label = { Text("Claims") })
-        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.SupportAgent, null) }, label = { Text("Help") })
+        NavigationBarItem(selected = true, onClick = {}, icon = { Icon(Icons.Default.Home, null) }, label = { Text(languageState.value.getT("Home", "होम", "ମୁଖ୍ୟ ପୃଷ୍ଠା")) })
+        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.History, null) }, label = { Text(languageState.value.getT("Claims", "दावे", "ଦାବି")) })
+        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.SupportAgent, null) }, label = { Text(languageState.value.getT("Help", "सहायता", "ସାହାଯ୍ୟ")) })
     }
 }
 
@@ -1296,7 +1311,6 @@ fun FarmerBottomBar(navController: NavHostController) {
 @Composable
 fun LoginScreenPreview() {
     CommunityGoatTheme {
-        var phone by remember { mutableStateOf("9876543210") }
         LoginScreen({}, {})
     }
 }
@@ -1308,18 +1322,19 @@ data class AppNotification(val title: String, val message: String, val time: Str
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationSheet(onDismiss: () -> Unit) {
+    val languageState = LocalAppLanguage.current
     val notifications = listOf(
-        AppNotification("New Enrollment", "Farmer Ram added a new goat.", "2 mins ago"),
-        AppNotification("Vaccination Due", "PPR Vaccine due for TAG-12345.", "1 hour ago"),
-        AppNotification("Claim Approved", "Claim #CLM7890 has been approved.", "Yesterday"),
-        AppNotification("Visit Reminder", "Scheduled visit to Village Site B.", "Today, 4 PM")
+        AppNotification(languageState.value.getT("New Enrollment", "नया नामांकन", "ନୂତନ ପଞ୍ଜିକରଣ"), languageState.value.getT("Farmer Ram added a new goat.", "किसान राम ने एक नई बकरी जोड़ी।", "କୃଷକ ରାମ ଏକ ନୂତନ ଛେଳି ଯୋଡିଛନ୍ତି।"), languageState.value.getT("2 mins ago", "2 मिनट पहले", "୨ ମିନିଟ୍ ପୂର୍ବରୁ")),
+        AppNotification(languageState.value.getT("Vaccination Due", "टीकाकरण देय", "ଟୀକାକରଣ ବାକି"), languageState.value.getT("PPR Vaccine due for TAG-12345.", "TAG-12345 के लिए PPR वैक्सीन देय है।", "TAG-12345 ପାଇଁ PPR ଟୀକା ବାକି ଅଛି |"), languageState.value.getT("1 hour ago", "1 घंटे पहले", "୧ ଘଣ୍ଟା ପୂର୍ବରୁ")),
+        AppNotification(languageState.value.getT("Claim Approved", "दावा स्वीकृत", "ଦାବି ଅନୁମୋଦିତ"), languageState.value.getT("Claim #CLM7890 has been approved.", "दावा #CLM7890 स्वीकृत हो गया है।", "ଦାବି #CLM7890 ଅନୁମୋଦିତ ହୋଇଛି।"), languageState.value.getT("Yesterday", "कल", "ଗତକାଲି")),
+        AppNotification(languageState.value.getT("Visit Reminder", "मुलाकात अनुस्मारक", "ପରିଦର୍ଶନ ସ୍ମାରକୀ"), languageState.value.getT("Scheduled visit to Village Site B.", "गांव साइट बी की निर्धारित यात्रा।", "ଗ୍ରାମ ସାଇଟ୍ ବି କୁ ନିର୍ଦ୍ଧାରିତ ପରିଦର୍ଶନ |"), languageState.value.getT("Today, 4 PM", "आज, शाम 4 बजे", "ଆଜି, ଅପରାହ୍ନ ୪ ଟା"))
     )
     
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = Color.White,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = Color.LightGray) },
-        windowInsets = WindowInsets(0, 0, 0, 0)
+        dragHandle = @Composable { BottomSheetDefaults.DragHandle(color = Color.LightGray) },
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) }
     ) {
         Column(
             modifier = Modifier
@@ -1328,7 +1343,7 @@ fun NotificationSheet(onDismiss: () -> Unit) {
                 .padding(horizontal = 24.dp, vertical = 8.dp)
         ) {
             Text(
-                "Notifications",
+                languageState.value.getT("Notifications", "सूचनाएं", "ବିଜ୍ଞପ୍ତି"),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
@@ -1392,5 +1407,247 @@ fun NotificationItem(notification: AppNotification) {
                 fontWeight = FontWeight.Medium
             )
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProfileScreen(onLogout: () -> Unit, onBack: () -> Unit) {
+    val backgroundColor = Color(0xFFF8F9F5)
+    val languageState = LocalAppLanguage.current
+    var showLanguagePicker by remember { mutableStateOf(false) }
+    
+    val profileImageState = LocalProfileImage.current
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        profileImageState.value = uri
+    }
+
+    fun getLanguageName(lang: AppLanguage) = when(lang) {
+        AppLanguage.HINDI -> "हिन्दी (HI)"
+        AppLanguage.ODIA -> "ଓଡ଼ିଆ (OR)"
+        AppLanguage.ENGLISH -> "English (EN)"
+    }
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundColor)
+            .verticalScroll(rememberScrollState())
+    ) {
+        // Green Header
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp))
+                .background(PrimaryGreen)
+                .padding(top = 48.dp, bottom = 32.dp, start = 20.dp, end = 20.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                    Text(
+                        languageState.value.getT("Profile Settings", "प्रोफ़ाइल सेटिंग्स", "ପ୍ରୋଫାଇଲ୍ ସେଟିଙ୍ଗ୍ସ"),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // Profile Image
+                Box(contentAlignment = Alignment.Center) {
+                    Surface(
+                        color = Color(0xFFFFCCBC),
+                        shape = CircleShape,
+                        modifier = Modifier.size(100.dp),
+                        border = BorderStroke(4.dp, Color.White.copy(alpha = 0.2f))
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            if (profileImageState.value != null) {
+                                AsyncImage(
+                                    model = profileImageState.value,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(60.dp),
+                                    tint = Color.White
+                                )
+                            }
+                        }
+                    }
+                    Surface(
+                        onClick = { imagePickerLauncher.launch("image/*") },
+                        color = Color.White,
+                        shape = CircleShape,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(32.dp)
+                            .border(1.dp, Color.LightGray.copy(alpha = 0.5f), CircleShape),
+                        shadowElevation = 4.dp
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Edit, null, tint = PrimaryGreen, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    languageState.value.getT("Sushma Didi", "सुषमा दीदी", "ସୁଷମା ଦିଦି"),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Text(
+                    "+91 98765 43210",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Info Cards
+            ProfileInfoSection(languageState.value.getT("Account Details", "खाता विवरण", "ଖାତା ବିବରଣୀ")) {
+                ProfileInfoItem(
+                    languageState.value.getT("Full Name", "पूरा नाम", "ପୁରା ନାମ"),
+                    languageState.value.getT("Sushma Didi", "सुषमा दीदी", "ସୁଷମା ଦିଦି")
+                )
+                ProfileInfoItem(
+                    languageState.value.getT("Role", "भूमिका", "ଭୂମିକା"),
+                    languageState.value.getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି")
+                )
+                ProfileInfoItem(
+                    languageState.value.getT("Village", "गाँव", "ଗ୍ରାମ"),
+                    languageState.value.getT("Gopalpur, Odisha", "गोपालपुर, ओडिशा", "ଗୋପାଳପୁର, ଓଡ଼ିଶା")
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            ProfileInfoSection(languageState.value.getT("App Settings", "ऐप सेटिंग्स", "ଆପ୍ ସେଟିଙ୍ଗ୍ସ")) {
+                var notificationsEnabled by remember { mutableStateOf(true) }
+                SettingsToggleItem(
+                    label = languageState.value.getT("Enable Notifications", "सूचनाएं सक्षम करें", "ବିଜ୍ଞପ୍ତି ସକ୍ଷମ କରନ୍ତୁ"),
+                    checked = notificationsEnabled,
+                    onCheckedChange = { notificationsEnabled = it }
+                )
+                Box {
+                    SettingsClickItem(languageState.value.getT("Language", "भाषा", "ଭାଷା"), getLanguageName(languageState.value)) {
+                        showLanguagePicker = true
+                    }
+                    DropdownMenu(
+                        expanded = showLanguagePicker,
+                        onDismissRequest = { showLanguagePicker = false }
+                    ) {
+                        DropdownMenuItem(text = { Text("English") }, onClick = { languageState.value = AppLanguage.ENGLISH; showLanguagePicker = false })
+                        DropdownMenuItem(text = { Text("हिन्दी") }, onClick = { languageState.value = AppLanguage.HINDI; showLanguagePicker = false })
+                        DropdownMenuItem(text = { Text("ଓଡ଼ିଆ") }, onClick = { languageState.value = AppLanguage.ODIA; showLanguagePicker = false })
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            ProfileInfoSection(languageState.value.getT("Support & Legal", "समर्थन और कानूनी", "ସମର୍ଥନ ଏବଂ ଆଇନଗତ")) {
+                SettingsClickItem(languageState.value.getT("Help & Support", "सहायता और समर्थन", "ସାହାଯ୍ୟ ଏବଂ ସମର୍ଥନ"), "") {}
+                SettingsClickItem(languageState.value.getT("Privacy Policy", "गोपनीयता नीति", "ଗୋପନୀୟତା ନୀତି"), "") {}
+                SettingsClickItem(languageState.value.getT("Terms of Service", "सेवा की शर्तें", "ସେବା ସର୍ତ୍ତାବଳୀ"), "") {}
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            Button(
+                onClick = onLogout,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.AutoMirrored.Filled.Logout, null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(languageState.value.getT("Logout", "लॉग आउट", "ଲଗ୍ ଆଉଟ୍"), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(languageState.value.getT("Version 2.0.4", "संस्करण 2.0.4", "ସଂସ୍କରଣ ୨.୦.୪"), color = Color.Gray, fontSize = 12.sp)
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+fun ProfileInfoSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = PrimaryGreen)
+        Spacer(modifier = Modifier.height(12.dp))
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+fun ProfileInfoItem(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, color = Color.Gray)
+        Text(value, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+fun SettingsToggleItem(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, fontWeight = FontWeight.Medium)
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(checkedThumbColor = PrimaryGreen, checkedTrackColor = PrimaryGreen.copy(alpha = 0.3f))
+        )
+    }
+}
+
+@Composable
+fun SettingsClickItem(label: String, value: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(label, fontWeight = FontWeight.Medium)
+            if (value.isNotEmpty()) {
+                Text(value, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            }
+        }
+        Icon(Icons.Default.ChevronRight, null, tint = Color.Gray)
     }
 }

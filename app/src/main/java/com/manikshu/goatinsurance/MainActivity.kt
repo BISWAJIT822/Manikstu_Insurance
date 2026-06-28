@@ -7,6 +7,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -19,9 +21,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this)
             val navController = rememberNavController()
+            val languageState = remember { mutableStateOf(AppLanguage.ENGLISH) }
+            val profileImageState = remember { mutableStateOf<android.net.Uri?>(null) }
 
             CommunityGoatTheme {
-                CompositionLocalProvider(LocalWindowSizeClass provides windowSizeClass) {
+                CompositionLocalProvider(
+                    LocalWindowSizeClass provides windowSizeClass,
+                    LocalAppLanguage provides languageState,
+                    LocalProfileImage provides profileImageState
+                ) {
                     AppNavigation(navController)
                 }
             }
