@@ -31,6 +31,12 @@ import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material.icons.filled.Vaccines
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
@@ -55,13 +61,15 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 
-import androidx.compose.ui.text.SpanStyle
+
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import coil.compose.AsyncImage
+import java.io.File
+import java.io.FileOutputStream
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -70,17 +78,38 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
+import kotlinx.coroutines.launch
 
 val LocalWindowSizeClass = staticCompositionLocalOf<WindowSizeClass?> { null }
 val LocalAppLanguage = compositionLocalOf { mutableStateOf(AppLanguage.ENGLISH) }
 val LocalProfileImage = compositionLocalOf { mutableStateOf<Uri?>(null) }
+val LocalNotificationsEnabled = compositionLocalOf { mutableStateOf(true) }
 
 @Composable
-fun AppNavigation(navController: NavHostController) {
+fun AppNavigation(navController: NavHostController, sessionManager: SessionManager) {
+    val scope = rememberCoroutineScope()
+    val userRole by sessionManager.userRole.collectAsState(initial = null)
+    
+    // Auto-navigate if already logged in
+    LaunchedEffect(userRole) {
+        userRole?.let { role ->
+            val currentRoute = navController.currentDestination?.route
+            if (currentRoute == "login" || currentRoute == "signup") {
+                val route = when(role) {
+                    UserRole.SURAKSHA_DIDI -> "didi_dashboard"
+                    UserRole.FARMER -> "farmer_dashboard"
+                    UserRole.COORDINATOR -> "coordinator_dashboard"
+                }
+                navController.navigate(route) { popUpTo("login") { inclusive = true } }
+            }
+        }
+    }
+
     NavHost(navController = navController, startDestination = "login") {
         composable("login") { 
             LoginScreen(
                 onLoginSuccess = { role ->
+                    scope.launch { sessionManager.saveSession(role) }
                     val route = when(role) {
                         UserRole.SURAKSHA_DIDI -> "didi_dashboard"
                         UserRole.FARMER -> "farmer_dashboard"
@@ -94,6 +123,7 @@ fun AppNavigation(navController: NavHostController) {
         composable("signup") {
             SignUpScreen(
                 onSignUpSuccess = { role ->
+                    scope.launch { sessionManager.saveSession(role) }
                     val route = when(role) {
                         UserRole.SURAKSHA_DIDI -> "didi_dashboard"
                         UserRole.FARMER -> "farmer_dashboard"
@@ -114,11 +144,12 @@ fun AppNavigation(navController: NavHostController) {
         composable("profile") { 
             ProfileScreen(
                 onLogout = { 
-                    navController.navigate("login") { 
-                        popUpTo("didi_dashboard") { inclusive = true }
-                        popUpTo("farmer_dashboard") { inclusive = true }
-                        popUpTo("coordinator_dashboard") { inclusive = true }
-                    } 
+                    scope.launch { 
+                        sessionManager.clearSession()
+                        navController.navigate("login") { 
+                            popUpTo(0) { inclusive = true }
+                        } 
+                    }
                 },
                 onBack = { navController.popBackStack() }
             ) 
@@ -881,44 +912,156 @@ fun MortalityStep4() {
     Text(languageState.value.getT("Step 4: Cause of Death & Sign", "चरण 4: मृत्यु का कारण और हस्ताक्षर", "ପଦକ୍ଷେପ ୪: ମୃତ୍ୟୁର କାରଣ ଏବଂ ସ୍ଵାକ୍ଷର")) 
 }
 
+@Composable
+fun StepProgressIndicator(currentStep: Int, totalSteps: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(totalSteps) { index ->
+            val step = index + 1
+            val isCompleted = step < currentStep
+            val isCurrent = step == currentStep
+            
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(if (isCompleted || isCurrent) PrimaryGreen else Color.LightGray.copy(alpha = 0.3f))
+                    .border(1.dp, if (isCompleted || isCurrent) PrimaryGreen else Color.LightGray, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isCompleted) {
+                    Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp), tint = Color.White)
+                } else {
+                    Text(
+                        text = step.toString(),
+                        color = if (isCurrent) Color.White else Color.Gray,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            
+            if (index < totalSteps - 1) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(2.dp)
+                        .background(if (step < currentStep) PrimaryGreen else Color.LightGray.copy(alpha = 0.3f))
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EnrollmentStepper(onComplete: () -> Unit) {
     var currentStep by remember { mutableIntStateOf(1) }
     val languageState = LocalAppLanguage.current
+    
+    // Form State
+    var farmerName by remember { mutableStateOf("") }
+    var mobileNumber by remember { mutableStateOf("") }
+    var village by remember { mutableStateOf("") }
+    var aadhaar by remember { mutableStateOf("") }
+    
+    var breed by remember { mutableStateOf("") }
+    var gender by remember { mutableStateOf("") }
+    var age by remember { mutableStateOf("") }
+    var weight by remember { mutableStateOf("") }
+    var colorMarks by remember { mutableStateOf("") }
+    
+    var earTagNumber by remember { mutableStateOf("") }
+    
     val steps = listOf(
-        languageState.value.getT("Farmer Registration", "किसान पंजीकरण", "କୃଷକ ପଞ୍ଜିକରଣ"),
+        languageState.value.getT("Farmer Information", "किसान जानकारी", "କୃଷକ ସୂଚନା"),
         languageState.value.getT("Goat Details", "बकरी का विवरण", "ଛେଳି ବିବରଣୀ"),
-        languageState.value.getT("Photos", "तस्वीरें", "ଫଟୋ"),
+        languageState.value.getT("Photo Capture", "फोटो कैप्चर", "ଫଟୋ କ୍ୟାପଚର"),
         languageState.value.getT("Ear Tagging", "कान की टैगिंग", "କାନ ଟ୍ୟାଗିଂ"),
-        languageState.value.getT("Vaccination", "टीकाकरण", "ଟୀକାକରଣ"),
-        languageState.value.getT("Premium", "प्रीमियम", "ପ୍ରିମିୟମ"),
-        languageState.value.getT("Policy", "नीति", "ନୀତି")
+        languageState.value.getT("Vaccination History", "टीकाकरण इतिहास", "ଟୀକାକରଣ ଇତିହାସ"),
+        languageState.value.getT("Premium Payment", "प्रीमियम भुगतान", "ପ୍ରିମିୟମ ଦେୟ"),
+        languageState.value.getT("Policy Generated", "पॉलिसी जेनरेट हुई", "ନୀତି ପ୍ରସ୍ତୁତ ହୋଇଛି")
     )
 
     Scaffold(
         modifier = Modifier.fillMaxSize().navigationBarsPadding(),
-        topBar = { CenterAlignedTopAppBar(title = { Text(languageState.value.getT("New Enrollment", "नया नामांकन", "ନୂତନ ପଞ୍ଜିକରଣ")) }) }
+        containerColor = Color.White,
+        topBar = {
+            TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White,
+                    titleContentColor = Color.Black,
+                    navigationIconContentColor = Color.Black
+                ),
+                title = { 
+                    Text(
+                        languageState.value.getT("Enrollment (Step $currentStep of 7)", "नामांकन (चरण $currentStep of 7)", "ପଞ୍ଜିକରଣ (ପଦକ୍ଷେପ $currentStep of 7)"),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    ) 
+                },
+                navigationIcon = {
+                    IconButton(onClick = { if (currentStep > 1) currentStep-- else onComplete() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                    }
+                }
+            )
+        }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
-            Text(languageState.value.getT("Step", "चरण", "ପଦକ୍ଷେପ") + " $currentStep: ${steps[currentStep-1]}", style = MaterialTheme.typography.headlineSmall, color = PrimaryGreen)
-            Spacer(modifier = Modifier.height(16.dp))
-            LinearProgressIndicator(progress = { currentStep / 7f }, modifier = Modifier.fillMaxWidth())
+        Column(modifier = Modifier.padding(padding).fillMaxSize().background(Color.White).padding(horizontal = 20.dp)) {
+            StepProgressIndicator(currentStep, 7)
             
-            Box(modifier = Modifier.weight(1f).padding(vertical = 24.dp)) {
+            Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                Text(
+                    text = steps[currentStep-1],
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
                 when(currentStep) {
-                    1 -> EnrollmentFarmerForm()
-                    2 -> EnrollmentGoatForm()
-                    6 -> PremiumCollectionContent()
-                    else -> Text(languageState.value.getT("Field content for ${steps[currentStep-1]} goes here...", "${steps[currentStep-1]} के लिए सामग्री यहाँ आती है...", "${steps[currentStep-1]} ପାଇଁ ବିଷୟବସ୍ତୁ ଏଠାରେ ଅଛି ..."))
+                    1 -> EnrollmentFarmerStep(farmerName, { farmerName = it }, mobileNumber, { mobileNumber = it }, village, { village = it }, aadhaar, { aadhaar = it })
+                    2 -> EnrollmentGoatStep(breed, { breed = it }, gender, { gender = it }, age, { age = it }, weight, { weight = it }, colorMarks, { colorMarks = it })
+                    3 -> EnrollmentPhotoStep()
+                    4 -> EnrollmentTaggingStep(earTagNumber) { earTagNumber = it }
+                    5 -> EnrollmentVaccinationStep()
+                    6 -> EnrollmentPaymentStep()
+                    7 -> EnrollmentPolicyStep(farmerName, earTagNumber)
                 }
             }
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                if (currentStep > 1) OutlinedButton(onClick = { currentStep-- }) { Text(languageState.value.getT("Back", "पीछे", "ପଛକୁ")) }
-                else Spacer(Modifier.width(8.dp))
-                Button(onClick = { if (currentStep < 7) currentStep++ else onComplete() }) {
-                    Text(if (currentStep == 7) languageState.value.getT("Complete", "पूरा करें", "ସମ୍ପୂର୍ଣ୍ଣ") else languageState.value.getT("Next Step", "अगला चरण", "ପରବର୍ତ୍ତୀ ପଦକ୍ଷେପ"))
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                if (currentStep in 2..6) {
+                    OutlinedButton(
+                        onClick = { currentStep-- },
+                        modifier = Modifier.weight(1f).height(56.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, PrimaryGreen)
+                    ) {
+                        Text(languageState.value.getT("Back", "पीछे", "ପଛକୁ"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                    }
+                }
+                
+                Button(
+                    onClick = { if (currentStep < 7) currentStep++ else onComplete() },
+                    modifier = Modifier.weight(1f).height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+                ) {
+                    Text(
+                        text = if (currentStep == 7) languageState.value.getT("Finish Enrollment", "नामांकन पूरा करें", "ପଞ୍ଜିକରଣ ଶେଷ କରନ୍ତୁ") 
+                               else languageState.value.getT("Next", "अगला", "ପରବର୍ତ୍ତୀ"),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
@@ -926,32 +1069,272 @@ fun EnrollmentStepper(onComplete: () -> Unit) {
 }
 
 @Composable
-fun EnrollmentFarmerForm() {
+fun EnrollmentFarmerStep(name: String, onNameChange: (String) -> Unit, phone: String, onPhoneChange: (String) -> Unit, village: String, onVillageChange: (String) -> Unit, aadhaar: String, onAadhaarChange: (String) -> Unit) {
     val languageState = LocalAppLanguage.current
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedTextField(value = "", onValueChange = {}, label = { Text(languageState.value.getT("Farmer Name", "किसान का नाम", "କୃଷକଙ୍କ ନାମ")) }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(value = "", onValueChange = {}, label = { Text(languageState.value.getT("Aadhaar Number", "आधार नंबर", "ଆଧାର ନମ୍ବର")) }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(value = "", onValueChange = {}, label = { Text(languageState.value.getT("Village", "गाँव", "ଗ୍ରାମ")) }, modifier = Modifier.fillMaxWidth())
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        EnrollmentTextField(label = languageState.value.getT("Farmer Name *", "किसान का नाम *", "କୃଷକଙ୍କ ନାମ *"), value = name, onValueChange = onNameChange, placeholder = "Full Name")
+        EnrollmentTextField(label = languageState.value.getT("Mobile Number *", "मोबाइल नंबर *", "ମୋବାଇଲ୍ ନମ୍ବର *"), value = phone, onValueChange = onPhoneChange, placeholder = "10-digit number", keyboardType = KeyboardType.Phone)
+        EnrollmentTextField(label = languageState.value.getT("Village", "गाँव", "ଗ୍ରାମ"), value = village, onValueChange = onVillageChange, placeholder = "Village Name")
+        EnrollmentTextField(label = languageState.value.getT("Aadhaar / Gov ID", "आधार / सरकारी आईडी", "ଆଧାର / ସରକାରୀ ID"), value = aadhaar, onValueChange = onAadhaarChange, placeholder = "12-digit number", keyboardType = KeyboardType.Number)
     }
 }
 
 @Composable
-fun EnrollmentGoatForm() {
+fun EnrollmentGoatStep(breed: String, onBreedChange: (String) -> Unit, gender: String, onGenderChange: (String) -> Unit, age: String, onAgeChange: (String) -> Unit, weight: String, onWeightChange: (String) -> Unit, color: String, onColorChange: (String) -> Unit) {
     val languageState = LocalAppLanguage.current
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedTextField(value = "", onValueChange = {}, label = { Text(languageState.value.getT("Ear Tag Number", "कान का टैग नंबर", "କାନ ଟ୍ୟାଗ୍ ନମ୍ବର")) }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(value = "", onValueChange = {}, label = { Text(languageState.value.getT("Breed", "नस्ल", "ପ୍ରଜାତି")) }, modifier = Modifier.fillMaxWidth())
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        EnrollmentTextField(label = languageState.value.getT("Breed", "नस्ल", "ପ୍ରଜାତି"), value = breed, onValueChange = onBreedChange, placeholder = "Black Bengal")
+        EnrollmentTextField(label = languageState.value.getT("Gender", "लिंग", "ଲିଙ୍ଗ"), value = gender, onValueChange = onGenderChange, placeholder = "Female")
+        EnrollmentTextField(label = languageState.value.getT("Age (Approx)", "आयु (लगभग)", "ବୟସ (ପ୍ରାୟ)"), value = age, onValueChange = onAgeChange, placeholder = "12 Months")
+        EnrollmentTextField(label = languageState.value.getT("Weight (Approx)", "वजन (लगभग)", "ଓଜନ (ପ୍ରାୟ)"), value = weight, onValueChange = onWeightChange, placeholder = "18 KG")
+        EnrollmentTextField(label = languageState.value.getT("Color / Marks", "रंग / निशान", "ରଙ୍ଗ / ଚିହ୍ନ"), value = color, onValueChange = onColorChange, placeholder = "Black with White Spots")
     }
 }
 
 @Composable
-fun PremiumCollectionContent() {
+fun EnrollmentPhotoStep() {
     val languageState = LocalAppLanguage.current
     Column {
-        Text(languageState.value.getT("Collect ₹350 from Farmer", "किसान से ₹350 लीजिए", "କୃଷକଙ୍କଠାରୁ ₹୩୫୦ ସଂଗ୍ରହ କରନ୍ତୁ"), style = MaterialTheme.typography.titleLarge)
-        Text(languageState.value.getT("Didi Earning from this: ₹52", "इससे दीदी की कमाई: ₹52", "ଏଥିରୁ ଦିଦିଙ୍କ ଉପାର୍ଜନ: ₹୫୨"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+        Text(
+            languageState.value.getT("Please upload 4 mandatory photos of the goat.", "कृपया बकरी की 4 अनिवार्य फोटो अपलोड करें।", "ଦୟାକରି ଛେଳିର ୪ଟି ବାଧ୍ୟତାମୂଳକ ଫଟୋ ଅପଲୋଡ୍ କରନ୍ତୁ |"),
+            style = MaterialTheme.typography.bodyMedium, color = Color.Gray
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            PhotoCaptureBox(languageState.value.getT("Left Side", "बाईं ओर", "ବାମ ପାର୍ଶ୍ୱ"), modifier = Modifier.weight(1f))
+            PhotoCaptureBox(languageState.value.getT("Right Side", "दाईं ओर", "ଡାହାଣ ପାର୍ଶ୍ୱ"), modifier = Modifier.weight(1f))
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            PhotoCaptureBox(languageState.value.getT("Front View", "सामने का दृश्य", "ସମ୍ମୁଖ ଦୃଶ୍ୟ"), modifier = Modifier.weight(1f))
+            PhotoCaptureBox(languageState.value.getT("Ear Tag", "कान का टैग", "କାନ ଟ୍ୟାଗ୍"), modifier = Modifier.weight(1f))
+        }
     }
 }
+
+@Composable
+fun EnrollmentTaggingStep(earTag: String, onTagChange: (String) -> Unit) {
+    val languageState = LocalAppLanguage.current
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        EnrollmentTextField(label = languageState.value.getT("Ear Tag Number *", "कान का टैग नंबर *", "କାନ ଟ୍ୟାଗ୍ ନମ୍ବର *"), value = earTag, onValueChange = onTagChange, placeholder = "e.g. ET-240801")
+        Spacer(modifier = Modifier.height(32.dp))
+        Surface(
+            onClick = { /* Scan Tag */ },
+            modifier = Modifier.size(120.dp),
+            shape = RoundedCornerShape(20.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f)),
+            shadowElevation = 2.dp
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                Icon(Icons.Default.QrCodeScanner, null, tint = PrimaryGreen, modifier = Modifier.size(48.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(languageState.value.getT("Scan Tag", "टैग स्कैन करें", "ଟ୍ୟାଗ୍ ସ୍କାନ୍"), color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+@Composable
+fun EnrollmentVaccinationStep() {
+    val languageState = LocalAppLanguage.current
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        VaccineStatusItem("PPR Vaccine", true)
+        VaccineStatusItem("ET + TT Vaccine", true)
+        VaccineStatusItem("FMD Vaccine", false)
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
+        ) {
+            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.CalendarToday, null, tint = Color.Gray, modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(languageState.value.getT("Next Vaccination Due", "अगला टीकाकरण देय", "ପରବର୍ତ୍ତୀ ଟୀକାକରଣ ବାକି"), fontSize = 12.sp, color = Color.Gray)
+                    Text("15 Aug 2024", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun EnrollmentPaymentStep() {
+    val languageState = LocalAppLanguage.current
+    Column {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8E9))
+        ) {
+            Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(languageState.value.getT("Total Premium Amount", "कुल प्रीमियम राशि", "ମୋଟ ପ୍ରିମିୟମ ପରିମାଣ"), fontSize = 14.sp, color = Color.Gray)
+                Text("₹ 350", style = MaterialTheme.typography.headlineLarge, color = PrimaryGreen, fontWeight = FontWeight.Bold)
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(languageState.value.getT("Select Payment Method", "भुगतान विधि चुनें", "ଦେୟ ପଦ୍ଧତି ଚୟନ କରନ୍ତୁ"), fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PaymentMethodChip("Cash", true, modifier = Modifier.weight(1f))
+            PaymentMethodChip("UPI", false, modifier = Modifier.weight(1f))
+            PaymentMethodChip("Wallet", false, modifier = Modifier.weight(1f))
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        EnrollmentTextField(label = languageState.value.getT("Premium Amount (editable if needed)", "प्रीमियम राशि (यदि आवश्यक हो तो संपादन योग्य)", "ପ୍ରିମିୟମ ପରିମାଣ (ଆବଶ୍ୟକ ହେଲେ ସଂପାଦନ ଯୋଗ୍ୟ)"), value = "350", onValueChange = {}, prefix = "₹")
+        Spacer(modifier = Modifier.height(16.dp))
+        EnrollmentTextField(label = languageState.value.getT("Receipt Number", "रसीद संख्या", "ରସିଦ ନମ୍ବର"), value = "RCP-240801-001", onValueChange = {}, leadingIcon = Icons.Default.Receipt)
+    }
+}
+
+@Composable
+fun EnrollmentPolicyStep(farmer: String, tag: String) {
+    val languageState = LocalAppLanguage.current
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier.size(64.dp).clip(CircleShape).background(Color(0xFFE8F5E9)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.VerifiedUser, null, tint = SuccessGreen, modifier = Modifier.size(32.dp))
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(languageState.value.getT("Policy Generated Successfully!", "पॉलिसी सफलतापूर्वक जेनरेट हुई!", "ନୀତି ସଫଳତାର ସହିତ ପ୍ରସ୍ତୁତ ହୋଇଛି!"), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                PolicyDetailRow(languageState.value.getT("Policy Number", "पॉलिसी नंबर", "ନୀତି ନମ୍ବର"), "POL-2024-00125")
+                PolicyDetailRow(languageState.value.getT("Farmer Name", "किसान का नाम", "କୃଷକଙ୍କ ନାମ"), farmer.ifBlank { "RASGJM RYU" })
+                PolicyDetailRow(languageState.value.getT("Ear Tag", "कान का टैग", "କାନ ଟ୍ୟାଗ୍"), tag.ifBlank { "ET-453678" })
+                PolicyDetailRow(languageState.value.getT("Premium Paid", "प्रीमियम भुगतान", "ଦିଆଯାଇଥିବା ପ୍ରିମିୟମ"), "₹ 350")
+                PolicyDetailRow(languageState.value.getT("Validity", "वैधता", "ବୈଧତା"), "01 Aug 2024 - 31 Jul 2025")
+                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
+                PolicyDetailRow(languageState.value.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), "₹ 8,500", true)
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        OutlinedButton(
+            onClick = { /* Download */ },
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, PrimaryGreen)
+        ) {
+            Icon(Icons.Default.FileDownload, null, tint = PrimaryGreen)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(languageState.value.getT("Download Certificate", "प्रमाण पत्र डाउनलोड करें", "ପ୍ରମାଣପତ୍ର ଡାଉନଲୋଡ୍ କରନ୍ତୁ"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+// --- ENROLLMENT HELPERS ---
+
+@Composable
+fun EnrollmentTextField(label: String, value: String, onValueChange: (String) -> Unit, placeholder: String = "", keyboardType: KeyboardType = KeyboardType.Text, prefix: String? = null, leadingIcon: ImageVector? = null) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(label, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black, modifier = Modifier.padding(bottom = 8.dp))
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text(placeholder, color = Color.Gray) },
+            shape = RoundedCornerShape(12.dp),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            singleLine = true,
+            leadingIcon = leadingIcon?.let { { Icon(it, null, tint = Color.DarkGray) } },
+            prefix = prefix?.let { { Text(it, color = Color.Black) } },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),
+                focusedBorderColor = PrimaryGreen
+            )
+        )
+    }
+}
+
+@Composable
+fun PhotoCaptureBox(label: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Surface(
+            onClick = { /* Capture */ },
+            modifier = Modifier.aspectRatio(1.2f).fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                Icon(Icons.Default.AddAPhoto, null, tint = Color.Gray, modifier = Modifier.size(32.dp))
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("Capture", fontSize = 11.sp, color = Color.Gray)
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(label, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+    }
+}
+
+@Composable
+fun VaccineStatusItem(name: String, isGiven: Boolean) {
+    val languageState = LocalAppLanguage.current
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
+    ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(name, fontWeight = FontWeight.Bold, color = Color.Black)
+            Surface(
+                color = if (isGiven) Color(0xFFE8F5E9) else Color(0xFFFFF3E0),
+                shape = RoundedCornerShape(4.dp)
+            ) {
+                Text(
+                    text = if (isGiven) languageState.value.getT("Given", "दिया गया", "ଦିଆଯାଇଛି") 
+                           else languageState.value.getT("Pending", "लंबित", "ବାକି ଅଛି"),
+                    color = if (isGiven) SuccessGreen else AccentOrange,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PaymentMethodChip(label: String, isSelected: Boolean, modifier: Modifier = Modifier) {
+    Surface(
+        onClick = { /* Select */ },
+        modifier = modifier.height(48.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = if (isSelected) PrimaryGreen else Color.White,
+        border = if (isSelected) null else BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(label, color = if (isSelected) Color.White else Color.Black, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun PolicyDetailRow(label: String, value: String, isBold: Boolean = false) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, color = Color.Gray, fontSize = 14.sp)
+        Text(value, fontWeight = if (isBold) FontWeight.ExtraBold else FontWeight.Bold, fontSize = if (isBold) 16.sp else 14.sp)
+    }
+}
+
 
 @Composable
 fun FarmerDashboard(navController: NavHostController) {
@@ -1417,11 +1800,35 @@ fun ProfileScreen(onLogout: () -> Unit, onBack: () -> Unit) {
     val languageState = LocalAppLanguage.current
     var showLanguagePicker by remember { mutableStateOf(false) }
     
+    val context = LocalContext.current
     val profileImageState = LocalProfileImage.current
+
+    fun saveImageToInternalStorage(uri: Uri): Uri? {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(uri)
+            val file = File(context.filesDir, "profile_pic.jpg")
+            val outputStream = FileOutputStream(file)
+            inputStream?.use { input ->
+                outputStream.use { output ->
+                    input.copyTo(output)
+                }
+            }
+            Uri.fromFile(file)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        profileImageState.value = uri
+        if (uri != null) {
+            val internalUri = saveImageToInternalStorage(uri)
+            if (internalUri != null) {
+                profileImageState.value = internalUri
+                Toast.makeText(context, languageState.value.getT("Saved", "सहेजा गया", "ସଂରକ୍ଷିତ"), Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     fun getLanguageName(lang: AppLanguage) = when(lang) {
@@ -1544,11 +1951,11 @@ fun ProfileScreen(onLogout: () -> Unit, onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(24.dp))
             
             ProfileInfoSection(languageState.value.getT("App Settings", "ऐप सेटिंग्स", "ଆପ୍ ସେଟିଙ୍ଗ୍ସ")) {
-                var notificationsEnabled by remember { mutableStateOf(true) }
+                val notificationsEnabled = LocalNotificationsEnabled.current
                 SettingsToggleItem(
                     label = languageState.value.getT("Enable Notifications", "सूचनाएं सक्षम करें", "ବିଜ୍ଞପ୍ତି ସକ୍ଷମ କରନ୍ତୁ"),
-                    checked = notificationsEnabled,
-                    onCheckedChange = { notificationsEnabled = it }
+                    checked = notificationsEnabled.value,
+                    onCheckedChange = { notificationsEnabled.value = it }
                 )
                 Box {
                     SettingsClickItem(languageState.value.getT("Language", "भाषा", "ଭାଷା"), getLanguageName(languageState.value)) {
