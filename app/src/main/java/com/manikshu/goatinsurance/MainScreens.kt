@@ -634,114 +634,125 @@ fun RoleCard(role: UserRole, label: String, icon: ImageVector, isSelected: Boole
 
 @Composable
 fun DidiDashboard(navController: NavHostController) {
-    ResponsiveLayout(
-        compact = {
-            Scaffold(
-                modifier = Modifier.fillMaxSize(),
-                bottomBar = { DidiBottomBar(navController) }
-            ) { padding ->
-                DidiContent(padding, navController)
-            }
-        },
-        expanded = {
-            Row(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
-                NavigationRail {
-                    NavigationRailItem(selected = true, onClick = {}, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
-                    NavigationRailItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Pets, null) }, label = { Text("Goats") })
-                    NavigationRailItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Vaccines, null) }, label = { Text("Vaccines") })
-                }
-                DidiContent(PaddingValues(0.dp), navController)
-            }
+    var showNotifications by remember { mutableStateOf(false) }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
+    if (showNotifications) NotificationSheet { showNotifications = false }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ProfileDrawerContent(
+                name = "Sushma Didi",
+                role = "Suraksha Didi",
+                id = "DIDI-12341",
+                onClose = { scope.launch { drawerState.close() } }
+            )
         }
-    )
+    ) {
+        ResponsiveLayout(
+            compact = {
+                Scaffold(
+                    modifier = Modifier.fillMaxSize().navigationBarsPadding(),
+                    bottomBar = { DidiBottomBar(navController) },
+                    contentWindowInsets = WindowInsets(0, 0, 0, 0)
+                ) { padding ->
+                    DidiContent(
+                        padding, 
+                        navController, 
+                        onNotificationClick = { showNotifications = true },
+                        onProfileClick = { scope.launch { drawerState.open() } }
+                    )
+                }
+            },
+            expanded = {
+                Row(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).navigationBarsPadding()) {
+                    NavigationRail {
+                        NavigationRailItem(selected = true, onClick = {}, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Home") })
+                        NavigationRailItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Pets, null) }, label = { Text("Goats") })
+                        NavigationRailItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Vaccines, null) }, label = { Text("Vaccines") })
+                    }
+                    DidiContent(
+                        PaddingValues(0.dp), 
+                        navController, 
+                        onNotificationClick = { showNotifications = true },
+                        onProfileClick = { scope.launch { drawerState.open() } }
+                    )
+                }
+            }
+        )
+    }
 }
 
 @Composable
-fun DidiContent(padding: PaddingValues, navController: NavHostController) {
+fun DidiContent(padding: PaddingValues, navController: NavHostController, onNotificationClick: () -> Unit, onProfileClick: () -> Unit) {
     Column(
         modifier = Modifier
             .padding(bottom = padding.calculateBottomPadding())
             .fillMaxSize()
             .background(Color(0xFFF8F9F5))
     ) {
-        DashboardHeader("Sushma Didi", "Suraksha Didi")
+        DashboardHeader("Sushma Didi", "Suraksha Didi", onNotificationClick, onProfileClick = onProfileClick, hasNotifications = true)
         
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
+        val window = LocalWindowSizeClass.current
+        val isCompact = window?.widthSizeClass == WindowWidthSizeClass.Compact
+        val gridColumns = if (isCompact) 6 else 12
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(gridColumns),
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            contentPadding = PaddingValues(bottom = 32.dp, start = 20.dp, end = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            Text(
-                "This Month Overview",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 20.dp)
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // 2x2 Grid for Stats
-            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        StatCard("Goats Enrolled", "128", Icons.Default.Pets, PrimaryGreen, CardLightGreen)
-                    }
-                    Box(modifier = Modifier.weight(1f)) {
-                        StatCard("Pending Claims", "12", Icons.Default.Assignment, AccentOrange, CardLightOrange)
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        StatCard("Today's Visits", "24", Icons.Default.CalendarToday, InfoBlue, CardLightBlue)
-                    }
-                    Box(modifier = Modifier.weight(1f)) {
-                        StatCard("Earnings", "₹8,450", Icons.Default.Payments, Color(0xFF9C27B0), CardLightPurple)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            Text(
-                "Quick Actions",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 20.dp)
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 3x2 Grid for Quick Actions
-            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        QuickActionGridCard("Enroll Goat", Icons.Default.Pets, PrimaryGreen, CardLightGreen) { navController.navigate("enrollment") }
-                    }
-                    Box(modifier = Modifier.weight(1f)) {
-                        QuickActionGridCard("Vaccination", Icons.Default.MedicalServices, InfoBlue, CardLightBlue) { /* TODO */ }
-                    }
-                    Box(modifier = Modifier.weight(1f)) {
-                        QuickActionGridCard("Mortality Report", Icons.Default.LocationOn, Color(0xFFD32F2F), CardLightRed) { navController.navigate("mortality_report") }
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        QuickActionGridCard("Claims", Icons.Default.Assignment, AccentOrange, CardLightOrange) { navController.navigate("claim_tracker") }
-                    }
-                    Box(modifier = Modifier.weight(1f)) {
-                        QuickActionGridCard("Goat List", Icons.Default.FactCheck, Color(0xFF2E7D32), CardLightGreen) { /* TODO */ }
-                    }
-                    Box(modifier = Modifier.weight(1f)) {
-                        QuickActionGridCard("AI Assistant", Icons.Default.AccountBox, Color(0xFF7B1FA2), CardLightPurple) { /* TODO */ }
-                    }
+            item(span = { GridItemSpan(gridColumns) }) {
+                Column {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        "This Month Overview",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
             
-            Spacer(modifier = Modifier.height(32.dp))
+            // Stats (2 columns on mobile, 4 on tablet)
+            val statSpan = if (isCompact) 3 else 3
+            items(4, span = { GridItemSpan(statSpan) }) { index ->
+                when(index) {
+                    0 -> StatCard("Goats Enrolled", "128", Icons.Default.Pets, PrimaryGreen, CardLightGreen)
+                    1 -> StatCard("Pending Claims", "12", Icons.Default.Assignment, AccentOrange, CardLightOrange)
+                    2 -> StatCard("Today's Visits", "24", Icons.Default.CalendarToday, InfoBlue, CardLightBlue)
+                    3 -> StatCard("Earnings", "₹8,450", Icons.Default.Payments, Color(0xFF9C27B0), CardLightPurple)
+                }
+            }
+
+            item(span = { GridItemSpan(gridColumns) }) {
+                Column {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        "Quick Actions",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // Quick Actions (3 columns on mobile, 6 on tablet)
+            val actionSpan = if (isCompact) 2 else 2
+            items(6, span = { GridItemSpan(actionSpan) }) { index ->
+                when(index) {
+                    0 -> QuickActionGridCard("Enroll Goat", Icons.Default.Pets, PrimaryGreen, CardLightGreen) { navController.navigate("enrollment") }
+                    1 -> QuickActionGridCard("Vaccination", Icons.Default.MedicalServices, InfoBlue, CardLightBlue) { /* TODO */ }
+                    2 -> QuickActionGridCard("Mortality Report", Icons.Default.LocationOn, Color(0xFFD32F2F), CardLightRed) { navController.navigate("mortality_report") }
+                    3 -> QuickActionGridCard("Claims", Icons.Default.Assignment, AccentOrange, CardLightOrange) { navController.navigate("claim_tracker") }
+                    4 -> QuickActionGridCard("Goat List", Icons.Default.FactCheck, Color(0xFF2E7D32), CardLightGreen) { /* TODO */ }
+                    5 -> QuickActionGridCard("AI Assistant", Icons.Default.AccountBox, Color(0xFF7B1FA2), CardLightPurple) { /* TODO */ }
+                }
+            }
         }
     }
 }
@@ -749,7 +760,10 @@ fun DidiContent(padding: PaddingValues, navController: NavHostController) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PremiumCollectionScreen(onComplete: () -> Unit) {
-    Scaffold(topBar = { CenterAlignedTopAppBar(title = { Text("Premium Collection") }) }) { padding ->
+    Scaffold(
+        modifier = Modifier.fillMaxSize().navigationBarsPadding(),
+        topBar = { CenterAlignedTopAppBar(title = { Text("Premium Collection") }) }
+    ) { padding ->
         Column(modifier = Modifier.padding(padding).padding(16.dp)) {
             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -771,7 +785,10 @@ fun PremiumCollectionScreen(onComplete: () -> Unit) {
 @Composable
 fun MortalityReportScreen(onComplete: () -> Unit) {
     var currentStep by remember { mutableIntStateOf(1) }
-    Scaffold(topBar = { CenterAlignedTopAppBar(title = { Text("Mortality Verification") }) }) { padding ->
+    Scaffold(
+        modifier = Modifier.fillMaxSize().navigationBarsPadding(),
+        topBar = { CenterAlignedTopAppBar(title = { Text("Mortality Verification") }) }
+    ) { padding ->
         Column(modifier = Modifier.padding(padding).padding(16.dp)) {
             LinearProgressIndicator(progress = currentStep / 4f, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(24.dp))
@@ -793,7 +810,7 @@ fun MortalityReportScreen(onComplete: () -> Unit) {
 fun ClaimStatusTracker() {
     val stages = listOf("Death Reported", "Didi Site Visit", "Verification", "Coordinator Review", "Payment Sent")
     val currentStage = 2
-    Column(modifier = Modifier.padding(16.dp)) {
+    Column(modifier = Modifier.fillMaxSize().navigationBarsPadding().padding(16.dp)) {
         Text("Claim #CLM7890", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
         stages.forEachIndexed { index, stage ->
@@ -854,6 +871,7 @@ fun EnrollmentStepper(onComplete: () -> Unit) {
     val steps = listOf("Farmer Registration", "Goat Details", "Photos", "Ear Tagging", "Vaccination", "Premium", "Policy")
 
     Scaffold(
+        modifier = Modifier.fillMaxSize().navigationBarsPadding(),
         topBar = { CenterAlignedTopAppBar(title = { Text("New Enrollment") }) }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
@@ -908,31 +926,57 @@ fun PremiumCollectionContent() {
 
 @Composable
 fun FarmerDashboard(navController: NavHostController) {
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        bottomBar = { FarmerBottomBar(navController) }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(bottom = padding.calculateBottomPadding())
-                .fillMaxSize()
-        ) {
-            DashboardHeader("Farmer Ram", "Farmer")
+    var showNotifications by remember { mutableStateOf(false) }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
+    if (showNotifications) NotificationSheet { showNotifications = false }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ProfileDrawerContent(
+                name = "Farmer Ram",
+                role = "Farmer",
+                id = "FARM-77821",
+                onClose = { scope.launch { drawerState.close() } }
+            )
+        }
+    ) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize().navigationBarsPadding(),
+            bottomBar = { FarmerBottomBar(navController) },
+            contentWindowInsets = WindowInsets(0, 0, 0, 0)
+        ) { padding ->
             Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = padding.calculateBottomPadding())
+                    .fillMaxSize()
+                    .background(Color(0xFFF8F9F5))
             ) {
-                Text("My Policies", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(16.dp))
-                ResponsiveGrid {
-                    item { PolicyCard("TAG-12345", "Active", "Jan 2026") }
-                    item { PolicyCard("TAG-67890", "Active", "Feb 2026") }
+                DashboardHeader("Farmer Ram", "Farmer", onNotificationClick = { showNotifications = true }, onProfileClick = { scope.launch { drawerState.open() } }, hasNotifications = true)
+            
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 300.dp),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Text("My Policies", style = MaterialTheme.typography.titleMedium, color = Color.Black, fontWeight = FontWeight.Bold)
                 }
-                Card(modifier = Modifier.padding(16.dp).fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = InfoBlue.copy(alpha = 0.1f))) {
-                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Info, null, tint = InfoBlue)
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text("Report death within 24 hours to ensure claim eligibility.")
+                
+                item { PolicyCard("TAG-12345", "Active", "Jan 2026") }
+                item { PolicyCard("TAG-67890", "Active", "Feb 2026") }
+
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = InfoBlue.copy(alpha = 0.1f))) {
+                        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Info, null, tint = InfoBlue)
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text("Report death within 24 hours to ensure claim eligibility.", color = Color.Black)
+                        }
                     }
                 }
             }
@@ -942,30 +986,52 @@ fun FarmerDashboard(navController: NavHostController) {
 
 @Composable
 fun CoordinatorDashboard(navController: NavHostController) {
-    Scaffold(modifier = Modifier.fillMaxSize()) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(bottom = padding.calculateBottomPadding())
-                .fillMaxSize()
-        ) {
-            DashboardHeader("Cluster Coordinator", "Coordinator")
+    var showNotifications by remember { mutableStateOf(false) }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
+    if (showNotifications) NotificationSheet { showNotifications = false }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ProfileDrawerContent(
+                name = "Cluster Coordinator",
+                role = "Coordinator",
+                id = "COORD-99012",
+                onClose = { scope.launch { drawerState.close() } }
+            )
+        }
+    ) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize().navigationBarsPadding(),
+            contentWindowInsets = WindowInsets(0, 0, 0, 0)
+        ) { padding ->
             Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = padding.calculateBottomPadding())
+                    .fillMaxSize()
+                    .background(Color(0xFFF8F9F5))
             ) {
-                ResponsiveGrid {
-                    item { StatCard("Pending Approvals", "14", Icons.Default.Gavel, PrimaryGreen, CardLightGreen) }
-                    item { StatCard("Corpus Fund", "₹85,000", Icons.Default.AccountBalance, InfoBlue, CardLightBlue) }
-                    item { StatCard("Mortality Rate", "2.4%", Icons.Default.TrendingUp, ErrorRed, CardLightRed) }
-                }
+                DashboardHeader("Cluster Coordinator", "Coordinator", onNotificationClick = { showNotifications = true }, onProfileClick = { scope.launch { drawerState.open() } }, hasNotifications = true)
+            
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 300.dp),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item { StatCard("Pending Approvals", "14", Icons.Default.Gavel, PrimaryGreen, CardLightGreen) }
+                item { StatCard("Corpus Fund", "₹85,000", Icons.Default.AccountBalance, InfoBlue, CardLightBlue) }
+                item { StatCard("Mortality Rate", "2.4%", Icons.Default.TrendingUp, ErrorRed, CardLightRed) }
             }
         }
     }
 }
 
 @Composable
-fun DashboardHeader(name: String, role: String = "Suraksha Didi") {
+fun DashboardHeader(name: String, role: String = "Suraksha Didi", onNotificationClick: () -> Unit = {}, onProfileClick: () -> Unit = {}, hasNotifications: Boolean = false) {
     Surface(
         color = PrimaryGreen,
         modifier = Modifier.fillMaxWidth()
@@ -977,26 +1043,33 @@ fun DashboardHeader(name: String, role: String = "Suraksha Didi") {
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Profile Image
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFFFCCBC)),
-                contentAlignment = Alignment.Center
+            Surface(
+                onClick = onProfileClick,
+                color = Color(0xFFFFCCBC),
+                shape = CircleShape,
+                modifier = Modifier.size(64.dp)
             ) {
-                Icon(
-                    Icons.Default.Person,
-                    contentDescription = null,
-                    modifier = Modifier.size(40.dp),
-                    tint = Color.White
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = "Profile",
+                        modifier = Modifier.size(40.dp),
+                        tint = Color.White
+                    )
+                }
             }
             
             Spacer(modifier = Modifier.width(16.dp))
             
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Hello, $name 👋",
+                    text = "Hello,",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "$name 👋",
                     style = MaterialTheme.typography.titleLarge,
                     color = Color.White,
                     fontWeight = FontWeight.Bold
@@ -1010,7 +1083,7 @@ fun DashboardHeader(name: String, role: String = "Suraksha Didi") {
             
             // Notification Bell
             Surface(
-                onClick = { /* TODO */ },
+                onClick = onNotificationClick,
                 color = Color.White.copy(alpha = 0.15f),
                 shape = CircleShape,
                 modifier = Modifier.size(48.dp)
@@ -1021,6 +1094,16 @@ fun DashboardHeader(name: String, role: String = "Suraksha Didi") {
                         contentDescription = "Notifications",
                         tint = Color.White
                     )
+                    if (hasNotifications) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .align(Alignment.TopEnd)
+                                .offset(x = (-8).dp, y = 8.dp)
+                                .clip(CircleShape)
+                                .background(Color.Red)
+                        )
+                    }
                 }
             }
         }
@@ -1036,22 +1119,22 @@ fun StatCard(label: String, value: String, icon: ImageVector, iconColor: Color, 
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
                     .background(iconBgColor),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, null, tint = iconColor, modifier = Modifier.size(24.dp))
+                Icon(icon, null, tint = iconColor, modifier = Modifier.size(20.dp))
             }
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             Column {
-                Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(label, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.Black, maxLines = 1)
+                Text(label, style = MaterialTheme.typography.labelSmall, color = Color.Black, maxLines = 1)
             }
         }
     }
@@ -1080,12 +1163,13 @@ fun QuickActionGridCard(label: String, icon: ImageVector, iconColor: Color, icon
             ) {
                 Icon(icon, null, tint = iconColor, modifier = Modifier.size(28.dp))
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 label,
-                fontSize = 11.sp,
-                lineHeight = 13.sp,
+                fontSize = 10.sp,
+                lineHeight = 12.sp,
                 fontWeight = FontWeight.Bold,
+                color = Color.Black,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 4.dp)
             )
@@ -1183,17 +1267,17 @@ fun DidiBottomBar(navController: NavHostController) {
             selected = true,
             onClick = {},
             icon = { Icon(Icons.Default.Home, null) },
-            label = { Text("Home", fontSize = 10.sp) },
+            label = { Text("Home", fontSize = 9.sp) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = PrimaryGreen,
                 selectedTextColor = PrimaryGreen,
                 indicatorColor = Color.Transparent
             )
         )
-        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Pets, null) }, label = { Text("Goats", fontSize = 10.sp) })
-        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.MedicalServices, null) }, label = { Text("Vaccination", fontSize = 10.sp) })
-        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Assignment, null) }, label = { Text("Claims", fontSize = 10.sp) })
-        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.MoreHoriz, null) }, label = { Text("More", fontSize = 10.sp) })
+        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Pets, null) }, label = { Text("Goats", fontSize = 9.sp) })
+        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.MedicalServices, null) }, label = { Text("Vaccination", fontSize = 9.sp) })
+        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Assignment, null) }, label = { Text("Claims", fontSize = 9.sp) })
+        NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.MoreHoriz, null) }, label = { Text("More", fontSize = 9.sp) })
     }
 }
 
@@ -1206,24 +1290,7 @@ fun FarmerBottomBar(navController: NavHostController) {
     }
 }
 
-@Composable
-fun ResponsiveGrid(content: LazyGridScope.() -> Unit) {
-    val window = LocalWindowSizeClass.current
-    val columns = when (window?.widthSizeClass) {
-        WindowWidthSizeClass.Compact -> 1
-        WindowWidthSizeClass.Medium -> 2
-        else -> 3
-    }
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(columns),
-        contentPadding = PaddingValues(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.heightIn(max = 2000.dp),
-        userScrollEnabled = false,
-        content = content
-    )
-}
+
 
 @androidx.compose.ui.tooling.preview.Preview(showBackground = true)
 @Composable
@@ -1231,5 +1298,99 @@ fun LoginScreenPreview() {
     CommunityGoatTheme {
         var phone by remember { mutableStateOf("9876543210") }
         LoginScreen({}, {})
+    }
+}
+
+// --- NOTIFICATION COMPONENTS ---
+
+data class AppNotification(val title: String, val message: String, val time: String)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NotificationSheet(onDismiss: () -> Unit) {
+    val notifications = listOf(
+        AppNotification("New Enrollment", "Farmer Ram added a new goat.", "2 mins ago"),
+        AppNotification("Vaccination Due", "PPR Vaccine due for TAG-12345.", "1 hour ago"),
+        AppNotification("Claim Approved", "Claim #CLM7890 has been approved.", "Yesterday"),
+        AppNotification("Visit Reminder", "Scheduled visit to Village Site B.", "Today, 4 PM")
+    )
+    
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = Color.White,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = Color.LightGray) },
+        windowInsets = WindowInsets(0, 0, 0, 0)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 8.dp)
+        ) {
+            Text(
+                "Notifications",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(bottom = 32.dp)
+            ) {
+                items(notifications) { notification ->
+                    NotificationItem(notification)
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = Color.LightGray.copy(alpha = 0.4f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NotificationItem(notification: AppNotification) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(PrimaryGreen.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.Notifications,
+                contentDescription = null,
+                tint = PrimaryGreen,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Column {
+            Text(
+                notification.title,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+                fontSize = 15.sp
+            )
+            Text(
+                notification.message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Gray,
+                lineHeight = 18.sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                notification.time,
+                style = MaterialTheme.typography.labelSmall,
+                color = PrimaryGreen,
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }
