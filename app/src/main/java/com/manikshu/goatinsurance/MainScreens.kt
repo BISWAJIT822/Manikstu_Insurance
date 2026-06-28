@@ -58,6 +58,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import coil.compose.AsyncImage
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -69,6 +73,7 @@ import androidx.navigation.compose.*
 
 val LocalWindowSizeClass = staticCompositionLocalOf<WindowSizeClass?> { null }
 val LocalAppLanguage = compositionLocalOf { mutableStateOf(AppLanguage.ENGLISH) }
+val LocalProfileImage = compositionLocalOf { mutableStateOf<Uri?>(null) }
 
 @Composable
 fun AppNavigation(navController: NavHostController) {
@@ -1039,6 +1044,7 @@ fun CoordinatorDashboard(navController: NavHostController) {
 @Composable
 fun DashboardHeader(name: String, role: String, onNotificationClick: () -> Unit = {}, hasNotifications: Boolean = false, onProfileClick: () -> Unit = {}) {
     val languageState = LocalAppLanguage.current
+    val profileImageState = LocalProfileImage.current
     Surface(
         color = PrimaryGreen,
         modifier = Modifier.fillMaxWidth()
@@ -1057,12 +1063,21 @@ fun DashboardHeader(name: String, role: String, onNotificationClick: () -> Unit 
                 modifier = Modifier.size(64.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.Person,
-                        contentDescription = "Profile Settings",
-                        modifier = Modifier.size(40.dp),
-                        tint = Color.White
-                    )
+                    if (profileImageState.value != null) {
+                        AsyncImage(
+                            model = profileImageState.value,
+                            contentDescription = "Profile Settings",
+                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = "Profile Settings",
+                            modifier = Modifier.size(40.dp),
+                            tint = Color.White
+                        )
+                    }
                 }
             }
             
@@ -1401,6 +1416,13 @@ fun ProfileScreen(onLogout: () -> Unit, onBack: () -> Unit) {
     val backgroundColor = Color(0xFFF8F9F5)
     val languageState = LocalAppLanguage.current
     var showLanguagePicker by remember { mutableStateOf(false) }
+    
+    val profileImageState = LocalProfileImage.current
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        profileImageState.value = uri
+    }
 
     fun getLanguageName(lang: AppLanguage) = when(lang) {
         AppLanguage.HINDI -> "हिन्दी (HI)"
@@ -1449,16 +1471,25 @@ fun ProfileScreen(onLogout: () -> Unit, onBack: () -> Unit) {
                         border = BorderStroke(4.dp, Color.White.copy(alpha = 0.2f))
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.Person,
-                                contentDescription = null,
-                                modifier = Modifier.size(60.dp),
-                                tint = Color.White
-                            )
+                            if (profileImageState.value != null) {
+                                AsyncImage(
+                                    model = profileImageState.value,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(60.dp),
+                                    tint = Color.White
+                                )
+                            }
                         }
                     }
                     Surface(
-                        onClick = { /* Edit Photo */ },
+                        onClick = { imagePickerLauncher.launch("image/*") },
                         color = Color.White,
                         shape = CircleShape,
                         modifier = Modifier
@@ -1513,7 +1544,12 @@ fun ProfileScreen(onLogout: () -> Unit, onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(24.dp))
             
             ProfileInfoSection(languageState.value.getT("App Settings", "ऐप सेटिंग्स", "ଆପ୍ ସେଟିଙ୍ଗ୍ସ")) {
-                SettingsToggleItem(languageState.value.getT("Enable Notifications", "सूचनाएं सक्षम करें", "ବିଜ୍ଞପ୍ତି ସକ୍ଷମ କରନ୍ତୁ"), true) {}
+                var notificationsEnabled by remember { mutableStateOf(true) }
+                SettingsToggleItem(
+                    label = languageState.value.getT("Enable Notifications", "सूचनाएं सक्षम करें", "ବିଜ୍ଞପ୍ତି ସକ୍ଷମ କରନ୍ତୁ"),
+                    checked = notificationsEnabled,
+                    onCheckedChange = { notificationsEnabled = it }
+                )
                 Box {
                     SettingsClickItem(languageState.value.getT("Language", "भाषा", "ଭାଷା"), getLanguageName(languageState.value)) {
                         showLanguagePicker = true

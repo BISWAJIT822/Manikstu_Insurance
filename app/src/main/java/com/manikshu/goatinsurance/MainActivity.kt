@@ -22,11 +22,13 @@ class MainActivity : ComponentActivity() {
             val windowSizeClass = calculateWindowSizeClass(this)
             val navController = rememberNavController()
             val languageState = remember { mutableStateOf(AppLanguage.ENGLISH) }
+            val profileImageState = remember { mutableStateOf<android.net.Uri?>(null) }
 
             CommunityGoatTheme {
                 CompositionLocalProvider(
                     LocalWindowSizeClass provides windowSizeClass,
-                    LocalAppLanguage provides languageState
+                    LocalAppLanguage provides languageState,
+                    LocalProfileImage provides profileImageState
                 ) {
                     AppNavigation(navController)
                 }
