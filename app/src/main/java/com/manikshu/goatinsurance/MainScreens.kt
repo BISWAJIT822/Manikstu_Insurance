@@ -2281,7 +2281,19 @@ fun DidiBottomBar(navController: NavHostController) {
 fun FarmerBottomBar(navController: NavHostController) {
     val languageState = LocalAppLanguage.current
     NavigationBar(containerColor = Color.White) {
-        NavigationBarItem(selected = true, onClick = {}, icon = { Icon(Icons.Default.Home, null) }, label = { Text(languageState.value.getT("Home", "होम", "ମୁଖ୍ୟ ପୃଷ୍ଠା"), fontSize = 10.sp) })
+        NavigationBarItem(
+            selected = true, 
+            onClick = {}, 
+            icon = { Icon(Icons.Default.Home, null) }, 
+            label = { Text(languageState.value.getT("Home", "होम", "ମୁଖ୍ୟ ପୃଷ୍ଠା"), fontSize = 10.sp) },
+            colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = PrimaryBlue,
+                selectedTextColor = PrimaryBlue,
+                unselectedIconColor = Color.Gray,
+                unselectedTextColor = Color.Gray,
+                indicatorColor = Color.Transparent
+            )
+        )
         NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Pets, null) }, label = { Text(languageState.value.getT("My Goats", "मेरी बकरियां", "ମୋର ଛେଳି"), fontSize = 10.sp) })
         NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null) }, label = { Text(languageState.value.getT("Claims", "दावे", "ଦାବି"), fontSize = 10.sp) })
         NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.SupportAgent, null) }, label = { Text(languageState.value.getT("Help", "सहायता", "ସାହାଯ୍ୟ"), fontSize = 10.sp) })
