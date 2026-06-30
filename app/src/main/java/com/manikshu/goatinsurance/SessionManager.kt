@@ -15,15 +15,27 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class SessionManager(private val context: Context) {
     companion object {
         private val USER_ROLE_KEY = stringPreferencesKey("user_role")
+        private val USER_NAME_KEY = stringPreferencesKey("user_name")
+        private val VILLAGE_KEY = stringPreferencesKey("village")
         private val LANGUAGE_KEY = stringPreferencesKey("app_language")
         private val PROFILE_IMAGE_KEY = stringPreferencesKey("profile_image_uri")
         private val NOTIFICATIONS_ENABLED_KEY = androidx.datastore.preferences.core.booleanPreferencesKey("notifications_enabled")
     }
 
-    suspend fun saveSession(role: UserRole) {
+    suspend fun saveSession(role: UserRole, name: String? = null, village: String? = null) {
         context.dataStore.edit { preferences ->
             preferences[USER_ROLE_KEY] = role.name
+            name?.let { preferences[USER_NAME_KEY] = it }
+            village?.let { preferences[VILLAGE_KEY] = it }
         }
+    }
+
+    val userName: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[USER_NAME_KEY]
+    }
+
+    val village: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[VILLAGE_KEY]
     }
 
     val userRole: Flow<UserRole?> = context.dataStore.data.map { preferences ->
