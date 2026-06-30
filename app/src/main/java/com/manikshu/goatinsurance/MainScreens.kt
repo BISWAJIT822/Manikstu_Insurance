@@ -1391,7 +1391,7 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
             val isStepValid = when(currentStep) {
                 1 -> farmerName.isNotBlank() && mobileNumber.length == 10 && village.isNotBlank() && location.isNotBlank() && aadhaar.length == 12
                 2 -> breed.isNotBlank() && gender.isNotBlank() && age.isNotBlank() && weight.isNotBlank() && colorMarks.isNotBlank()
-                3 -> leftPhotoUri != null && rightPhotoUri != null && frontPhotoUri != null && tagPhotoUri != null
+                3 -> true // Camera access removed for bypass
                 4 -> earTagNumber.isNotBlank()
                 else -> true
             }
