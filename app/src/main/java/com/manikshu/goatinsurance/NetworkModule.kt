@@ -5,6 +5,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
+import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -16,31 +17,46 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    // Use 10.0.2.2 to access your PC's localhost from the Android Emulator
-    private const val BASE_URL = "http://10.0.2.2:8080/"
+    // BASE_URL comes from BuildConfig (see app/build.gradle.kts).
+    //  - adb reverse:   http://localhost:8000/   (default; run `adb reverse tcp:8000 tcp:8000`)
+    //  - emulator:      http://10.0.2.2:8000/
+    //  - localtunnel:   https://<your-subdomain>.loca.lt/
+    private val BASE_URL = BuildConfig.BASE_URL
 
     @Provides
     @Singleton
     fun provideJson(): Json = Json {
         ignoreUnknownKeys = true
         coerceInputValues = true
+        explicitNulls = false
+    }
+
+    /** Adds `Authorization: Bearer <token>` when a token is present. */
+    @Provides
+    @Singleton
+    fun provideAuthInterceptor(): Interceptor = Interceptor { chain ->
+        val token = AuthTokenHolder.token
+        val request = if (token.isNullOrBlank()) {
+            chain.request()
+        } else {
+            chain.request().newBuilder()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+        }
+        chain.proceed(request)
     }
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
+    fun provideOkHttpClient(authInterceptor: Interceptor): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+            else HttpLoggingInterceptor.Level.NONE
         }
         return OkHttpClient.Builder()
+            .addInterceptor(authInterceptor)
             .addInterceptor(logging)
             .build()
-    }
-
-    @Provides
-    @Singleton
-    fun provideApiService(retrofit: Retrofit): ApiService {
-        return retrofit.create(ApiService::class.java)
     }
 
     @Provides
@@ -53,4 +69,9 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()
     }
+
+    @Provides
+    @Singleton
+    fun provideApiService(retrofit: Retrofit): ApiService =
+        retrofit.create(ApiService::class.java)
 }

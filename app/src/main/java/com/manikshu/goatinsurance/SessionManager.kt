@@ -7,17 +7,34 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_session")
 
-class SessionManager(private val context: Context) {
+/**
+ * In-memory holder so the OkHttp interceptor can read the JWT synchronously.
+ * Kept in sync with DataStore by SessionManager.
+ */
+object AuthTokenHolder {
+    @Volatile
+    var token: String? = null
+}
+
+@Singleton
+class SessionManager @Inject constructor(@ApplicationContext private val context: Context) {
     companion object {
         private val USER_ROLE_KEY = stringPreferencesKey("user_role")
         private val LANGUAGE_KEY = stringPreferencesKey("app_language")
         private val PROFILE_IMAGE_KEY = stringPreferencesKey("profile_image_uri")
         private val NOTIFICATIONS_ENABLED_KEY = androidx.datastore.preferences.core.booleanPreferencesKey("notifications_enabled")
+        private val AUTH_TOKEN_KEY = stringPreferencesKey("auth_token")
+        private val USER_NAME_KEY = stringPreferencesKey("user_name")
+        private val USER_MOBILE_KEY = stringPreferencesKey("user_mobile")
     }
 
     suspend fun saveSession(role: UserRole) {
@@ -29,6 +46,29 @@ class SessionManager(private val context: Context) {
     val userRole: Flow<UserRole?> = context.dataStore.data.map { preferences ->
         preferences[USER_ROLE_KEY]?.let { UserRole.valueOf(it) }
     }
+
+    // ---- auth token ----
+    suspend fun saveAuthToken(token: String) {
+        AuthTokenHolder.token = token
+        context.dataStore.edit { it[AUTH_TOKEN_KEY] = token }
+    }
+
+    val authToken: Flow<String?> = context.dataStore.data.map { it[AUTH_TOKEN_KEY] }
+
+    /** Call on app start to repopulate the in-memory token from disk. */
+    suspend fun loadTokenIntoMemory() {
+        AuthTokenHolder.token = context.dataStore.data.map { it[AUTH_TOKEN_KEY] }.first()
+    }
+
+    suspend fun saveUserInfo(name: String, mobile: String) {
+        context.dataStore.edit {
+            it[USER_NAME_KEY] = name
+            it[USER_MOBILE_KEY] = mobile
+        }
+    }
+
+    val userName: Flow<String?> = context.dataStore.data.map { it[USER_NAME_KEY] }
+    val userMobile: Flow<String?> = context.dataStore.data.map { it[USER_MOBILE_KEY] }
 
     suspend fun saveLanguage(language: AppLanguage) {
         context.dataStore.edit { preferences ->
@@ -65,11 +105,13 @@ class SessionManager(private val context: Context) {
     }
 
     suspend fun clearSession() {
+        AuthTokenHolder.token = null
         context.dataStore.edit { preferences ->
             preferences.remove(USER_ROLE_KEY)
-            preferences.remove(LANGUAGE_KEY)
             preferences.remove(PROFILE_IMAGE_KEY)
-            preferences.remove(NOTIFICATIONS_ENABLED_KEY)
+            preferences.remove(AUTH_TOKEN_KEY)
+            preferences.remove(USER_NAME_KEY)
+            preferences.remove(USER_MOBILE_KEY)
         }
     }
 }

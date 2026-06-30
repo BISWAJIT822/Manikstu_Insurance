@@ -1,38 +1,161 @@
 package com.manikshu.goatinsurance
 
-import okhttp3.MultipartBody
 import retrofit2.http.*
 
 interface ApiService {
-    @POST("/auth/send-otp")
-    suspend fun sendOtp(@Body request: OtpRequest): GenericResponse
 
-    @POST("/auth/verify-otp")
-    suspend fun verifyOtp(@Body request: VerifyOtpRequest): AuthResponse
+    // ----------------- GENERAL / auth -----------------
+    @GET("auth/request_otp")
+    suspend fun requestOtp(
+        @Query("mobile_number") mobile: String,
+        @Query("role") role: String,
+    ): OtpResponse
 
-    @GET("/dashboard/{role}/stats")
-    suspend fun getStats(@Path("role") role: String): DashboardStats
+    @GET("auth/verify_login")
+    suspend fun verifyLogin(
+        @Query("mobile_number") mobile: String,
+        @Query("role") role: String,
+        @Query("otp") otp: String,
+    ): LoginResponse
 
-    @POST("/enrollment/start")
-    suspend fun startEnrollment(): EnrollmentDraftResponse
+    @GET("auth/request_otp_signup")
+    suspend fun requestOtpSignup(
+        @Query("full_name") fullName: String,
+        @Query("mobile_number") mobile: String,
+        @Query("role") role: String,
+    ): OtpResponse
 
-    @GET("/goats")
-    suspend fun getGoats(@Query("search") search: String? = null): List<Goat>
+    @POST("auth/verify_signup")
+    suspend fun verifySignup(@Body body: VerifySignupRequest): StatusResponse
 
-    @POST("/claims/death")
-    suspend fun reportDeath(@Body claim: ClaimRequest): GenericResponse
+    @GET("auth/profile")
+    suspend fun profile(): ProfileResponse
+
+    @GET("auth/logout")
+    suspend fun logout(): StatusResponse
+
+    // ----------------- ADMIN -----------------
+    @GET("admin/overview")
+    suspend fun adminOverview(): AdminOverview
+
+    @GET("admin/users")
+    suspend fun listUsers(
+        @Query("role") role: String? = null,
+        @Query("is_approved") isApproved: Boolean? = null,
+        @Query("is_active") isActive: Boolean? = null,
+        @Query("search") search: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("page_size") pageSize: Int = 20,
+    ): UserListResponse
+
+    @GET("admin/users/{id}")
+    suspend fun userDetail(@Path("id") id: Int): UserDto
+
+    @POST("admin/users/{id}/approve")
+    suspend fun approveUser(@Path("id") id: Int): StatusResponse
+
+    @POST("admin/users/{id}/reject")
+    suspend fun rejectUser(@Path("id") id: Int): StatusResponse
+
+    @POST("admin/users/{id}/activate")
+    suspend fun activateUser(@Path("id") id: Int): StatusResponse
+
+    @POST("admin/users/{id}/deactivate")
+    suspend fun deactivateUser(@Path("id") id: Int): StatusResponse
+
+    // ----------------- SURAKSHA DIDI -----------------
+    @GET("sd/profile")
+    suspend fun sdProfile(): ProfileResponse
+
+    @GET("sd/dashboard")
+    suspend fun sdDashboard(): SdDashboard
+
+    @POST("sd/enroll_goat")
+    suspend fun enrollGoat(@Body body: EnrollGoatRequest): EnrollGoatResponse
+
+    @GET("sd/goats")
+    suspend fun sdGoats(
+        @Query("tab") tab: String = "all",
+        @Query("search") search: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("page_size") pageSize: Int = 20,
+    ): GoatListResponse
+
+    @GET("sd/goats/{id}")
+    suspend fun sdGoatDetail(@Path("id") id: Int): Map<String, kotlinx.serialization.json.JsonElement>
+
+    @GET("sd/vaccinations")
+    suspend fun sdVaccinations(@Query("filter") filter: String = "all"): VaccinationListResponse
+
+    @POST("sd/record_vaccination")
+    suspend fun recordVaccination(@Body body: RecordVaccinationRequest): StatusResponse
+
+    @POST("sd/report_mortality")
+    suspend fun reportMortality(@Body body: ReportMortalityRequest): MortalityIdResponse
+
+    @POST("sd/upload_mortality_photos")
+    suspend fun uploadMortalityPhotos(@Body body: UploadMortalityPhotosRequest): StatusResponse
+
+    @GET("sd/mortality/{id}/progress")
+    suspend fun mortalityProgress(@Path("id") id: Int): MortalityProgress
+
+    @POST("sd/ai_assistant")
+    suspend fun aiAssistant(@Body body: AiAssistantRequest): AiAssistantResponse
+
+    // ----------------- FARMER -----------------
+    @GET("farmer/profile")
+    suspend fun farmerProfile(): ProfileResponse
+
+    @GET("farmer/policies")
+    suspend fun farmerPolicies(): MyPoliciesResponse
+
+    @GET("farmer/policies/{policyNumber}")
+    suspend fun farmerPolicyDetail(@Path("policyNumber") policyNumber: String): Map<String, kotlinx.serialization.json.JsonElement>
+
+    @POST("farmer/report_death")
+    suspend fun farmerReportDeath(@Body body: ReportDeathRequest): StatusResponse
+
+    @GET("farmer/vaccination_schedule")
+    suspend fun farmerVaccinationSchedule(
+        @Query("goat_id") goatId: Int? = null,
+    ): List<VaccinationScheduleItem>
+
+    // ----------------- COORDINATOR -----------------
+    @GET("coordinator/profile")
+    suspend fun coProfile(): ProfileResponse
+
+    @GET("coordinator/dashboard")
+    suspend fun coDashboard(): CoDashboard
+
+    @GET("coordinator/live_activity")
+    suspend fun coLiveActivity(
+        @Query("page") page: Int = 1,
+        @Query("page_size") pageSize: Int = 20,
+    ): List<ActivityItem>
+
+    @GET("coordinator/cluster_map")
+    suspend fun coClusterMap(@Query("block") block: String? = null): List<ClusterDto>
+
+    @GET("coordinator/claims")
+    suspend fun coClaims(
+        @Query("status") status: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("page_size") pageSize: Int = 20,
+    ): ClaimListResponse
+
+    @GET("coordinator/claims/{claimNumber}")
+    suspend fun coClaimReview(@Path("claimNumber") claimNumber: String): Map<String, kotlinx.serialization.json.JsonElement>
+
+    @POST("coordinator/review_claim")
+    suspend fun reviewClaim(@Body body: ReviewClaimRequest): StatusResponse
+
+    @GET("coordinator/reports")
+    suspend fun coReports(
+        @Query("date_from") dateFrom: String? = null,
+        @Query("date_to") dateTo: String? = null,
+        @Query("tab") tab: String = "summary",
+    ): ReportsResponse
+
+    @GET("coordinator/team")
+    suspend fun coTeam(): TeamListResponse
 }
-
-data class OtpRequest(val phone: String, val role: String)
-data class VerifyOtpRequest(val phone: String, val otp: String, val role: String)
-data class AuthResponse(val accessToken: String, val refreshToken: String, val user: User)
-data class GenericResponse(val success: Boolean, val message: String)
-data class EnrollmentDraftResponse(val draftId: String)
-data class ClaimRequest(
-    val goatId: String,
-    val dateOfDeath: String,
-    val cause: String,
-    val latitude: Double,
-    val longitude: Double,
-    val photos: List<String>
-)

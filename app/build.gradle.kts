@@ -21,11 +21,26 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Backend base URL. Override per build type below.
+    //  - adb reverse (USB device): http://localhost:8000/  -> run `adb reverse tcp:8000 tcp:8000`
+    //  - emulator:                 http://10.0.2.2:8000/
+    //  - localtunnel (any network):https://<subdomain>.loca.lt/
     buildTypes {
+        debug {
+            buildConfigField("String", "BASE_URL", "\"https://violet-monkeys-warn.loca.lt/\"")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            buildConfigField("String", "BASE_URL", "\"https://violet-monkeys-warn.loca.lt/\"")
         }
+    }
+
+    buildFeatures {
+
+
+        buildConfig = true
+        compose = true
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

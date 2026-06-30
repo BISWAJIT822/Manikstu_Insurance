@@ -24,8 +24,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this)
             val navController = rememberNavController()
-            val sessionManager = remember { SessionManager(this) }
-            
+            val sessionManager = remember { SessionManager(applicationContext) }
+
+            // Restore JWT into memory so authenticated calls work after restart
+            LaunchedEffect(Unit) { sessionManager.loadTokenIntoMemory() }
+
             val savedLanguage by sessionManager.appLanguage.collectAsState(initial = AppLanguage.ENGLISH)
             val savedProfileImage by sessionManager.profileImageUri.collectAsState(initial = null)
             val savedNotificationsEnabled by sessionManager.notificationsEnabled.collectAsState(initial = true)

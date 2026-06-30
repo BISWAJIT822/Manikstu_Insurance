@@ -7,7 +7,6 @@ import androidx.compose.ui.graphics.Color
 
 val PrimaryGreen = Color(0xFF1B6B3A)
 val DarkGreen = Color(0xFF0D4A26)
-val PrimaryBlue = Color(0xFF1565C0)
 val AccentOrange = Color(0xFFFF6B35)
 val InfoBlue = Color(0xFF4A90E2)
 val SuccessGreen = Color(0xFF28A745)
