@@ -20,7 +20,7 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             _authState.value = AuthState.Loading
             try {
-                repository.sendOtp(phone, role.name)
+                repository.requestOtp(phone, role.name)
                 _authState.value = AuthState.OtpSent
             } catch (e: Exception) {
                 _authState.value = AuthState.Error(e.message ?: "Failed to send OTP")
@@ -32,7 +32,10 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             _authState.value = AuthState.Loading
             try {
-                repository.verifyOtp(phone, otp, role.name)
+                val response = repository.verifyLogin(phone, role.name, otp)
+                if (response.token != null) {
+                    AuthTokenHolder.token = response.token
+                }
                 _authState.value = AuthState.Authenticated(role)
             } catch (e: Exception) {
                 _authState.value = AuthState.Error(e.message ?: "Invalid OTP")

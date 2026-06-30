@@ -56,6 +56,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
 import androidx.compose.ui.Alignment
@@ -65,6 +66,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 
 
 import androidx.compose.ui.text.buildAnnotatedString
@@ -140,15 +143,16 @@ fun AppNavigation(navController: NavHostController, sessionManager: SessionManag
             )
         }
         composable("setup_profile/{role}/{name}/{phone}") { backStackEntry ->
-            val role = UserRole.valueOf(backStackEntry.arguments?.getString("role") ?: UserRole.FARMER.name)
+            val roleStr = backStackEntry.arguments?.getString("role") ?: UserRole.FARMER.name
+            val role = try { UserRole.valueOf(roleStr) } catch(e: Exception) { UserRole.FARMER }
             val name = backStackEntry.arguments?.getString("name") ?: ""
             val phone = backStackEntry.arguments?.getString("phone") ?: ""
             SetupProfileScreen(
                 role = role,
                 initialName = name,
                 initialPhone = phone,
-                onComplete = { selectedRole, name, village ->
-                    scope.launch { sessionManager.saveSession(selectedRole, name, village) }
+                onComplete = { selectedRole, name, location ->
+                    scope.launch { sessionManager.saveSession(selectedRole, name, location) }
                     val route = when(selectedRole) {
                         UserRole.SURAKSHA_DIDI -> "didi_dashboard"
                         UserRole.FARMER -> "farmer_dashboard"
@@ -162,6 +166,9 @@ fun AppNavigation(navController: NavHostController, sessionManager: SessionManag
         composable("didi_dashboard") { DidiDashboard(navController, sessionManager) }
         composable("farmer_dashboard") { FarmerDashboard(navController, sessionManager) }
         composable("coordinator_dashboard") { CoordinatorDashboard(navController, sessionManager) }
+        composable("cluster_map") { ClusterMapScreen(navController) }
+        composable("activity_report") { ActivityReportScreen(navController) }
+        composable("coordinator_reports") { CoordinatorReportsScreen(navController) }
         composable("enrollment") { 
             EnrollmentStepper(
                 onBack = { navController.popBackStack() },
@@ -1503,18 +1510,19 @@ fun EnrollmentPhotoStep(
         return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     }
 
-    var tempUri by remember { mutableStateOf<Uri?>(null) }
-    var captureType by remember { mutableStateOf("") }
+    var tempUriStr by rememberSaveable { mutableStateOf<String?>(null) }
+    var captureType by rememberSaveable { mutableStateOf("") }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
-        if (success && tempUri != null) {
+        if (success && tempUriStr != null) {
+            val uri = Uri.parse(tempUriStr)
             when (captureType) {
-                "left" -> onLeftCapture(tempUri!!)
-                "right" -> onRightCapture(tempUri!!)
-                "front" -> onFrontCapture(tempUri!!)
-                "tag" -> onTagCapture(tempUri!!)
+                "left" -> onLeftCapture(uri)
+                "right" -> onRightCapture(uri)
+                "front" -> onFrontCapture(uri)
+                "tag" -> onTagCapture(uri)
             }
         }
     }
@@ -1523,7 +1531,7 @@ fun EnrollmentPhotoStep(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            tempUri?.let { cameraLauncher.launch(it) }
+            tempUriStr?.let { cameraLauncher.launch(Uri.parse(it)) }
         } else {
             Toast.makeText(context, languageState.value.getT("Camera permission required", "कैमरा अनुमति आवश्यक है", "କ୍ୟାମେରା ଅନୁମତି ଆବଶ୍ୟକ"), Toast.LENGTH_SHORT).show()
         }
@@ -1532,8 +1540,12 @@ fun EnrollmentPhotoStep(
     fun launchCamera(type: String) {
         captureType = type
         val uri = createTempUri(type)
-        tempUri = uri
-        permissionLauncher.launch(android.Manifest.permission.CAMERA)
+        tempUriStr = uri.toString()
+        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            cameraLauncher.launch(uri)
+        } else {
+            permissionLauncher.launch(android.Manifest.permission.CAMERA)
+        }
     }
 
     Column {
@@ -2328,43 +2340,6 @@ fun FarmerHeader(name: String, role: String, onNotificationClick: () -> Unit = {
 }
 
 
-@Composable
-fun CoordinatorDashboard(navController: NavHostController, sessionManager: SessionManager) {
-    var showNotifications by remember { mutableStateOf(false) }
-    if (showNotifications) NotificationSheet(themeColor = PrimaryGreen) { showNotifications = false }
-    val languageState = LocalAppLanguage.current
-    val userName by sessionManager.userName.collectAsState(initial = "Cluster Coordinator")
-
-    Scaffold(
-        modifier = Modifier.fillMaxSize().navigationBarsPadding(),
-        contentWindowInsets = WindowInsets(0, 0, 0, 0)
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(bottom = padding.calculateBottomPadding())
-                .fillMaxSize()
-                .background(Color(0xFFF8F9F5))
-        ) {
-            DashboardHeader(
-                userName ?: "Cluster Coordinator",
-                languageState.value.getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ"),
-                onNotificationClick = { showNotifications = true },
-            )
-
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 300.dp),
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                item { StatCard(languageState.value.getT("Pending Approvals", "लंबित स्वीकृतियां", "ବାକି ରହିଥିବା ଅନୁମୋଦନ"), "14", Icons.Default.Gavel, PrimaryGreen, CardLightGreen) }
-                item { StatCard(languageState.value.getT("Corpus Fund", "कॉर्पस फंड", "କର୍ପସ ପାଣ୍ଠି"), "₹85,000", Icons.Default.AccountBalance, InfoBlue, CardLightBlue) }
-                item { StatCard(languageState.value.getT("Mortality Rate", "मृत्यु दर", "ମୃତ୍ୟୁ ହାର"), "2.4%", Icons.AutoMirrored.Filled.TrendingUp, ErrorRed, CardLightRed) }
-            }
-        }
-    }
-}
 
 @Composable
 fun DashboardHeader(name: String, role: String, onNotificationClick: () -> Unit = {}, hasNotifications: Boolean = false, onProfileClick: () -> Unit = {}) {
@@ -2913,11 +2888,17 @@ fun ProfileScreen(userRole: UserRole?, sessionManager: SessionManager, onLogout:
     val savedVillage by sessionManager.village.collectAsState(initial = null)
 
     val isFarmer = userRole == UserRole.FARMER
-    val themeColor = if (isFarmer) PrimaryBlue else PrimaryGreen
-    val userName = savedName ?: if (isFarmer) 
-        languageState.value.getT("Ramesh Naik", "रमेश नायक", "ରମେଶ ନାୟକ") 
-    else 
-        languageState.value.getT("Sushma Didi", "सुषमा दीदी", "ସୁଷମା ଦିଦି")
+    val isCoordinator = userRole == UserRole.COORDINATOR
+    val themeColor = when(userRole) {
+        UserRole.FARMER -> PrimaryBlue
+        UserRole.COORDINATOR -> CoordinatorOrange
+        else -> PrimaryGreen
+    }
+    val userName = savedName ?: when {
+        isFarmer -> languageState.value.getT("Ramesh Naik", "रमेश नायक", "ରମେଶ ନାୟକ")
+        isCoordinator -> languageState.value.getT("lalu", "लालू", "ଲାଲୁ")
+        else -> languageState.value.getT("Sushma Didi", "सुषमा दीदी", "ସୁସମା ଦିଦି")
+    }
     
     val roleLabel = when(userRole) {
         UserRole.FARMER -> languageState.value.getT("Farmer", "किसान", "କୃଷକ")
@@ -3041,7 +3022,7 @@ fun ProfileScreen(userRole: UserRole?, sessionManager: SessionManager, onLogout:
                     color = Color.White
                 )
                 Text(
-                    if (isFarmer) "+91 94370 12345" else "+91 98765 43210",
+                    if (isFarmer) "+91 94370 12345" else if (isCoordinator) "+91 99999 88888" else "+91 98765 43210",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.8f)
                 )
@@ -3065,11 +3046,12 @@ fun ProfileScreen(userRole: UserRole?, sessionManager: SessionManager, onLogout:
                     roleLabel
                 )
                 ProfileInfoItem(
-                    languageState.value.getT("Village", "गाँव", "ଗ୍ରାମ"),
-                    savedVillage ?: if (isFarmer)
-                        languageState.value.getT("Pipili, Odisha", "पिपिली, ओडिशा", "ପିପିଲି, ଓଡ଼ିଶା")
-                    else
-                        languageState.value.getT("Gopalpur, Odisha", "गोपालपुर, ओडिशा", "ଗୋପାଳପୁର, ଓଡ଼ିଶା")
+                    languageState.value.getT("Location", "स्थान", "ଅବସ୍ଥାନ"),
+                    savedVillage ?: when {
+                        isFarmer -> languageState.value.getT("Pipili, Odisha", "पिपिली, ओडिशा", "ପିପିଲି, ଓଡ଼ିଶା")
+                        isCoordinator -> languageState.value.getT("Bhubaneswar, Odisha", "भुवनेश्वर, ओडिशा", "ଭୁବନେଶ୍ୱର, ଓଡ଼ିଶା")
+                        else -> languageState.value.getT("Gopalpur, Odisha", "गोपालपुर, ओडिशा", "ଗୋପାଳପୁର, ଓଡ଼ିଶା")
+                    }
                 )
             }
             
@@ -4225,7 +4207,16 @@ fun SetupProfileScreen(
     var aadhaarNumber by remember { mutableStateOf("") }
     var aadhaarPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
-    val themeColor = if (role == UserRole.FARMER) PrimaryBlue else PrimaryGreen
+    val themeColor = when(role) {
+        UserRole.FARMER -> PrimaryBlue
+        UserRole.COORDINATOR -> CoordinatorOrange
+        else -> PrimaryGreen
+    }
+
+    val locationLabel = if (role == UserRole.COORDINATOR) 
+        languageState.value.getT("Location *", "स्थान *", "ଅବସ୍ଥାନ *")
+    else 
+        languageState.value.getT("Village *", "गाँव *", "ଗ୍ରାମ *")
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -4353,40 +4344,15 @@ fun SetupProfileScreen(
 
             // Section 2: Location
             ProfileSetupSection(languageState.value.getT("Location", "स्थान", "ଅବସ୍ଥାନ"), themeColor) {
-                EnrollmentDropdownField(
-                    label = languageState.value.getT("State *", "राज्य *", "ରାଜ୍ୟ *"),
-                    selectedValue = state,
-                    options = listOf("Odisha", "West Bengal", "Bihar", "Jharkhand", "Chhattisgarh"),
-                    onValueChange = { state = it },
-                    borderColor = themeColor
-                )
+                EnrollmentTextField(label = languageState.value.getT("State *", "राज्य *", "ରାଜ୍ୟ *"), value = state, onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) state = it }, borderColor = themeColor)
                 Spacer(modifier = Modifier.height(12.dp))
-                EnrollmentDropdownField(
-                    label = languageState.value.getT("District *", "जिला *", "ଜିଲ୍ଲା *"),
-                    selectedValue = district,
-                    options = listOf("Khordha", "Cuttack", "Puri", "Baleswar", "Ganjam", "Sambalpur"),
-                    onValueChange = { district = it },
-                    borderColor = themeColor
-                )
+                EnrollmentTextField(label = languageState.value.getT("District *", "जिला *", "ଜିଲ୍ଲା *"), value = district, onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) district = it }, borderColor = themeColor)
                 Spacer(modifier = Modifier.height(12.dp))
-                EnrollmentDropdownField(
-                    label = languageState.value.getT("Block *", "ब्लॉक *", "ବ୍ଲକ *"),
-                    selectedValue = block,
-                    options = listOf("Pipili", "Balianta", "Nimapada", "Delanga", "Bhubaneswar"),
-                    onValueChange = { block = it },
-                    borderColor = themeColor
-                )
+                EnrollmentTextField(label = languageState.value.getT("Block *", "ब्लॉक *", "ବ୍ଲକ *"), value = block, onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) block = it }, borderColor = themeColor)
                 Spacer(modifier = Modifier.height(12.dp))
-                EnrollmentTextField(label = languageState.value.getT("Village *", "गाँव *", "ଗ୍ରାମ *"), value = village, onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) village = it }, borderColor = themeColor)
+                EnrollmentTextField(label = locationLabel, value = village, onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) village = it }, borderColor = themeColor)
                 Spacer(modifier = Modifier.height(12.dp))
-                EnrollmentTextField(
-                    label = languageState.value.getT("Pincode *", "पिनकोड *", "ପିନକୋଡ୍ *"), 
-                    value = pincode, 
-                    onValueChange = { if(it.length <= 6 && it.all { char -> char.isDigit() }) pincode = it }, 
-                    keyboardType = KeyboardType.Number, 
-                    borderColor = themeColor,
-                    trailingIcon = if (pincode.length == 6) Icons.Default.CheckCircle else null
-                )
+                EnrollmentTextField(label = languageState.value.getT("Pincode *", "पिनकोड *", "ପିନକୋଡ୍ *"), value = pincode, onValueChange = { if(it.length <= 6) pincode = it }, keyboardType = KeyboardType.Number, borderColor = themeColor)
             }
 
             Spacer(modifier = Modifier.height(24.dp))

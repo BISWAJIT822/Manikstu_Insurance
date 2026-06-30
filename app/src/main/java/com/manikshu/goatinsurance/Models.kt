@@ -109,3 +109,98 @@ data class DashboardStats(
     val pendingClaims: Int,
     val upcomingVaccinations: Int
 )
+
+@Serializable
+data class OtpResponse(val status: String, val message: String)
+
+@Serializable
+data class LoginResponse(val status: String, val message: String, val token: String? = null)
+
+@Serializable
+data class VerifySignupRequest(
+    val fullName: String,
+    val mobile: String,
+    val role: String,
+    val otp: String
+)
+
+@Serializable
+data class StatusResponse(val status: String, val message: String)
+
+@Serializable
+data class ProfileResponse(val status: String, val profile: UserDto)
+
+@Serializable
+data class AdminOverview(val totalUsers: Int, val pendingApprovals: Int)
+
+@Serializable
+data class UserListResponse(val users: List<UserDto>)
+
+@Serializable
+data class UserDto(val id: Int, val fullName: String, val role: String)
+
+@Serializable
+data class SdDashboard(val totalEnrollments: Int)
+
+@Serializable
+data class EnrollGoatRequest(val farmerName: String, val mobileNumber: String)
+
+@Serializable
+data class EnrollGoatResponse(val status: String, val goatId: Int)
+
+@Serializable
+data class GoatListResponse(val goats: List<Goat>)
+
+@Serializable
+data class VaccinationListResponse(val vaccinations: List<Vaccination>)
+
+@Serializable
+data class RecordVaccinationRequest(val goatId: Int, val vaccinationType: String)
+
+@Serializable
+data class ReportMortalityRequest(val goatId: Int, val cause: String)
+
+@Serializable
+data class MortalityIdResponse(val mortalityId: Int)
+
+@Serializable
+data class UploadMortalityPhotosRequest(val mortalityId: Int, val photos: List<String>)
+
+@Serializable
+data class MortalityProgress(val status: String)
+
+@Serializable
+data class AiAssistantRequest(val topic: String, val message: String)
+
+@Serializable
+data class AiAssistantResponse(val reply: String)
+
+@Serializable
+data class MyPoliciesResponse(val policies: List<Policy>)
+
+@Serializable
+data class ReportDeathRequest(val policyNumber: String, val reason: String)
+
+@Serializable
+data class VaccinationScheduleItem(val goatId: Int, val vaccineName: String, val date: String)
+
+@Serializable
+data class CoDashboard(val activeClaims: Int)
+
+@Serializable
+data class ActivityItem(val id: Int, val title: String)
+
+@Serializable
+data class ClusterDto(val id: Int, val name: String)
+
+@Serializable
+data class ClaimListResponse(val claims: List<Claim>)
+
+@Serializable
+data class ReviewClaimRequest(val claimNumber: String, val status: String)
+
+@Serializable
+data class ReportsResponse(val data: String)
+
+@Serializable
+data class TeamListResponse(val members: List<UserDto>)

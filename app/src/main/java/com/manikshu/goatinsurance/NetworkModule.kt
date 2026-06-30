@@ -13,6 +13,10 @@ import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import javax.inject.Singleton
 
+object AuthTokenHolder {
+    var token: String? = null
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {

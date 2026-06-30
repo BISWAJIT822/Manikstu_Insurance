@@ -1,0 +1,1208 @@
+package com.manikshu.goatinsurance
+
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
+
+val CoordinatorOrange = Color(0xFFFF7043)
+val CoordinatorLightOrange = Color(0xFFFFF3E0)
+
+@Composable
+fun CoordinatorDashboard(navController: NavHostController, sessionManager: SessionManager) {
+    val languageState = LocalAppLanguage.current
+    val userName by sessionManager.userName.collectAsState(initial = "lalu")
+    
+    Scaffold(
+        bottomBar = { CoordinatorBottomBar(navController) },
+        containerColor = Color(0xFFF8F9FB),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            CoordinatorHeader(
+                userName ?: "lalu",
+                languageState.value.getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ"),
+                onProfileClick = { navController.navigate("profile") }
+            )
+
+            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                // Stat Cards Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    CoordinatorStatCard(
+                        modifier = Modifier.weight(1f),
+                        label = languageState.value.getT("Active Policies", "सक्रिय नीतियां", "ସକ୍ରିୟ ନୀତି"),
+                        value = "1,256",
+                        trend = "+4%",
+                        trendColor = SuccessGreen,
+                        icon = Icons.Default.Security,
+                        points = listOf(0.2f, 0.4f, 0.3f, 0.6f, 0.5f, 0.8f)
+                    )
+                    CoordinatorStatCard(
+                        modifier = Modifier.weight(1f),
+                        label = languageState.value.getT("Claims Today", "आज के दावे", "ଆଜିର ଦାବି"),
+                        value = "18",
+                        trend = "+12%",
+                        trendColor = SuccessGreen,
+                        icon = Icons.Default.Assignment,
+                        points = listOf(0.1f, 0.2f, 0.5f, 0.4f, 0.7f, 0.9f)
+                    )
+                    CoordinatorStatCard(
+                        modifier = Modifier.weight(1f),
+                        label = languageState.value.getT("Mortality", "मृत्यु दर", "ମୃତ୍ୟୁ ହାର"),
+                        value = "2.35%",
+                        trend = "-5%",
+                        trendColor = Color.Red,
+                        icon = Icons.Default.Assessment,
+                        points = listOf(0.8f, 0.7f, 0.9f, 0.6f, 0.4f, 0.2f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                PerformanceOverviewCard(languageState.value)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                LiveActivitySection(navController, languageState.value)
+                
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun CoordinatorHeader(name: String, role: String, onProfileClick: () -> Unit) {
+    val languageState = LocalAppLanguage.current
+    Surface(
+        color = CoordinatorOrange,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 56.dp, bottom = 28.dp, start = 20.dp, end = 20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                onClick = onProfileClick,
+                modifier = Modifier.size(72.dp),
+                shape = CircleShape,
+                color = Color.White
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Person, null, tint = Color.Gray, modifier = Modifier.size(40.dp))
+                }
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = languageState.value.getT("Hello,", "नमस्ते,", "ନମସ୍କାର,"),
+                    fontSize = 14.sp,
+                    color = Color.White.copy(alpha = 0.9f)
+                )
+                Text(
+                    text = "$name 👋",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = role,
+                    fontSize = 13.sp,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
+            }
+            
+            var expanded by remember { mutableStateOf(false) }
+            var selectedPeriod by remember { mutableStateOf("Today") }
+            
+            Box {
+                Surface(
+                    onClick = { expanded = true },
+                    color = Color.White.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = when(selectedPeriod) {
+                                "Today" -> languageState.value.getT("Today", "आज", "ଆଜି")
+                                "Weekly" -> languageState.value.getT("Weekly", "साप्ताहिक", "ସାପ୍ତାହିକ")
+                                "Monthly" -> languageState.value.getT("Monthly", "मासिक", "ମାସିକ")
+                                else -> selectedPeriod
+                            },
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Icon(Icons.Default.ArrowDropDown, null, tint = Color.White)
+                    }
+                }
+
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.background(Color.White)
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(languageState.value.getT("Today", "आज", "ଆଜି"), color = Color.Black) },
+                        onClick = {
+                            selectedPeriod = "Today"
+                            expanded = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(languageState.value.getT("Weekly", "साप्ताहिक", "ସାପ୍ତାହିକ"), color = Color.Black) },
+                        onClick = {
+                            selectedPeriod = "Weekly"
+                            expanded = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(languageState.value.getT("Monthly", "मासिक", "ମାସିକ"), color = Color.Black) },
+                        onClick = {
+                            selectedPeriod = "Monthly"
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CoordinatorStatCard(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: String,
+    trend: String,
+    trendColor: Color,
+    icon: ImageVector,
+    points: List<Float>
+) {
+    Card(
+        modifier = modifier.height(140.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    color = CoordinatorOrange.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(icon, null, tint = CoordinatorOrange, modifier = Modifier.size(18.dp))
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        if (trend.startsWith("+")) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                        null,
+                        tint = trendColor,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Text(trend, color = trendColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(label, fontSize = 11.sp, color = Color.Gray)
+            Text(value, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            Canvas(modifier = Modifier.fillMaxWidth().height(1.dp)) {
+                drawLine(
+                    color = if (label.contains("Active")) SuccessGreen else Color.Transparent,
+                    start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                    end = androidx.compose.ui.geometry.Offset(size.width * 0.7f, 0f),
+                    strokeWidth = 2.dp.toPx()
+                )
+            }
+            
+            Spacer(modifier = Modifier.weight(1f))
+            
+            Canvas(modifier = Modifier.fillMaxWidth().height(20.dp)) {
+                val path = Path()
+                points.forEachIndexed { index, point ->
+                    val x = index * size.width / (points.size - 1)
+                    val y = size.height * (1f - point)
+                    if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                }
+                drawPath(path, color = trendColor, style = Stroke(width = 2.dp.toPx()))
+            }
+        }
+    }
+}
+
+@Composable
+fun PerformanceOverviewCard(language: AppLanguage) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        language.getT("Performance Overview", "प्रदर्शन अवलोकन", "ପ୍ରଦର୍ଶନ ସମୀକ୍ଷା"),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                    Text(
+                        language.getT("Last 7 days activity", "पिछले 7 दिनों की गतिविधि", "ଗତ ୭ ଦିନର କାର୍ଯ୍ୟକଳାପ"),
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                }
+                Icon(Icons.Default.MoreVert, null, tint = Color.Gray)
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Bar Chart
+            Row(
+                modifier = Modifier.fillMaxWidth().height(150.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                val days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+                val heights = listOf(0.6f, 0.3f, 0.7f, 0.4f, 0.8f, 0.6f, 0.7f)
+                
+                days.forEachIndexed { index, day ->
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            modifier = Modifier
+                                .width(24.dp)
+                                .fillMaxHeight(heights[index])
+                                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                .background(CoordinatorOrange)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(day, fontSize = 10.sp, color = Color.Gray)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LiveActivitySection(navController: NavHostController, language: AppLanguage) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                language.getT("Live Activity", "लाइव गतिविधि", "ଲାଇଭ୍ କାର୍ଯ୍ୟକଳାପ"),
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+            Text(
+                language.getT("Recent", "हाल ही में", "ସାମ୍ପ୍ରତିକ"),
+                fontSize = 13.sp,
+                color = Color.Gray
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                LiveActivityItem(
+                    title = "Sushma Didi filed a claim",
+                    time = "2 mins ago",
+                    status = "Pending",
+                    statusColor = Color(0xFFFFB74D),
+                    icon = Icons.AutoMirrored.Filled.Assignment
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.LightGray.copy(alpha = 0.3f))
+                LiveActivityItem(
+                    title = "Laxmi Didi completed vaccination",
+                    time = "5 mins ago",
+                    status = "Success",
+                    statusColor = SuccessGreen,
+                    icon = Icons.Default.MedicalServices
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.LightGray.copy(alpha = 0.3f))
+                LiveActivityItem(
+                    title = "New enrollment by Sushma Didi",
+                    time = "10 mins ago",
+                    status = "New",
+                    statusColor = Color(0xFF4FC3F7),
+                    icon = Icons.Default.PersonAdd
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                OutlinedButton(
+                    onClick = { navController.navigate("activity_report") },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
+                ) {
+                    Text(
+                        language.getT("Full Activity Report", "पूर्ण गतिविधि रिपोर्ट", "ପୂର୍ଣ୍ଣ କାର୍ଯ୍ୟକଳାପ ରିପୋର୍ଟ"),
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ActivityReportScreen(navController: NavHostController) {
+    val languageState = LocalAppLanguage.current
+    
+    Scaffold(
+        topBar = {
+            Surface(
+                color = CoordinatorOrange,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                TopAppBar(
+                    title = { 
+                        Text(
+                            languageState.value.getT("Activity Report", "गतिविधि रिपोर्ट", "କାର୍ଯ୍ୟକଳାପ ରିପୋର୍ଟ"),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        ) 
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                    modifier = Modifier.statusBarsPadding()
+                )
+            }
+        },
+        containerColor = Color(0xFFF8F9FB),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+            
+            val reports = listOf(
+                Triple("Sushma Didi filed a claim", "2 mins ago", "Pending"),
+                Triple("Laxmi Didi completed vaccination", "5 mins ago", "Success"),
+                Triple("New enrollment by Sushma Didi", "10 mins ago", "New"),
+                Triple("Visit scheduled by Ramesh Didi", "1 hour ago", "Info"),
+                Triple("System maintenance update", "2 hours ago", "System"),
+                Triple("Claim #CLM1002 Approved", "5 hours ago", "Success"),
+                Triple("Farmer Ram added new goat", "Yesterday", "New"),
+                Triple("Vaccination batch #PPR-01 used", "Yesterday", "Info")
+            )
+
+            items(reports) { (title, time, status) ->
+                val statusColor = when(status) {
+                    "Pending" -> Color(0xFFFFB74D)
+                    "Success" -> SuccessGreen
+                    "New" -> Color(0xFF4FC3F7)
+                    "System" -> Color.Gray
+                    else -> Color.LightGray
+                }
+                
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    LiveActivityItem(
+                        title = title,
+                        time = time,
+                        status = status,
+                        statusColor = statusColor,
+                        icon = when(status) {
+                            "Pending" -> Icons.AutoMirrored.Filled.Assignment
+                            "Success" -> Icons.Default.CheckCircle
+                            "New" -> Icons.Default.PersonAdd
+                            else -> Icons.Default.Info
+                        }
+                    )
+                }
+            }
+            
+            item { Spacer(modifier = Modifier.height(24.dp)) }
+        }
+    }
+}
+
+@Composable
+fun LiveActivityItem(
+    title: String,
+    time: String,
+    status: String,
+    statusColor: Color,
+    icon: ImageVector
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            modifier = Modifier.size(44.dp),
+            shape = CircleShape,
+            color = Color(0xFFF5F5F5)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = Color.Gray, modifier = Modifier.size(22.dp))
+            }
+        }
+        
+        Spacer(modifier = Modifier.width(12.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title, 
+                fontSize = 15.sp, 
+                fontWeight = FontWeight.Bold, 
+                color = Color.Black,
+                lineHeight = 18.sp
+            )
+            Text(text = time, fontSize = 13.sp, color = Color.Gray)
+        }
+        
+        Spacer(modifier = Modifier.width(8.dp))
+        
+        Surface(
+            color = statusColor.copy(alpha = 0.1f),
+            shape = RoundedCornerShape(4.dp)
+        ) {
+            Text(
+                text = status,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                color = statusColor,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ClusterMapScreen(navController: NavHostController) {
+    val languageState = LocalAppLanguage.current
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedTab by remember { mutableIntStateOf(0) } // 0 for Map, 1 for List
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { 
+                    Text(
+                        languageState.value.getT("Cluster Map", "क्लस्टर मानचित्र", "କ୍ଲଷ୍ଟର ମାନଚିତ୍ର"),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    ) 
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = CoordinatorOrange)
+            )
+        },
+        bottomBar = { CoordinatorBottomBar(navController) },
+        containerColor = Color(0xFFF8F9FB)
+    ) { padding ->
+        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            // Search Bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                placeholder = { Text(languageState.value.getT("Search village or Didi", "गांव या दीदी खोजें", "ଗ୍ରାମ କିମ୍ବା ଦିଦି ଖୋଜନ୍ତୁ")) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f)
+                )
+            )
+
+            // Map/List Toggle
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFFEEEEEE))
+                    .padding(2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    onClick = { selectedTab = 0 },
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    color = if (selectedTab == 0) Color.White else Color.Transparent,
+                    shape = RoundedCornerShape(6.dp),
+                    shadowElevation = if (selectedTab == 0) 2.dp else 0.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            languageState.value.getT("Map", "मानचित्र", "ମାନଚିତ୍ର"),
+                            fontWeight = FontWeight.Bold,
+                            color = if (selectedTab == 0) Color.Black else Color.Gray,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+                Surface(
+                    onClick = { selectedTab = 1 },
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    color = if (selectedTab == 1) Color.White else Color.Transparent,
+                    shape = RoundedCornerShape(6.dp),
+                    shadowElevation = if (selectedTab == 1) 2.dp else 0.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            languageState.value.getT("List", "सूची", "ତାଲିକା"),
+                            fontWeight = FontWeight.Bold,
+                            color = if (selectedTab == 1) Color.Black else Color.Gray,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (selectedTab == 0) {
+                // Map View UI Placeholder (No interactive map integration)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .background(Color(0xFFE8F5E9)) // Light green background to simulate a map
+                ) {
+                    // Simulated Map Content (Grid lines and subtle variations)
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val strokeWidth = 1.dp.toPx()
+                        val color = Color.LightGray.copy(alpha = 0.2f)
+                        for (i in 1..10) {
+                            drawLine(color, androidx.compose.ui.geometry.Offset(i * size.width / 10, 0f), androidx.compose.ui.geometry.Offset(i * size.width / 10, size.height), strokeWidth)
+                            drawLine(color, androidx.compose.ui.geometry.Offset(0f, i * size.height / 10), androidx.compose.ui.geometry.Offset(size.width, i * size.height / 10), strokeWidth)
+                        }
+                    }
+
+                    // UI Designed Cluster Markers
+                    ClusterUI(Modifier.align(Alignment.Center).offset(x = (-80).dp, y = (-40).dp), "15", Color.Red)
+                    ClusterUI(Modifier.align(Alignment.Center).offset(x = 60.dp, y = (-100).dp), "8", Color(0xFF4CAF50))
+                    ClusterUI(Modifier.align(Alignment.Center).offset(x = 100.dp, y = 40.dp), "6", CoordinatorOrange)
+                    ClusterUI(Modifier.align(Alignment.Center).offset(x = (-40).dp, y = 80.dp), "3", Color(0xFF2196F3))
+                    ClusterUI(Modifier.align(Alignment.Center).offset(x = 0.dp, y = (-20).dp), "2", Color(0xFF8BC34A))
+
+                    // Legend Overlay
+                    Card(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 24.dp, start = 16.dp, end = 16.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            LegendItem(languageState.value.getT("High Claims", "उच्च दावे", "ଉଚ୍ଚ ଦାବି"), Color.Red)
+                            LegendItem(languageState.value.getT("Medium", "मध्यम", "ମଧ୍ୟମ"), CoordinatorOrange)
+                            LegendItem(languageState.value.getT("Low", "कम", "କମ"), Color(0xFF4CAF50))
+                        }
+                    }
+                }
+            } else {
+                // List View UI (Light Theme)
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .background(Color.White)
+                ) {
+                    val villages = listOf(
+                        "Village Pipili" to "Sushma Didi",
+                        "Village Balianta" to "Laxmi Didi",
+                        "Village Puri" to "Ramesh Didi",
+                        "Village Cuttack" to "Sita Didi",
+                        "Village Khorda" to "Gita Didi",
+                        "Village Nayagarh" to "Sunita Didi"
+                    )
+
+                    items(villages) { (village, didi) ->
+                        ListItem(
+                            modifier = Modifier.background(Color.White),
+                            headlineContent = { 
+                                Text(
+                                    village, 
+                                    fontWeight = FontWeight.Bold, 
+                                    color = Color.Black 
+                                ) 
+                            },
+                            supportingContent = { 
+                                Text(
+                                    "$didi • 5 Active Claims", 
+                                    color = Color.Gray 
+                                ) 
+                            },
+                            leadingContent = { 
+                                Surface(
+                                    color = CoordinatorOrange.copy(alpha = 0.1f),
+                                    shape = CircleShape,
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.LocationOn, 
+                                            null, 
+                                            tint = CoordinatorOrange,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            },
+                            trailingContent = { 
+                                Icon(
+                                    Icons.Default.ChevronRight, 
+                                    null, 
+                                    tint = Color.LightGray 
+                                ) 
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.White)
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp), 
+                            color = Color.LightGray.copy(alpha = 0.3f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ClusterUI(modifier: Modifier, count: String, color: Color) {
+    Box(
+        modifier = modifier
+            .size(50.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // Outer glow/ring
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            shape = CircleShape,
+            color = color.copy(alpha = 0.2f)
+        ) {}
+        
+        // Inner circle
+        Surface(
+            modifier = Modifier.size(34.dp),
+            shape = CircleShape,
+            color = color,
+            border = BorderStroke(2.dp, Color.White)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = count,
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun LegendItem(label: String, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(label, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CoordinatorReportsScreen(navController: NavHostController) {
+    val languageState = LocalAppLanguage.current
+    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedDateRange by remember { mutableStateOf("This Month") }
+    var showExportModal by remember { mutableStateOf(false) }
+
+    val tabs = listOf("Enrollment", "Vaccination", "Claims", "Financial", "Performance")
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { 
+                    Text(
+                        languageState.value.getT("Reports", "रिपोर्ट", "ରିପୋର୍ଟ"),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    ) 
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = CoordinatorOrange)
+            )
+        },
+        bottomBar = { CoordinatorBottomBar(navController) },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = { showExportModal = true },
+                containerColor = CoordinatorOrange,
+                contentColor = Color.White,
+                icon = { Icon(Icons.Default.FileDownload, null) },
+                text = { Text("Export Report") }
+            )
+        },
+        containerColor = Color(0xFFF8F9FB)
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Filters Section
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FilterDropdown(Modifier.weight(1f), "Date Range", selectedDateRange) { selectedDateRange = it }
+                    FilterDropdown(Modifier.weight(1f), "Region", "All Regions") {}
+                }
+                FilterDropdown(Modifier.fillMaxWidth(), "Suraksha Didi", "All Didis", isSearchable = true) {}
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Summary Cards
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ReportSummaryCard("Total Farmers", "856", "+12%", SuccessGreen, Icons.Default.People)
+                ReportSummaryCard("Goats Insured", "2,145", "+8%", SuccessGreen, Icons.Default.Pets)
+                ReportSummaryCard("Pending Claims", "14", "-5%", Color.Red, Icons.Default.Assignment)
+                ReportSummaryCard("Premium", "₹4.2L", "+15%", SuccessGreen, Icons.Default.Payments)
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Tabs
+            ScrollableTabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = Color.Transparent,
+                edgePadding = 16.dp,
+                divider = {},
+                indicator = { tabPositions ->
+                    if (selectedTab < tabPositions.size) {
+                        TabRowDefaults.SecondaryIndicator(
+                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                            color = CoordinatorOrange
+                        )
+                    }
+                }
+            ) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        text = { 
+                            Text(
+                                title, 
+                                color = if (selectedTab == index) CoordinatorOrange else Color.Gray,
+                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
+                            ) 
+                        }
+                    )
+                }
+            }
+
+            // Content Area per Tab
+            Column(modifier = Modifier.padding(16.dp)) {
+                // Chart Placeholder
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text("${tabs[selectedTab]} Breakup", fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        // Simple bar chart visualization using Canvas
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val data = listOf(0.4f, 0.7f, 0.5f, 0.9f, 0.3f, 0.8f)
+                            val barWidth = size.width / (data.size * 2)
+                            data.forEachIndexed { i, value ->
+                                drawRect(
+                                    color = CoordinatorOrange,
+                                    topLeft = androidx.compose.ui.geometry.Offset(i * barWidth * 2 + barWidth / 2, size.height * (1 - value)),
+                                    size = androidx.compose.ui.geometry.Size(barWidth, size.height * value)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // List Area
+                Text("Detailed Data", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                repeat(5) { i ->
+                    ReportDataItem(
+                        name = "Region ${'A' + i}",
+                        status = if (i % 2 == 0) "Completed" else "Pending",
+                        value = "${(i + 1) * 120}"
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Button(
+                    onClick = { /* Generate Custom */ },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = CoordinatorOrange),
+                    border = BorderStroke(1.dp, CoordinatorOrange),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Generate Custom Report", fontWeight = FontWeight.Bold)
+                }
+                
+                Spacer(modifier = Modifier.height(80.dp)) // Space for FAB
+            }
+        }
+    }
+
+    if (showExportModal) {
+        AlertDialog(
+            onDismissRequest = { showExportModal = false },
+            confirmButton = {
+                TextButton(onClick = { showExportModal = false }) { Text("Cancel") }
+            },
+            title = { Text("Export Report") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Select Format:")
+                    ExportOption("PDF Document", Icons.Default.PictureAsPdf) { showExportModal = false }
+                    ExportOption("Excel Spreadsheet", Icons.Default.Description) { showExportModal = false }
+                }
+            },
+            containerColor = Color.White
+        )
+    }
+}
+
+@Composable
+fun FilterDropdown(modifier: Modifier, label: String, value: String, isSearchable: Boolean = false, onSelect: (String) -> Unit = {}) {
+    var expanded by remember { mutableStateOf(false) }
+    Box(modifier = modifier) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(label) },
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
+            shape = RoundedCornerShape(8.dp),
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CoordinatorOrange)
+        )
+        Box(modifier = Modifier.matchParentSize().clickable { expanded = true })
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(Color.White)) {
+            val options = if (label == "Date Range") listOf("Today", "This Week", "This Month", "Custom") else listOf("Option 1", "Option 2")
+            options.forEach { opt ->
+                DropdownMenuItem(text = { Text(opt, color = Color.Black) }, onClick = { onSelect(opt); expanded = false })
+            }
+        }
+    }
+}
+
+@Composable
+fun ReportSummaryCard(label: String, value: String, trend: String, trendColor: Color, icon: ImageVector) {
+    Card(
+        modifier = Modifier.width(160.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Surface(color = CoordinatorOrange.copy(alpha = 0.1f), shape = CircleShape, modifier = Modifier.size(32.dp)) {
+                    Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = CoordinatorOrange, modifier = Modifier.size(18.dp)) }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.TrendingUp, null, tint = trendColor, modifier = Modifier.size(12.dp))
+                    Text(trend, color = trendColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(value, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+            Text(label, fontSize = 12.sp, color = Color.Gray)
+        }
+    }
+}
+
+@Composable
+fun ReportDataItem(name: String, status: String, value: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+    ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(name, fontWeight = FontWeight.Bold)
+                Surface(
+                    color = when(status) {
+                        "Completed" -> SuccessGreen.copy(alpha = 0.1f)
+                        "Pending" -> Color(0xFFFFB74D).copy(alpha = 0.1f)
+                        else -> Color.Red.copy(alpha = 0.1f)
+                    },
+                    shape = RoundedCornerShape(4.dp)
+                ) {
+                    Text(
+                        status, 
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        color = when(status) {
+                            "Completed" -> SuccessGreen
+                            "Pending" -> Color(0xFFFFB74D)
+                            else -> Color.Red
+                        },
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            Text(value, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = CoordinatorOrange)
+        }
+    }
+}
+
+@Composable
+fun ExportOption(label: String, icon: ImageVector, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, null, tint = Color.Gray)
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(label)
+    }
+}
+
+@Composable
+fun CoordinatorBottomBar(navController: NavHostController) {
+    val languageState = LocalAppLanguage.current
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    NavigationBar(
+        containerColor = Color.White,
+        tonalElevation = 8.dp
+    ) {
+        NavigationBarItem(
+            selected = currentRoute == "coordinator_dashboard",
+            onClick = {
+                if (currentRoute != "coordinator_dashboard") {
+                    navController.navigate("coordinator_dashboard") {
+                        popUpTo(navController.graph.startDestinationId)
+                        launchSingleTop = true
+                    }
+                }
+            },
+            icon = { Icon(Icons.Default.Home, null) },
+            label = { Text(languageState.value.getT("Dashboard", "डैशबोर्ड", "ଡ୍ୟାସବୋର୍ଡ"), fontSize = 10.sp) },
+            colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = CoordinatorOrange,
+                selectedTextColor = CoordinatorOrange,
+                unselectedIconColor = Color.Gray,
+                unselectedTextColor = Color.Gray,
+                indicatorColor = Color.Transparent
+            )
+        )
+        NavigationBarItem(
+            selected = currentRoute == "claim_list",
+            onClick = {
+                if (currentRoute != "claim_list") {
+                    navController.navigate("claim_list")
+                }
+            },
+            icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null) },
+            label = { Text(languageState.value.getT("Claims", "दावे", "ଦାବି"), fontSize = 10.sp) },
+            colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = CoordinatorOrange,
+                selectedTextColor = CoordinatorOrange,
+                unselectedIconColor = Color.Gray,
+                unselectedTextColor = Color.Gray,
+                indicatorColor = Color.Transparent
+            )
+        )
+        NavigationBarItem(
+            selected = currentRoute == "cluster_map",
+            onClick = { 
+                if (currentRoute != "cluster_map") {
+                    navController.navigate("cluster_map")
+                }
+            },
+            icon = { Icon(Icons.Default.Public, null) },
+            label = { Text(languageState.value.getT("Map", "मानचित्र", "ମାନଚିତ୍ର"), fontSize = 10.sp) },
+            colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = CoordinatorOrange,
+                selectedTextColor = CoordinatorOrange,
+                unselectedIconColor = Color.Gray,
+                unselectedTextColor = Color.Gray,
+                indicatorColor = Color.Transparent
+            )
+        )
+        NavigationBarItem(
+            selected = currentRoute == "coordinator_reports",
+            onClick = { 
+                if (currentRoute != "coordinator_reports") {
+                    navController.navigate("coordinator_reports")
+                }
+            },
+            icon = { Icon(Icons.Default.BarChart, null) },
+            label = { Text(languageState.value.getT("Reports", "रिपोर्ट", "ରିପୋର୍ଟ"), fontSize = 10.sp) },
+            colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = CoordinatorOrange,
+                selectedTextColor = CoordinatorOrange,
+                unselectedIconColor = Color.Gray,
+                unselectedTextColor = Color.Gray,
+                indicatorColor = Color.Transparent
+            )
+        )
+        NavigationBarItem(
+            selected = false,
+            onClick = { },
+            icon = { Icon(Icons.Default.MoreHoriz, null) },
+            label = { Text(languageState.value.getT("More", "अधिक", "ଅଧିକ"), fontSize = 10.sp) },
+            colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = CoordinatorOrange,
+                selectedTextColor = CoordinatorOrange,
+                unselectedIconColor = Color.Gray,
+                unselectedTextColor = Color.Gray,
+                indicatorColor = Color.Transparent
+            )
+        )
+    }
+}
