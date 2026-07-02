@@ -57,6 +57,7 @@ import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
 import androidx.compose.ui.Alignment
@@ -492,15 +493,38 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String) -> Unit, onNavigateToLo
 // --- SCREENS ---
 
 @Composable
-fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Unit) {
+fun LoginScreen(
+    onLoginSuccess: (UserRole) -> Unit,
+    onNavigateToSignUp: () -> Unit,
+    authViewModel: AuthViewModel = hiltViewModel(),
+) {
     var phone by remember { mutableStateOf("") }
     var otp by remember { mutableStateOf("") }
     var step by remember { mutableIntStateOf(1) }
     var selectedRole by remember { mutableStateOf<UserRole?>(null) }
-    
+
     val context = LocalContext.current
     val languageState = LocalAppLanguage.current
     var showLanguagePicker by remember { mutableStateOf(false) }
+
+    val authState by authViewModel.authState.collectAsState()
+    val devOtp by authViewModel.devOtp.collectAsState()
+    val isLoading = authState is AuthState.Loading
+
+    LaunchedEffect(authState) {
+        when (val s = authState) {
+            is AuthState.OtpSent -> {
+                step = 2
+                devOtp?.let { Toast.makeText(context, "Dev OTP: $it", Toast.LENGTH_LONG).show() }
+            }
+            is AuthState.Authenticated -> {
+                authViewModel.resetState()
+                onLoginSuccess(s.role)
+            }
+            is AuthState.Error -> Toast.makeText(context, s.message, Toast.LENGTH_LONG).show()
+            else -> {}
+        }
+    }
 
     val backgroundColor = Color(0xFFF8F9F5)
     
@@ -649,14 +673,14 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                     Button(
-                        onClick = { 
+                        onClick = {
                             if (selectedRole == null) {
                                 Toast.makeText(context, languageState.value.getT("Scroll down and choose a role", "नीचे स्क्रॉल करें और एक भूमिका चुनें", "ତଳକୁ ସ୍କ୍ରୋଲ୍ କରନ୍ତୁ ଏବଂ ଏକ ଭୂମିକା ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show()
                             } else {
-                                step = 2 
+                                authViewModel.sendOtp(phone, selectedRole!!)
                             }
                         },
-                        enabled = phone.length == 10,
+                        enabled = phone.length == 10 && !isLoading,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
@@ -666,7 +690,11 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                             disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f)
                         )
                     ) {
-                        Text(languageState.value.getT("Send OTP", "ओटीपी भेजें", "ଓଟିପି ପଠାନ୍ତୁ"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        if (isLoading) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text(languageState.value.getT("Send OTP", "ओटीपी भेजें", "ଓଟିପି ପଠାନ୍ତୁ"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(
@@ -679,17 +707,23 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                 } else {
                     Text(languageState.value.getT("Enter 6-digit OTP sent to +91 $phone", "+91 $phone पर भेजा गया ओटीपी दर्ज करें", "+91 $phone କୁ ପଠାଯାଇଥିବା ଓଟିପି ଦିଅନ୍ତୁ"), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
                     Spacer(modifier = Modifier.height(24.dp))
-                    OtpInput(otp, { otp = it }, onDone = { if (otp.length == 6) onLoginSuccess(selectedRole!!) })
+                    OtpInput(otp, { otp = it }, onDone = { if (otp.length == 6) authViewModel.verifyOtp(phone, otp, selectedRole!!) })
                     Spacer(modifier = Modifier.height(24.dp))
                     Button(
-                        onClick = { onLoginSuccess(selectedRole!!) },
-                        enabled = otp.length == 6,
+                        onClick = { authViewModel.verifyOtp(phone, otp, selectedRole!!) },
+                        enabled = otp.length == 6 && !isLoading,
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
-                    ) { Text(languageState.value.getT("Verify & Login", "सत्यापित करें और लॉगिन", "ଯାଞ୍ଚ ଏବଂ ଲଗଇନ୍"), fontSize = 16.sp, fontWeight = FontWeight.Bold) }
-                    
-                    TextButton(onClick = { step = 1 }) { Text(languageState.value.getT("Change Number", "नंबर बदलें", "ନମ୍ବର ବଦଳାନ୍ତୁ"), color = PrimaryGreen) }
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text(languageState.value.getT("Verify & Login", "सत्यापित करें और लॉगिन", "ଯାଞ୍ଚ ଏବଂ ଲଗଇନ୍"), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    TextButton(onClick = { step = 1; authViewModel.resetState() }) { Text(languageState.value.getT("Change Number", "नंबर बदलें", "ନମ୍ବର ବଦଳାନ୍ତୁ"), color = PrimaryGreen) }
                 }
             }
         }
@@ -888,9 +922,17 @@ fun DidiDashboard(navController: NavHostController, sessionManager: SessionManag
 }
 
 @Composable
-fun DidiContent(padding: PaddingValues, navController: NavHostController, userName: String, onNotificationClick: () -> Unit) {
+fun DidiContent(
+    padding: PaddingValues,
+    navController: NavHostController,
+    userName: String,
+    sdViewModel: SdViewModel = hiltViewModel(),
+    onNotificationClick: () -> Unit,
+) {
     val languageState = LocalAppLanguage.current
     val context = LocalContext.current
+    val totalEnrollments by sdViewModel.totalEnrollments.collectAsState()
+    LaunchedEffect(Unit) { sdViewModel.loadDashboard() }
     Column(
         modifier = Modifier
             .padding(bottom = padding.calculateBottomPadding())
@@ -932,7 +974,7 @@ fun DidiContent(padding: PaddingValues, navController: NavHostController, userNa
             val statSpan = if (isCompact) 3 else 3
             items(4, span = { GridItemSpan(statSpan) }) { index: Int ->
                 when(index) {
-                    0 -> StatCard(languageState.value.getT("Goats Enrolled", "पंजीकृत बकरियां", "ପଞ୍ଜିକୃତ ଛେଳି"), "128", Icons.Default.Pets, PrimaryGreen, CardLightGreen)
+                    0 -> StatCard(languageState.value.getT("Goats Enrolled", "पंजीकृत बकरियां", "ପଞ୍ଜିକୃତ ଛେଳି"), totalEnrollments?.toString() ?: "—", Icons.Default.Pets, PrimaryGreen, CardLightGreen)
                     1 -> StatCard(languageState.value.getT("Pending Claims", "लंबित दावे", "ବାକି ରହିଥିବା ଦାବି"), "12", Icons.AutoMirrored.Filled.Assignment, AccentOrange, CardLightOrange)
                     2 -> StatCard(languageState.value.getT("Today's Visits", "आज की मुलाकात", "ଆଜିର ପରିଦର୍ଶନ"), "24", Icons.Default.CalendarToday, InfoBlue, CardLightBlue)
                     3 -> StatCard(languageState.value.getT("Earnings", "आय", "ଉପାର୍ଜନ"), "₹8,450", Icons.Default.Payments, Color(0xFF9C27B0), CardLightPurple)
@@ -2140,10 +2182,20 @@ fun FarmerDashboard(navController: NavHostController, sessionManager: SessionMan
 }
 
 @Composable
-fun FarmerContent(padding: PaddingValues, navController: NavHostController, userName: String, onNotificationClick: () -> Unit) {
+fun FarmerContent(
+    padding: PaddingValues,
+    navController: NavHostController,
+    userName: String,
+    farmerViewModel: FarmerViewModel = hiltViewModel(),
+    onNotificationClick: () -> Unit,
+) {
     val languageState = LocalAppLanguage.current
     val context = LocalContext.current
-    
+    val policies by farmerViewModel.policies.collectAsState()
+    val schedule by farmerViewModel.schedule.collectAsState()
+    LaunchedEffect(Unit) { farmerViewModel.load() }
+    val nextVaccDate = schedule.firstOrNull()?.date
+
     // Blue Theme Palette for Farmer
     val lightBlue = Color(0xFFE3F2FD)
     val medBlue = Color(0xFF64B5F6)
@@ -2192,8 +2244,8 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
             val statSpan = if (isCompact) 3 else 6
             items(2, span = { GridItemSpan(statSpan) }) { index: Int ->
                 when(index) {
-                    0 -> StatCard(languageState.value.getT("Active Policies", "सक्रिय नीतियां", "ସକ୍ରିୟ ନୀତି"), "02", Icons.AutoMirrored.Filled.Assignment, royalBlue, skyBlue)
-                    1 -> StatCard(languageState.value.getT("Total Goats", "कुल बकरियां", "ମୋଟ ଛେଳି"), "05", Icons.Default.Pets, PrimaryGreen, CardLightGreen)
+                    0 -> StatCard(languageState.value.getT("Active Policies", "सक्रिय नीतियां", "ସକ୍ରିୟ ନୀତି"), policies.count { it.status == "active" }.toString().padStart(2, '0'), Icons.AutoMirrored.Filled.Assignment, royalBlue, skyBlue)
+                    1 -> StatCard(languageState.value.getT("Total Goats", "कुल बकरियां", "ମୋଟ ଛେଳି"), policies.size.toString().padStart(2, '0'), Icons.Default.Pets, PrimaryGreen, CardLightGreen)
                 }
             }
 
@@ -2221,7 +2273,7 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                languageState.value.getT("15 Aug 2024 (Tomorrow)", "15 अगस्त 2024 (कल)", "୧୫ ଅଗଷ୍ଟ ୨୦୨୪ (କାଲି)"),
+                                nextVaccDate ?: languageState.value.getT("None scheduled", "कोई नहीं", "କିଛି ନାହିଁ"),
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black,
                                 fontSize = 15.sp
@@ -3366,9 +3418,15 @@ fun GoatListContent(
     selectedTab: Int,
     onTabChange: (Int) -> Unit,
     themeColor: Color,
-    onGoatClick: (String) -> Unit
+    sdViewModel: SdViewModel = hiltViewModel(),
+    onGoatClick: (String) -> Unit,
 ) {
     val languageState = LocalAppLanguage.current
+    val liveGoats by sdViewModel.goats.collectAsState()
+    val tabKey = when (selectedTab) { 1 -> "active"; 2 -> "expired"; 3 -> "claimed"; else -> "all" }
+    LaunchedEffect(selectedTab, searchQuery) {
+        sdViewModel.loadGoats(tab = tabKey, search = searchQuery.ifBlank { null })
+    }
     Column(modifier = Modifier.padding(padding)) {
         // Search Bar
         OutlinedTextField(
@@ -3399,55 +3457,43 @@ fun GoatListContent(
             }
         }
 
-        val mockGoats = listOf(
-            Triple("ET-340801-0001", "Ramesh Naik", "Pipili"),
-            Triple("ET-240801-0002", "Suresh Behera", "Balianta"),
-            Triple("ET-340801-0003", "Manoj Sahoo", "Pipili"),
-            Triple("ET-140801-0004", "Alok Dash", "Puri"),
-            Triple("ET-540801-0005", "Prakash Rout", "Cuttack")
-        )
-
-        val filteredGoats = mockGoats.filter { 
-            it.first.contains(searchQuery, ignoreCase = true) || it.second.contains(searchQuery, ignoreCase = true)
-        }.filter { goat ->
-            when (selectedTab) {
-                1 -> goat.first != "ET-340801-0003" // Mock Active
-                2 -> goat.first == "ET-340801-0003" // Mock Expired
-                3 -> false // Mock Claimed
-                else -> true // All
+        if (liveGoats.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(languageState.value.getT("No goats found", "कोई बकरी नहीं मिली", "କୌଣସି ଛେଳି ମିଳିଲା ନାହିଁ"), color = Color.Gray)
             }
-        }
-
-        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(filteredGoats) { goat: Triple<String, String, String> ->
-                val isExpired = goat.first == "ET-340801-0003"
-                Card(
-                    onClick = { onGoatClick(goat.first) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Surface(modifier = Modifier.size(70.dp), shape = RoundedCornerShape(12.dp), color = Color(0xFFF0F0F0)) {
-                            Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Pets, null, tint = Color.Gray) }
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(goat.first, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                            Text(goat.second, fontSize = 13.sp, color = Color.Gray)
-                            Text(goat.third, fontSize = 13.sp, color = Color.Gray)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(if (isExpired) languageState.value.getT("Policy Expired", "पॉलिसी समाप्त", "ନୀତି ସମାପ୍ତ") else languageState.value.getT("Policy Active", "पॉलिसी सक्रिय", "ନୀତି ସକ୍ରିୟ"), color = if (isExpired) Color.Red else SuccessGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            Text(if (isExpired) languageState.value.getT("Expired on: 31 May 2024", "31 मई 2024 को समाप्त", "୩୧ ମଇ ୨୦୨୪ ରେ ସମାପ୍ତ") else languageState.value.getT("Next Vaccine: 15 Aug 2024", "अगला टीका: 15 अगस्त 2024", "ପରବର୍ତ୍ତୀ ଟୀକା: ୧୫ ଅଗଷ୍ଟ ୨୦୨୪"), fontSize = 12.sp, color = Color.Black)
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Icon(Icons.Default.ChevronRight, null, tint = Color.LightGray)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            if (isExpired) {
-                                Icon(Icons.Default.Cancel, null, tint = Color.Red, modifier = Modifier.size(20.dp))
-                            } else {
-                                Icon(Icons.Default.CheckCircle, null, tint = SuccessGreen, modifier = Modifier.size(20.dp))
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(liveGoats) { goat: Goat ->
+                    val isExpired = goat.status == "expired" || goat.status == "claimed"
+                    Card(
+                        onClick = { onGoatClick(goat.earTag) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    ) {
+                        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Surface(modifier = Modifier.size(70.dp), shape = RoundedCornerShape(12.dp), color = Color(0xFFF0F0F0)) {
+                                Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Pets, null, tint = Color.Gray) }
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(goat.earTag, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                Text("${goat.breed} • ${goat.gender} • ${goat.ageMonths}M", fontSize = 13.sp, color = Color.Gray)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    goat.status.replaceFirstChar { it.uppercase() },
+                                    color = if (isExpired) Color.Red else SuccessGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp
+                                )
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Icon(Icons.Default.ChevronRight, null, tint = Color.LightGray)
+                                Spacer(modifier = Modifier.height(16.dp))
+                                if (isExpired) {
+                                    Icon(Icons.Default.Cancel, null, tint = Color.Red, modifier = Modifier.size(20.dp))
+                                } else {
+                                    Icon(Icons.Default.CheckCircle, null, tint = SuccessGreen, modifier = Modifier.size(20.dp))
+                                }
                             }
                         }
                     }

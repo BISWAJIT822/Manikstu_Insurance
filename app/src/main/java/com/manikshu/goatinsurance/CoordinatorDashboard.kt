@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,10 +44,17 @@ val CoordinatorOrange = Color(0xFFFF7043)
 val CoordinatorLightOrange = Color(0xFFFFF3E0)
 
 @Composable
-fun CoordinatorDashboard(navController: NavHostController, sessionManager: SessionManager) {
+fun CoordinatorDashboard(
+    navController: NavHostController,
+    sessionManager: SessionManager,
+    coViewModel: CoordinatorViewModel = hiltViewModel(),
+) {
     val languageState = LocalAppLanguage.current
     val userName by sessionManager.userName.collectAsState(initial = "lalu")
-    
+    val activeClaims by coViewModel.activeClaims.collectAsState()
+    val liveActivity by coViewModel.activity.collectAsState()
+    LaunchedEffect(Unit) { coViewModel.load() }
+
     Scaffold(
         bottomBar = { CoordinatorBottomBar(navController) },
         containerColor = Color(0xFFF8F9FB),
@@ -83,8 +91,8 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
                     )
                     CoordinatorStatCard(
                         modifier = Modifier.weight(1f),
-                        label = languageState.value.getT("Claims Today", "आज के दावे", "ଆଜିର ଦାବି"),
-                        value = "18",
+                        label = languageState.value.getT("Active Claims", "सक्रिय दावे", "ସକ୍ରିୟ ଦାବି"),
+                        value = activeClaims?.toString() ?: "—",
                         trend = "+12%",
                         trendColor = SuccessGreen,
                         icon = Icons.Default.Assignment,
@@ -107,7 +115,7 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                LiveActivitySection(navController, languageState.value)
+                LiveActivitySection(navController, languageState.value, liveActivity)
                 
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -351,7 +359,7 @@ fun PerformanceOverviewCard(language: AppLanguage) {
 }
 
 @Composable
-fun LiveActivitySection(navController: NavHostController, language: AppLanguage) {
+fun LiveActivitySection(navController: NavHostController, language: AppLanguage, items: List<ActivityItem> = emptyList()) {
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -369,9 +377,9 @@ fun LiveActivitySection(navController: NavHostController, language: AppLanguage)
                 color = Color.Gray
             )
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -379,30 +387,26 @@ fun LiveActivitySection(navController: NavHostController, language: AppLanguage)
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                LiveActivityItem(
-                    title = "Sushma Didi filed a claim",
-                    time = "2 mins ago",
-                    status = "Pending",
-                    statusColor = Color(0xFFFFB74D),
-                    icon = Icons.AutoMirrored.Filled.Assignment
-                )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.LightGray.copy(alpha = 0.3f))
-                LiveActivityItem(
-                    title = "Laxmi Didi completed vaccination",
-                    time = "5 mins ago",
-                    status = "Success",
-                    statusColor = SuccessGreen,
-                    icon = Icons.Default.MedicalServices
-                )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.LightGray.copy(alpha = 0.3f))
-                LiveActivityItem(
-                    title = "New enrollment by Sushma Didi",
-                    time = "10 mins ago",
-                    status = "New",
-                    statusColor = Color(0xFF4FC3F7),
-                    icon = Icons.Default.PersonAdd
-                )
-                
+                if (items.isEmpty()) {
+                    Text(
+                        language.getT("No recent activity", "कोई हालिया गतिविधि नहीं", "କୌଣସି ସାମ୍ପ୍ରତିକ କାର୍ଯ୍ୟକଳାପ ନାହିଁ"),
+                        color = Color.Gray, fontSize = 14.sp,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                } else {
+                    items.take(6).forEachIndexed { index, item ->
+                        if (index > 0) HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.LightGray.copy(alpha = 0.3f))
+                        val isClaim = item.title.contains("Claim", ignoreCase = true)
+                        LiveActivityItem(
+                            title = item.title,
+                            time = language.getT("Recent", "हाल ही में", "ସାମ୍ପ୍ରତିକ"),
+                            status = if (isClaim) "Claim" else "Enrolled",
+                            statusColor = if (isClaim) Color(0xFFFFB74D) else Color(0xFF4FC3F7),
+                            icon = if (isClaim) Icons.AutoMirrored.Filled.Assignment else Icons.Default.PersonAdd
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 OutlinedButton(

@@ -24,10 +24,10 @@ object NetworkModule {
     // Backend base URL. Hardcoded (not BuildConfig) because AGP 9 does not expose the
     // generated BuildConfig on KSP's source path, which breaks Hilt/KSP processing of
     // this module ("BASE_URL could not be resolved"). Change the value here to switch:
-    //  - emulator:      http://10.0.2.2:8000/   (current)
-    //  - USB device:    http://localhost:8000/  (run `adb reverse tcp:8000 tcp:8000`)
+    //  - USB device:    http://localhost:8000/  (current; run `adb reverse tcp:8000 tcp:8000`)
+    //  - emulator:      http://10.0.2.2:8000/
     //  - localtunnel:   https://<your-subdomain>.loca.lt/
-    private const val BASE_URL = "http://10.0.2.2:8000/"
+    private const val BASE_URL = "http://localhost:8000/"
 
     @Provides
     @Singleton
