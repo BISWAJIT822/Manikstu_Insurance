@@ -89,6 +89,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import kotlinx.coroutines.launch
@@ -102,8 +103,40 @@ private val PrimaryBlue = Color(0xFF1976D2)
 @Composable
 fun AppNavigation(navController: NavHostController, sessionManager: SessionManager) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val userRole by sessionManager.userRole.collectAsState(initial = null)
     
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    // Exit Confirmation Dialog
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = { Text(text = "Exit App") },
+            text = { Text(text = "Do you want to exit?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    (context as? android.app.Activity)?.finish()
+                }) {
+                    Text("Yes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitDialog = false }) {
+                    Text("No")
+                }
+            }
+        )
+    }
+
+    // Intercept back button on dashboards
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    val isDashboard = currentRoute in listOf("didi_dashboard", "farmer_dashboard", "coordinator_dashboard")
+    
+    androidx.activity.compose.BackHandler(enabled = isDashboard) {
+        showExitDialog = true
+    }
+
     // Auto-navigate if already logged in
     LaunchedEffect(userRole) {
         userRole?.let { role ->
@@ -999,6 +1032,41 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
     
     var deathDate by remember { mutableStateOf("") }
     var deathTime by remember { mutableStateOf("") }
+    var capturedPhotoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+    var tempUriStr by rememberSaveable { mutableStateOf<String?>(null) }
+
+    fun createTempUri(): Uri {
+        val file = File.createTempFile("death_report_", ".jpg", context.cacheDir)
+        return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && tempUriStr != null) {
+            capturedPhotoUri = Uri.parse(tempUriStr)
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            tempUriStr?.let { cameraLauncher.launch(Uri.parse(it)) }
+        } else {
+            Toast.makeText(context, languageState.value.getT("Camera permission required", "कैमरा अनुमति आवश्यक है", "କ୍ୟାମେରା ଅନୁମତି ଆବଶ୍ୟକ"), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun launchCamera() {
+        val uri = createTempUri()
+        tempUriStr = uri.toString()
+        if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            cameraLauncher.launch(uri)
+        } else {
+            permissionLauncher.launch(android.Manifest.permission.CAMERA)
+        }
+    }
 
     val goats = listOf(
         Triple("ET-340801-0001", "Black Bengal", "12M"),
@@ -1146,19 +1214,28 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
 
             // Photo Upload
             Text(
-                languageState.value.getT("Upload Photo (Optional)", "फोटो अपलोड करें (वैकल्पिक)", "ଫଟୋ ଅପଲୋଡ୍ କରନ୍ତୁ (ବୈକଳ୍ପିକ)"),
+                languageState.value.getT("Upload Photo *", "फोटो अपलोड करें *", "ଫଟୋ ଅପଲୋଡ୍ କରନ୍ତୁ *"),
                 fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black
             )
             Spacer(modifier = Modifier.height(8.dp))
             Surface(
-                modifier = Modifier.size(100.dp),
+                modifier = Modifier.size(120.dp),
                 shape = RoundedCornerShape(12.dp),
                 color = Color.White,
                 border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f)),
-                onClick = {}
+                onClick = { launchCamera() }
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.CameraAlt, null, tint = Color.Black, modifier = Modifier.size(32.dp))
+                    if (capturedPhotoUri != null) {
+                        AsyncImage(
+                            model = capturedPhotoUri,
+                            contentDescription = "Captured Goat",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(Icons.Default.CameraAlt, null, tint = Color.Black, modifier = Modifier.size(32.dp))
+                    }
                 }
             }
 
@@ -1183,7 +1260,7 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
             Button(
                 onClick = onComplete,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
-                enabled = isConfirmed && deathDate.isNotBlank() && deathTime.isNotBlank(),
+                enabled = isConfirmed && deathDate.isNotBlank() && deathTime.isNotBlank() && capturedPhotoUri != null,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
             ) {
