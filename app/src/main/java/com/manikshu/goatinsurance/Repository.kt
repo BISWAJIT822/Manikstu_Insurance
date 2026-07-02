@@ -3,8 +3,7 @@ package com.manikshu.goatinsurance
 import javax.inject.Inject
 import javax.inject.Singleton
 
-@Singleton
-class Repository @Inject constructor(
+class InsuranceRepository @Inject constructor(
     private val api: ApiService,
 ) {
     // ---------------- auth ----------------

@@ -91,6 +91,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.ContentScale
 import androidx.navigation.NavHostController
+import androidx.navigation.NavBackStackEntry
+import androidx.compose.animation.AnimatedContentScope
 import androidx.navigation.compose.*
 import kotlinx.coroutines.launch
 
@@ -175,7 +177,7 @@ fun AppNavigation(navController: NavHostController, sessionManager: SessionManag
                 onNavigateToLogin = { navController.popBackStack() }
             )
         }
-        composable("setup_profile/{role}/{name}/{phone}") { backStackEntry ->
+        composable("setup_profile/{role}/{name}/{phone}") { backStackEntry: NavBackStackEntry ->
             val roleStr = backStackEntry.arguments?.getString("role") ?: UserRole.FARMER.name
             val role = try { UserRole.valueOf(roleStr) } catch(e: Exception) { UserRole.FARMER }
             val name = backStackEntry.arguments?.getString("name") ?: ""
@@ -216,10 +218,10 @@ fun AppNavigation(navController: NavHostController, sessionManager: SessionManag
         composable("mortality_report") { MortalityReportScreen(onComplete = { navController.popBackStack() }) }
         composable("farmer_report_death") { FarmerReportDeathScreen(onBack = { navController.popBackStack() }, onComplete = { navController.popBackStack() }) }
         composable("claim_tracker") { ClaimStatusTracker() }
-        composable("claim_list") { ClaimListScreen(navController = navController, onBack = { navController.popBackStack() }) }
-        composable("claim_review/{claimId}") { backStackEntry ->
+        composable("claim_list") { ClaimListScreen(navController = navController, userRole = userRole, onBack = { navController.popBackStack() }) }
+        composable("claim_review/{claimId}") { backStackEntry: NavBackStackEntry ->
             val claimId = backStackEntry.arguments?.getString("claimId") ?: ""
-            ClaimReviewScreen(navController = navController, claimId = claimId, onBack = { navController.popBackStack() })
+            ClaimReviewScreen(navController = navController, claimId = claimId, userRole = userRole, onBack = { navController.popBackStack() })
         }
         composable("vaccine_list") { 
             VaccineListScreen(
@@ -228,7 +230,7 @@ fun AppNavigation(navController: NavHostController, sessionManager: SessionManag
                 onRecord = { tag -> navController.navigate("record_vaccination/$tag") }
             ) 
         }
-        composable("record_vaccination/{tag}") { backStackEntry ->
+        composable("record_vaccination/{tag}") { backStackEntry: NavBackStackEntry ->
             val tag = backStackEntry.arguments?.getString("tag") ?: ""
             RecordVaccinationScreen(tag = tag, onBack = { navController.popBackStack() })
         }
@@ -240,7 +242,7 @@ fun AppNavigation(navController: NavHostController, sessionManager: SessionManag
                 onAddGoat = { navController.navigate("enrollment") }
             ) 
         }
-        composable("goat_details/{tag}") { backStackEntry ->
+        composable("goat_details/{tag}") { backStackEntry: NavBackStackEntry ->
             val tag = backStackEntry.arguments?.getString("tag") ?: ""
             GoatDetailsScreen(navController = navController, tag = tag, userRole = userRole, onBack = { navController.popBackStack() })
         }
@@ -392,25 +394,25 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String) -> Unit, onNavigateToLo
                 if (step == 1) {
                     OutlinedTextField(
                         value = name,
-                        onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) name = it },
+                        onValueChange = { newValue -> if (newValue.all { char -> char.isLetter() || char.isWhitespace() }) name = newValue },
                         placeholder = { Text(languageState.value.getT("Full Name", "पूरा नाम", "ପୁରା ନାମ"), color = Color.Gray) },
                         leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = Color.DarkGray) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f), focusedBorderColor = PrimaryGreen)
+                        colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f), focusedBorderColor = PrimaryGreen)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
                         value = phone,
-                        onValueChange = { if (it.length <= 10) phone = it },
+                        onValueChange = { newValue -> if (newValue.length <= 10) phone = newValue },
                         placeholder = { Text(languageState.value.getT("Mobile Number", "मोबाइल नंबर", "ମୋବାଇଲ୍ ନମ୍ବର"), color = Color.Gray) },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = Color.DarkGray) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f), focusedBorderColor = PrimaryGreen)
+                        colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f), focusedBorderColor = PrimaryGreen)
                     )
                     
                     Spacer(modifier = Modifier.height(24.dp))
@@ -633,7 +635,7 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                 if (step == 1) {
                     OutlinedTextField(
                         value = phone,
-                        onValueChange = { if (it.length <= 10) phone = it },
+                        onValueChange = { newValue -> if (newValue.length <= 10) phone = newValue },
                         placeholder = { Text(languageState.value.getT("Mobile Number", "मोबाइल नंबर", "ମୋବାଇଲ୍ ନମ୍ବର"), color = Color.Gray) },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = Color.DarkGray) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -641,8 +643,6 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black,
                             unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),
                             focusedBorderColor = PrimaryGreen
                         )
@@ -930,7 +930,7 @@ fun DidiContent(padding: PaddingValues, navController: NavHostController, userNa
             
             // Stats (2 columns on mobile, 4 on tablet)
             val statSpan = if (isCompact) 3 else 3
-            items(4, span = { GridItemSpan(statSpan) }) { index ->
+            items(4, span = { GridItemSpan(statSpan) }) { index: Int ->
                 when(index) {
                     0 -> StatCard(languageState.value.getT("Goats Enrolled", "पंजीकृत बकरियां", "ପଞ୍ଜିକୃତ ଛେଳି"), "128", Icons.Default.Pets, PrimaryGreen, CardLightGreen)
                     1 -> StatCard(languageState.value.getT("Pending Claims", "लंबित दावे", "ବାକି ରହିଥିବା ଦାବି"), "12", Icons.AutoMirrored.Filled.Assignment, AccentOrange, CardLightOrange)
@@ -953,7 +953,7 @@ fun DidiContent(padding: PaddingValues, navController: NavHostController, userNa
 
             // Quick Actions (3 columns on mobile, 6 on tablet)
             val actionSpan = if (isCompact) 2 else 2
-            items(6, span = { GridItemSpan(actionSpan) }) { index ->
+            items(6, span = { GridItemSpan(actionSpan) }) { index: Int ->
                 when(index) {
                     0 -> QuickActionGridCard(languageState.value.getT("Enroll Goat", "बकरी का नामांकन", "ଛେଳି ପଞ୍ଜିକରଣ"), Icons.Default.Pets, PrimaryGreen, CardLightGreen) { navController.navigate("enrollment") }
                     1 -> QuickActionGridCard(languageState.value.getT("Vaccination", "टीकाकरण", "ଟୀକାକରଣ"), Icons.Default.MedicalServices, InfoBlue, CardLightBlue) { navController.navigate("vaccine_list") }
@@ -1908,8 +1908,6 @@ fun EnrollmentTextField(label: String, value: String, onValueChange: (String) ->
                 prefix = prefix?.let { { Text(it, color = Color.Black) } },
                 suffix = suffix?.let { { Text(it, color = Color.Black) } },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black,
                     unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),
                     focusedBorderColor = borderColor
                 )
@@ -2192,7 +2190,7 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
             
             // Stats (Top 2)
             val statSpan = if (isCompact) 3 else 6
-            items(2, span = { GridItemSpan(statSpan) }) { index ->
+            items(2, span = { GridItemSpan(statSpan) }) { index: Int ->
                 when(index) {
                     0 -> StatCard(languageState.value.getT("Active Policies", "सक्रिय नीतियां", "ସକ୍ରିୟ ନୀତି"), "02", Icons.AutoMirrored.Filled.Assignment, royalBlue, skyBlue)
                     1 -> StatCard(languageState.value.getT("Total Goats", "कुल बकरियां", "ମୋଟ ଛେଳି"), "05", Icons.Default.Pets, PrimaryGreen, CardLightGreen)
@@ -2619,7 +2617,7 @@ fun OtpInput(value: String, onValueChange: (String) -> Unit, onDone: () -> Unit 
                 .fillMaxWidth()
                 .height(48.dp)
                 .focusRequester(focusRequester),
-            decorationBox = {
+            decorationBox = { innerTextField ->
                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     repeat(6) { i ->
                         val char = value.getOrNull(i)?.toString() ?: ""
@@ -2642,6 +2640,8 @@ fun OtpInput(value: String, onValueChange: (String) -> Unit, onDone: () -> Unit 
                         }
                     }
                 }
+                // Call innerTextField to ensure the field works, but keep it invisible
+                Box(Modifier.size(0.dp)) { innerTextField() }
             }
         )
     }
@@ -2894,7 +2894,7 @@ fun NotificationSheet(themeColor: Color = PrimaryGreen, onDismiss: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(bottom = 32.dp)
             ) {
-                items(notifications) { notification ->
+                items(notifications) { notification: AppNotification ->
                     NotificationItem(notification, themeColor)
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 12.dp),
@@ -3419,7 +3419,7 @@ fun GoatListContent(
         }
 
         LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(filteredGoats) { goat ->
+            items(filteredGoats) { goat: Triple<String, String, String> ->
                 val isExpired = goat.first == "ET-340801-0003"
                 Card(
                     onClick = { onGoatClick(goat.first) },
@@ -3753,7 +3753,7 @@ fun VaccineListContent(
         }
 
         LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(filteredVaccines) { vaccine ->
+            items(filteredVaccines) { vaccine: Triple<String, String, String> ->
                 val isCompleted = vaccine.second == "ET-340801-0003"
                 val mockFarmer = when(vaccine.second) {
                     "ET-340801-0001" -> "Ramesh Naik"
@@ -3939,9 +3939,10 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ClaimListScreen(navController: NavHostController, onBack: () -> Unit) {
+fun ClaimListScreen(navController: NavHostController, userRole: UserRole? = null, onBack: () -> Unit) {
     val languageState = LocalAppLanguage.current
     var searchQuery by remember { mutableStateOf("") }
+    val isCoordinator = userRole == UserRole.COORDINATOR
 
     ResponsiveLayout(
         compact = {
@@ -3955,13 +3956,13 @@ fun ClaimListScreen(navController: NavHostController, onBack: () -> Unit) {
                             }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = PrimaryGreen,
+                            containerColor = if (isCoordinator) CoordinatorOrange else PrimaryGreen,
                             titleContentColor = Color.White,
                             navigationIconContentColor = Color.White
                         )
                     )
                 },
-                bottomBar = { DidiBottomBar(navController) },
+                bottomBar = { if (isCoordinator) CoordinatorBottomBar(navController) else DidiBottomBar(navController) },
                 containerColor = Color(0xFFF8F9F5)
             ) { padding ->
                 ClaimListContent(padding, searchQuery, { searchQuery = it }) { claimId ->
@@ -4053,7 +4054,7 @@ fun ClaimListContent(
         }
 
         LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(filteredClaims) { claim ->
+            items(filteredClaims) { claim: Triple<String, String, String> ->
                 Card(
                     onClick = { onClaimClick(claim.first) },
                     modifier = Modifier.fillMaxWidth(),
@@ -4117,10 +4118,11 @@ fun ClaimListContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ClaimReviewScreen(navController: NavHostController, claimId: String, onBack: () -> Unit) {
+fun ClaimReviewScreen(navController: NavHostController, claimId: String, userRole: UserRole? = null, onBack: () -> Unit) {
     val languageState = LocalAppLanguage.current
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Details", "Photos (6)", "AI Assessment", "History")
+    val isCoordinator = userRole == UserRole.COORDINATOR
 
     val mockClaims = listOf(
         Triple("CLM-240001-0021", "ET-240001-0001", "Ramesh Naik"),
@@ -4141,13 +4143,13 @@ fun ClaimReviewScreen(navController: NavHostController, claimId: String, onBack:
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = PrimaryGreen,
+                    containerColor = if (isCoordinator) CoordinatorOrange else PrimaryGreen,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
             )
         },
-        bottomBar = { DidiBottomBar(navController) },
+        bottomBar = { if (isCoordinator) CoordinatorBottomBar(navController) else DidiBottomBar(navController) },
         containerColor = Color(0xFFF8F9F5)
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
@@ -4331,9 +4333,9 @@ fun SetupProfileScreen(
             ProfileSetupSection(languageState.value.getT("Basic Info", "기본 정보", "ମୌଳିକ ସୂଚନା"), themeColor) {
                 // Profile Photo
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Box {
+                    Box(modifier = Modifier.size(100.dp)) {
                         Surface(
-                            modifier = Modifier.size(100.dp),
+                            modifier = Modifier.fillMaxSize(),
                             shape = CircleShape,
                             color = Color.LightGray.copy(alpha = 0.3f),
                             onClick = { imagePickerLauncher.launch("image/*") }
@@ -4343,7 +4345,7 @@ fun SetupProfileScreen(
                                     model = profilePhotoUri,
                                     contentDescription = null,
                                     modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                    contentScale = ContentScale.Crop
                                 )
                             } else {
                                 Box(contentAlignment = Alignment.Center) {
