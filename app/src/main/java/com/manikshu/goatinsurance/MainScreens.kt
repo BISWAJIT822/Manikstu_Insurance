@@ -68,6 +68,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
+import android.Manifest
+import android.app.Activity
 
 
 import androidx.compose.ui.text.buildAnnotatedString
@@ -4192,6 +4194,56 @@ fun SetupProfileScreen(
     val languageState = LocalAppLanguage.current
     val context = LocalContext.current
     
+    // Permission Handling
+    var showPermissionRationale by remember { mutableStateOf(true) }
+    val permissionsToRequest = arrayOf(
+        Manifest.permission.CAMERA,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    )
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.values.all { it }
+        if (!allGranted) {
+            Toast.makeText(context, languageState.value.getT("Required permissions denied. Closing app.", "आवश्यक अनुमतियां अस्वीकार कर दी गईं। ऐप बंद हो रहा है।", "ଆବଶ୍ୟକ ଅନୁମତି ପ୍ରତ୍ୟାଖ୍ୟାନ କରାଯାଇଛି | ଆପ୍ ବନ୍ଦ ହେଉଛି |"), Toast.LENGTH_LONG).show()
+            (context as? Activity)?.finish()
+        }
+    }
+
+    if (showPermissionRationale) {
+        AlertDialog(
+            onDismissRequest = { (context as? Activity)?.finish() },
+            title = { Text(languageState.value.getT("Permissions Required", "अनुमतियाँ आवश्यक हैं", "ଅନୁମତି ଆବଶ୍ୟକ"), fontWeight = FontWeight.Bold) },
+            text = { 
+                Text(languageState.value.getT(
+                    "This app needs Camera and Location access to verify livestock and record service areas. If you deny, the app will close.",
+                    "पशुधन को सत्यापित करने और सेवा क्षेत्रों को रिकॉर्ड करने के लिए इस ऐप को कैमरा और स्थान पहुंच की आवश्यकता है। यदि आप अस्वीकार करते हैं, तो ऐप बंद हो जाएगा।",
+                    "ପ୍ରାଣୀସମ୍ପଦ ଯାଞ୍ଚ କରିବା ଏବଂ ସେବା କ୍ଷେତ୍ର ରେକର୍ଡ କରିବାକୁ ଏହି ଆପ୍‌ କ୍ୟାମେରା ଏବଂ ଅବସ୍ଥାନ ଅନୁମତି ଆବଶ୍ୟକ କରେ | ଯଦି ଆପଣ ପ୍ରତ୍ୟାଖ୍ୟାନ କରନ୍ତି, ଆପ୍ ବନ୍ଦ ହୋଇଯିବ |"
+                ))
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPermissionRationale = false
+                        permissionLauncher.launch(permissionsToRequest)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+                ) {
+                    Text(languageState.value.getT("Allow", "अनुमति दें", "ଅନୁମତି ଦିଅନ୍ତୁ"))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { (context as? Activity)?.finish() }) {
+                    Text(languageState.value.getT("Deny & Close", "अस्वीकार करें और बंद करें", "ପ୍ରତ୍ୟାଖ୍ୟାନ କରନ୍ତୁ ଏବଂ ବନ୍ଦ କରନ୍ତୁ"), color = Color.Red)
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
     var profilePhotoUri by remember { mutableStateOf<Uri?>(null) }
     var name by remember { mutableStateOf(initialName) }
     val phone by remember { mutableStateOf(initialPhone) }
