@@ -21,9 +21,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -59,6 +61,7 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
                 .verticalScroll(rememberScrollState())
         ) {
             CoordinatorHeader(
+                navController,
                 userName ?: "lalu",
                 languageState.value.getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ"),
                 onProfileClick = { navController.navigate("profile") }
@@ -82,7 +85,7 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
                         points = listOf(0.2f, 0.4f, 0.3f, 0.6f, 0.5f, 0.8f)
                     )
                     CoordinatorStatCard(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).clickable { navController.navigate("claim_list") },
                         label = languageState.value.getT("Claims Today", "आज के दावे", "ଆଜିର ଦାବି"),
                         value = "18",
                         trend = "+12%",
@@ -116,8 +119,11 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
 }
 
 @Composable
-fun CoordinatorHeader(name: String, role: String, onProfileClick: () -> Unit) {
+fun CoordinatorHeader(navController: NavHostController, name: String, role: String, onProfileClick: () -> Unit) {
     val languageState = LocalAppLanguage.current
+    var expanded by remember { mutableStateOf(false) }
+    var selectedDate by remember { mutableStateOf("Today") }
+
     Surface(
         color = CoordinatorOrange,
         modifier = Modifier.fillMaxWidth()
@@ -159,32 +165,30 @@ fun CoordinatorHeader(name: String, role: String, onProfileClick: () -> Unit) {
                     color = Color.White.copy(alpha = 0.8f)
                 )
             }
-            
-            var expanded by remember { mutableStateOf(false) }
-            var selectedPeriod by remember { mutableStateOf("Today") }
-            
+
             Box {
                 Surface(
                     onClick = { expanded = true },
                     color = Color.White.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = when(selectedPeriod) {
-                                "Today" -> languageState.value.getT("Today", "आज", "ଆଜି")
-                                "Weekly" -> languageState.value.getT("Weekly", "साप्ताहिक", "ସାପ୍ତାହିକ")
-                                "Monthly" -> languageState.value.getT("Monthly", "मासिक", "ମାସିକ")
-                                else -> selectedPeriod
-                            },
+                            text = selectedDate,
                             color = Color.White,
-                            fontSize = 13.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Medium
                         )
-                        Icon(Icons.Default.ArrowDropDown, null, tint = Color.White)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            Icons.Default.ArrowDropDown,
+                            null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
 
@@ -193,27 +197,15 @@ fun CoordinatorHeader(name: String, role: String, onProfileClick: () -> Unit) {
                     onDismissRequest = { expanded = false },
                     modifier = Modifier.background(Color.White)
                 ) {
-                    DropdownMenuItem(
-                        text = { Text(languageState.value.getT("Today", "आज", "ଆଜି"), color = Color.Black) },
-                        onClick = {
-                            selectedPeriod = "Today"
-                            expanded = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(languageState.value.getT("Weekly", "साप्ताहिक", "ସାପ୍ତାହିକ"), color = Color.Black) },
-                        onClick = {
-                            selectedPeriod = "Weekly"
-                            expanded = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(languageState.value.getT("Monthly", "मासिक", "ମାସିକ"), color = Color.Black) },
-                        onClick = {
-                            selectedPeriod = "Monthly"
-                            expanded = false
-                        }
-                    )
+                    listOf("Today", "Yesterday", "This Week", "This Month").forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option, color = Color.Black) },
+                            onClick = {
+                                selectedDate = option
+                                expanded = false
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -227,7 +219,7 @@ fun CoordinatorStatCard(
     value: String,
     trend: String,
     trendColor: Color,
-    icon: ImageVector,
+    icon: Any,
     points: List<Float>
 ) {
     Card(
@@ -248,7 +240,10 @@ fun CoordinatorStatCard(
                     modifier = Modifier.size(32.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(icon, null, tint = CoordinatorOrange, modifier = Modifier.size(18.dp))
+                        when (icon) {
+                            is ImageVector -> Icon(icon, null, tint = CoordinatorOrange, modifier = Modifier.size(18.dp))
+                            is Painter -> Icon(icon, null, tint = CoordinatorOrange, modifier = Modifier.size(18.dp))
+                        }
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -893,7 +888,7 @@ fun CoordinatorReportsScreen(navController: NavHostController) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 ReportSummaryCard("Total Farmers", "856", "+12%", SuccessGreen, Icons.Default.People)
-                ReportSummaryCard("Goats Insured", "2,145", "+8%", SuccessGreen, Icons.Default.Pets)
+                ReportSummaryCard("Goats Insured", "2,145", "+8%", SuccessGreen, painterResource(R.drawable.ic_ewe_custom))
                 ReportSummaryCard("Pending Claims", "14", "-5%", Color.Red, Icons.Default.Assignment)
                 ReportSummaryCard("Premium", "₹4.2L", "+15%", SuccessGreen, Icons.Default.Payments)
             }
@@ -1023,9 +1018,16 @@ fun FilterDropdown(modifier: Modifier, label: String, value: String, isSearchabl
             readOnly = true,
             modifier = Modifier.fillMaxWidth(),
             label = { Text(label) },
-            trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) },
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, null, tint = Color.Black) },
             shape = RoundedCornerShape(8.dp),
-            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CoordinatorOrange)
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                focusedLabelColor = CoordinatorOrange,
+                unfocusedLabelColor = Color.Black.copy(alpha = 0.6f),
+                focusedBorderColor = CoordinatorOrange,
+                unfocusedBorderColor = Color.Gray.copy(alpha = 0.5f)
+            )
         )
         Box(modifier = Modifier.matchParentSize().clickable { expanded = true })
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(Color.White)) {
@@ -1038,7 +1040,7 @@ fun FilterDropdown(modifier: Modifier, label: String, value: String, isSearchabl
 }
 
 @Composable
-fun ReportSummaryCard(label: String, value: String, trend: String, trendColor: Color, icon: ImageVector) {
+fun ReportSummaryCard(label: String, value: String, trend: String, trendColor: Color, icon: Any) {
     Card(
         modifier = Modifier.width(160.dp),
         shape = RoundedCornerShape(12.dp),
@@ -1048,7 +1050,12 @@ fun ReportSummaryCard(label: String, value: String, trend: String, trendColor: C
         Column(modifier = Modifier.padding(12.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Surface(color = CoordinatorOrange.copy(alpha = 0.1f), shape = CircleShape, modifier = Modifier.size(32.dp)) {
-                    Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = CoordinatorOrange, modifier = Modifier.size(18.dp)) }
+                    Box(contentAlignment = Alignment.Center) {
+                        when (icon) {
+                            is ImageVector -> Icon(icon, null, tint = CoordinatorOrange, modifier = Modifier.size(18.dp))
+                            is Painter -> Icon(icon, null, tint = CoordinatorOrange, modifier = Modifier.size(18.dp))
+                        }
+                    }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.TrendingUp, null, tint = trendColor, modifier = Modifier.size(12.dp))
@@ -1183,19 +1190,6 @@ fun CoordinatorBottomBar(navController: NavHostController) {
             },
             icon = { Icon(Icons.Default.BarChart, null) },
             label = { Text(languageState.value.getT("Reports", "रिपोर्ट", "ରିପୋର୍ଟ"), fontSize = 10.sp) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = CoordinatorOrange,
-                selectedTextColor = CoordinatorOrange,
-                unselectedIconColor = Color.Gray,
-                unselectedTextColor = Color.Gray,
-                indicatorColor = Color.Transparent
-            )
-        )
-        NavigationBarItem(
-            selected = false,
-            onClick = { },
-            icon = { Icon(Icons.Default.MoreHoriz, null) },
-            label = { Text(languageState.value.getT("More", "अधिक", "ଅଧିକ"), fontSize = 10.sp) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = CoordinatorOrange,
                 selectedTextColor = CoordinatorOrange,

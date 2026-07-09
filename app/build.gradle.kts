@@ -46,10 +46,14 @@ kotlin {
 }
 
 dependencies {
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.fragment)
     implementation(libs.material)
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
     // Compose
     implementation(platform(libs.androidx.compose.bom))
