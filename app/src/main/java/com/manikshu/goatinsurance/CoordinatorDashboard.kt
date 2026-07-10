@@ -48,7 +48,12 @@ val CoordinatorLightOrange = Color(0xFFFFF3E0)
 fun CoordinatorDashboard(navController: NavHostController, sessionManager: SessionManager) {
     val languageState = LocalAppLanguage.current
     val userName by sessionManager.userName.collectAsState(initial = "lalu")
-    
+
+    val vm: CoordinatorDashboardViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+    val dashState by vm.dashboard.collectAsState()
+    val activity by vm.activity.collectAsState()
+    val dash = (dashState as? UiState.Success)?.data
+
     Scaffold(
         bottomBar = { CoordinatorBottomBar(navController) },
         containerColor = Color(0xFFF8F9FB),
@@ -78,8 +83,8 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
                     CoordinatorStatCard(
                         modifier = Modifier.weight(1f),
                         label = languageState.value.getT("Active Policies", "सक्रिय नीतियां", "ସକ୍ରିୟ ନୀତି"),
-                        value = "1,256",
-                        trend = "+4%",
+                        value = dash?.activePolicies?.toString() ?: "…",
+                        trend = "",
                         trendColor = SuccessGreen,
                         icon = Icons.Default.Security,
                         points = listOf(0.2f, 0.4f, 0.3f, 0.6f, 0.5f, 0.8f)
@@ -87,18 +92,18 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
                     CoordinatorStatCard(
                         modifier = Modifier.weight(1f).clickable { navController.navigate("claim_list") },
                         label = languageState.value.getT("Claims Today", "आज के दावे", "ଆଜିର ଦାବି"),
-                        value = "18",
-                        trend = "+12%",
+                        value = dash?.claimsToday?.toString() ?: "…",
+                        trend = "",
                         trendColor = SuccessGreen,
                         icon = Icons.Default.Assignment,
                         points = listOf(0.1f, 0.2f, 0.5f, 0.4f, 0.7f, 0.9f)
                     )
                     CoordinatorStatCard(
                         modifier = Modifier.weight(1f),
-                        label = languageState.value.getT("Mortality", "मृत्यु दर", "ମୃତ୍ୟୁ ହାର"),
-                        value = "2.35%",
-                        trend = "-5%",
-                        trendColor = Color.Red,
+                        label = languageState.value.getT("Enrollments", "नामांकन", "ପଞ୍ଜିକରଣ"),
+                        value = dash?.totalEnrollments?.toString() ?: "…",
+                        trend = "",
+                        trendColor = SuccessGreen,
                         icon = Icons.Default.Assessment,
                         points = listOf(0.8f, 0.7f, 0.9f, 0.6f, 0.4f, 0.2f)
                     )
@@ -110,7 +115,7 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                LiveActivitySection(navController, languageState.value)
+                LiveActivitySection(navController, languageState.value, activity)
                 
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -346,7 +351,7 @@ fun PerformanceOverviewCard(language: AppLanguage) {
 }
 
 @Composable
-fun LiveActivitySection(navController: NavHostController, language: AppLanguage) {
+fun LiveActivitySection(navController: NavHostController, language: AppLanguage, activity: List<ActivityItem> = emptyList()) {
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -374,30 +379,27 @@ fun LiveActivitySection(navController: NavHostController, language: AppLanguage)
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                LiveActivityItem(
-                    title = "Sushma Didi filed a claim",
-                    time = "2 mins ago",
-                    status = "Pending",
-                    statusColor = Color(0xFFFFB74D),
-                    icon = Icons.AutoMirrored.Filled.Assignment
-                )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.LightGray.copy(alpha = 0.3f))
-                LiveActivityItem(
-                    title = "Laxmi Didi completed vaccination",
-                    time = "5 mins ago",
-                    status = "Success",
-                    statusColor = SuccessGreen,
-                    icon = Icons.Default.MedicalServices
-                )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.LightGray.copy(alpha = 0.3f))
-                LiveActivityItem(
-                    title = "New enrollment by Sushma Didi",
-                    time = "10 mins ago",
-                    status = "New",
-                    statusColor = Color(0xFF4FC3F7),
-                    icon = Icons.Default.PersonAdd
-                )
-                
+                val shown = activity.take(5)
+                if (shown.isEmpty()) {
+                    Text(
+                        language.getT("No recent activity", "कोई हालिया गतिविधि नहीं", "କୌଣସି ସାମ୍ପ୍ରତିକ କାର୍ଯ୍ୟକଳାପ ନାହିଁ"),
+                        color = Color.Gray, fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
+                shown.forEachIndexed { index, item ->
+                    val isClaim = item.type == "claim"
+                    LiveActivityItem(
+                        title = "${item.actor}: ${item.detail}",
+                        time = item.time.take(16).replace("T", " "),
+                        status = if (isClaim) "Claim" else "New",
+                        statusColor = if (isClaim) Color(0xFFFFB74D) else Color(0xFF4FC3F7),
+                        icon = if (isClaim) Icons.AutoMirrored.Filled.Assignment else Icons.Default.PersonAdd
+                    )
+                    if (index < shown.size - 1) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.LightGray.copy(alpha = 0.3f))
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 OutlinedButton(
@@ -824,6 +826,10 @@ fun CoordinatorReportsScreen(navController: NavHostController) {
     var selectedDateRange by remember { mutableStateOf("This Month") }
     var showExportModal by remember { mutableStateOf(false) }
 
+    val vm: CoordinatorReportsViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+    val reportsState by vm.state.collectAsState()
+    val rep = (reportsState as? UiState.Success)?.data
+
     val tabs = listOf("Enrollment", "Vaccination", "Claims", "Financial", "Performance")
 
     Scaffold(
@@ -887,10 +893,10 @@ fun CoordinatorReportsScreen(navController: NavHostController) {
                     .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                ReportSummaryCard("Total Farmers", "856", "+12%", SuccessGreen, Icons.Default.People)
-                ReportSummaryCard("Goats Insured", "2,145", "+8%", SuccessGreen, painterResource(R.drawable.ic_ewe_custom))
-                ReportSummaryCard("Pending Claims", "14", "-5%", Color.Red, Icons.Default.Assignment)
-                ReportSummaryCard("Premium", "₹4.2L", "+15%", SuccessGreen, Icons.Default.Payments)
+                ReportSummaryCard("Enrollments", rep?.totalEnrollments?.toString() ?: "…", "", SuccessGreen, Icons.Default.People)
+                ReportSummaryCard("Claims Filed", rep?.totalClaimsFiled?.toString() ?: "…", "", SuccessGreen, painterResource(R.drawable.ic_ewe_custom))
+                ReportSummaryCard("Approved", rep?.claimsApproved?.toString() ?: "…", "", SuccessGreen, Icons.Default.Assignment)
+                ReportSummaryCard("Premium", rep?.let { "₹${it.totalPremium.toInt()}" } ?: "…", "", SuccessGreen, Icons.Default.Payments)
             }
 
             Spacer(modifier = Modifier.height(24.dp))

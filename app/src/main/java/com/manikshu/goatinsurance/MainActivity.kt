@@ -25,7 +25,15 @@ class MainActivity : ComponentActivity() {
             val windowSizeClass = calculateWindowSizeClass(this)
             val navController = rememberNavController()
             val sessionManager = remember { SessionManager(this) }
-            
+
+            // Restore the persisted JWT into the in-memory holder the OkHttp interceptor
+            // reads, before any authenticated screen makes a call.
+            val tokenLoaded = remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                AuthTokenHolder.token = sessionManager.currentToken()
+                tokenLoaded.value = true
+            }
+
             val savedLanguage by sessionManager.appLanguage.collectAsState(initial = AppLanguage.ENGLISH)
             val savedProfileImage by sessionManager.profileImageUri.collectAsState(initial = null)
             val savedNotificationsEnabled by sessionManager.notificationsEnabled.collectAsState(initial = true)
@@ -63,7 +71,9 @@ class MainActivity : ComponentActivity() {
                     LocalProfileImage provides profileImageState,
                     LocalNotificationsEnabled provides notificationsEnabledState
                 ) {
-                    AppNavigation(navController, sessionManager)
+                    if (tokenLoaded.value) {
+                        AppNavigation(navController, sessionManager)
+                    }
                 }
             }
         }

@@ -1,10 +1,11 @@
 package com.manikshu.goatinsurance
 
+import okhttp3.MultipartBody
 import retrofit2.http.*
 
 interface ApiService {
 
-    // ----------------- GENERAL / auth -----------------
+    // ----------------- AUTH -----------------
     @GET("auth/request_otp")
     suspend fun requestOtp(
         @Query("mobile_number") mobile: String,
@@ -33,6 +34,31 @@ interface ApiService {
 
     @GET("auth/logout")
     suspend fun logout(): StatusResponse
+
+    // ----------------- UPLOAD -----------------
+    @Multipart
+    @POST("upload")
+    suspend fun uploadPhoto(@Part file: MultipartBody.Part): UploadResponse
+
+    // ----------------- LOCATIONS (public) -----------------
+    @GET("locations/states")
+    suspend fun states(): StatesResponse
+
+    @GET("locations/districts")
+    suspend fun districts(@Query("state") state: String): DistrictsResponse
+
+    @GET("locations/blocks")
+    suspend fun blocks(
+        @Query("state") state: String,
+        @Query("district") district: String,
+    ): BlocksResponse
+
+    @GET("locations/villages")
+    suspend fun villages(
+        @Query("state") state: String,
+        @Query("district") district: String,
+        @Query("block") block: String,
+    ): VillagesResponse
 
     // ----------------- ADMIN -----------------
     @GET("admin/overview")
@@ -82,7 +108,7 @@ interface ApiService {
     ): GoatListResponse
 
     @GET("sd/goats/{id}")
-    suspend fun sdGoatDetail(@Path("id") id: Int): Map<String, kotlinx.serialization.json.JsonElement>
+    suspend fun sdGoatDetail(@Path("id") id: Int): GoatDetail
 
     @GET("sd/vaccinations")
     suspend fun sdVaccinations(@Query("filter") filter: String = "all"): VaccinationListResponse
@@ -102,6 +128,12 @@ interface ApiService {
     @POST("sd/ai_assistant")
     suspend fun aiAssistant(@Body body: AiAssistantRequest): AiAssistantResponse
 
+    @GET("sd/earnings")
+    suspend fun sdEarnings(): EarningListResponse
+
+    @GET("sd/claims")
+    suspend fun sdClaims(): SdClaimListResponse
+
     // ----------------- FARMER -----------------
     @GET("farmer/profile")
     suspend fun farmerProfile(): ProfileResponse
@@ -110,7 +142,7 @@ interface ApiService {
     suspend fun farmerPolicies(): MyPoliciesResponse
 
     @GET("farmer/policies/{policyNumber}")
-    suspend fun farmerPolicyDetail(@Path("policyNumber") policyNumber: String): Map<String, kotlinx.serialization.json.JsonElement>
+    suspend fun farmerPolicyDetail(@Path("policyNumber") policyNumber: String): PolicyDetail
 
     @POST("farmer/report_death")
     suspend fun farmerReportDeath(@Body body: ReportDeathRequest): StatusResponse
@@ -119,6 +151,9 @@ interface ApiService {
     suspend fun farmerVaccinationSchedule(
         @Query("goat_id") goatId: Int? = null,
     ): List<VaccinationScheduleItem>
+
+    @GET("farmer/claims")
+    suspend fun farmerClaims(): FarmerClaimListResponse
 
     // ----------------- COORDINATOR -----------------
     @GET("coordinator/profile")
@@ -144,7 +179,7 @@ interface ApiService {
     ): ClaimListResponse
 
     @GET("coordinator/claims/{claimNumber}")
-    suspend fun coClaimReview(@Path("claimNumber") claimNumber: String): Map<String, kotlinx.serialization.json.JsonElement>
+    suspend fun coClaimReview(@Path("claimNumber") claimNumber: String): ClaimReview
 
     @POST("coordinator/review_claim")
     suspend fun reviewClaim(@Body body: ReviewClaimRequest): StatusResponse

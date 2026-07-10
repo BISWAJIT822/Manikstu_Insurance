@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
@@ -126,6 +127,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
+import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
 
 val LocalWindowSizeClass = staticCompositionLocalOf<WindowSizeClass?> { null }
@@ -203,31 +205,45 @@ fun AppNavigation(navController: NavHostController, sessionManager: SessionManag
         }
         composable("signup") {
             SignUpScreen(
-                onVerifyOtp = { role, name, phone ->
-                    navController.navigate("setup_profile/$role/$name/$phone")
+                onVerifyOtp = { role, name, phone, otp ->
+                    navController.navigate("setup_profile/$role/$name/$phone/$otp")
                 },
                 onNavigateToLogin = { navController.popBackStack() }
             )
         }
-        composable("setup_profile/{role}/{name}/{phone}") { backStackEntry ->
+        composable("setup_profile/{role}/{name}/{phone}/{otp}") { backStackEntry ->
             val roleStr = backStackEntry.arguments?.getString("role") ?: UserRole.FARMER.name
             val role = try { UserRole.valueOf(roleStr) } catch(e: Exception) { UserRole.FARMER }
             val name = backStackEntry.arguments?.getString("name") ?: ""
             val phone = backStackEntry.arguments?.getString("phone") ?: ""
+            val otp = backStackEntry.arguments?.getString("otp") ?: ""
             SetupProfileScreen(
                 role = role,
                 initialName = name,
                 initialPhone = phone,
-                onComplete = { selectedRole, name, location ->
-                    scope.launch { sessionManager.saveSession(selectedRole, name, location) }
-                    val route = when(selectedRole) {
-                        UserRole.SURAKSHA_DIDI -> "didi_dashboard"
-                        UserRole.FARMER -> "farmer_dashboard"
-                        UserRole.COORDINATOR -> "coordinator_dashboard"
+                otp = otp,
+                onComplete = { authedRole ->
+                    if (authedRole != null) {
+                        // Auto-approved and logged in: go straight to the dashboard.
+                        scope.launch { sessionManager.saveSession(authedRole) }
+                        val dest = when (authedRole) {
+                            UserRole.SURAKSHA_DIDI -> "didi_dashboard"
+                            UserRole.FARMER -> "farmer_dashboard"
+                            UserRole.COORDINATOR -> "coordinator_dashboard"
+                        }
+                        navController.navigate(dest) { popUpTo("signup") { inclusive = true } }
+                    } else {
+                        navController.navigate("pending_approval") { popUpTo("signup") { inclusive = true } }
                     }
-                    navController.navigate(route) { popUpTo("signup") { inclusive = true } }
                 },
                 onBack = { navController.popBackStack() }
+            )
+        }
+        composable("pending_approval") {
+            PendingApprovalScreen(
+                onBackToLogin = {
+                    navController.navigate("login") { popUpTo(0) { inclusive = true } }
+                }
             )
         }
         composable("didi_dashboard") { DidiDashboard(navController, sessionManager) }
@@ -489,15 +505,29 @@ fun ResponsiveLayout(
 }
 
 @Composable
-fun SignUpScreen(onVerifyOtp: (UserRole, String, String) -> Unit, onNavigateToLogin: () -> Unit) {
+fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavigateToLogin: () -> Unit) {
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var otp by remember { mutableStateOf("") }
     var step by remember { mutableIntStateOf(1) }
     var selectedRole by remember { mutableStateOf<UserRole?>(null) }
-    
+
     val context = LocalContext.current
     val languageState = LocalAppLanguage.current
+
+    val authViewModel: AuthViewModel = hiltViewModel()
+    val authState by authViewModel.authState.collectAsState()
+    val isAuthLoading = authState is AuthState.Loading
+    LaunchedEffect(authState) {
+        when (val s = authState) {
+            is AuthState.OtpSent -> { step = 2; authViewModel.reset() }
+            is AuthState.Error -> {
+                Toast.makeText(context, s.message, Toast.LENGTH_LONG).show()
+                authViewModel.reset()
+            }
+            else -> {}
+        }
+    }
 
     // Permission Handling
     var showPermissionDialog by remember { mutableStateOf(false) }
@@ -680,10 +710,10 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String) -> Unit, onNavigateToLo
                             if (selectedRole == null) {
                                 Toast.makeText(context, languageState.value.getT("Scroll down and choose a role", "नीचे स्क्रॉल करें और एक भूमिका चुनें", "ତଳକୁ ସ୍କ୍ରୋଲ୍ କରନ୍ତୁ ଏବଂ ଏକ ଭୂମିକା ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show()
                             } else {
-                                step = 2 
+                                authViewModel.sendSignupOtp(name, phone, selectedRole!!)
                             }
                         },
-                        enabled = (name.isNotBlank() && phone.length == 10),
+                        enabled = (name.isNotBlank() && phone.length == 10) && !isAuthLoading,
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f))
@@ -705,7 +735,7 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String) -> Unit, onNavigateToLo
                                 ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
                             }
                             if (allGranted) {
-                                onVerifyOtp(selectedRole!!, name, phone)
+                                onVerifyOtp(selectedRole!!, name, phone, otp)
                             } else {
                                 showPermissionDialog = true
                             }
@@ -718,7 +748,7 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String) -> Unit, onNavigateToLo
                                 ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
                             }
                             if (allGranted) {
-                                onVerifyOtp(selectedRole!!, name, phone)
+                                onVerifyOtp(selectedRole!!, name, phone, otp)
                             } else {
                                 showPermissionDialog = true
                             }
@@ -776,9 +806,24 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
     var otp by remember { mutableStateOf("") }
     var step by remember { mutableIntStateOf(1) }
     var selectedRole by remember { mutableStateOf<UserRole?>(null) }
-    
+
     val context = LocalContext.current
     val languageState = LocalAppLanguage.current
+
+    val authViewModel: AuthViewModel = hiltViewModel()
+    val authState by authViewModel.authState.collectAsState()
+    val isAuthLoading = authState is AuthState.Loading
+    LaunchedEffect(authState) {
+        when (val s = authState) {
+            is AuthState.OtpSent -> { step = 2; authViewModel.reset() }
+            is AuthState.Authenticated -> { onLoginSuccess(s.role); authViewModel.reset() }
+            is AuthState.Error -> {
+                Toast.makeText(context, s.message, Toast.LENGTH_LONG).show()
+                authViewModel.reset()
+            }
+            else -> {}
+        }
+    }
 
     // Permission Handling
     var showPermissionDialog by remember { mutableStateOf(false) }
@@ -981,10 +1026,10 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                             if (selectedRole == null) {
                                 Toast.makeText(context, languageState.value.getT("Scroll down and choose a role", "नीचे स्क्रॉल करें और एक भूमिका चुनें", "ତଳକୁ ସ୍କ୍ରୋଲ୍ କରନ୍ତୁ ଏବଂ ଏକ ଭୂମିକା ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show()
                             } else {
-                                step = 2 
+                                authViewModel.sendOtp(phone, selectedRole!!)
                             }
                         },
-                        enabled = phone.length == 10,
+                        enabled = phone.length == 10 && !isAuthLoading,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
@@ -1013,7 +1058,7 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                                 ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
                             }
                             if (allGranted) {
-                                onLoginSuccess(selectedRole!!)
+                                authViewModel.verifyOtp(phone, otp, selectedRole!!)
                             } else {
                                 showPermissionDialog = true
                             }
@@ -1026,7 +1071,7 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                                 ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
                             }
                             if (allGranted) {
-                                onLoginSuccess(selectedRole!!)
+                                authViewModel.verifyOtp(phone, otp, selectedRole!!)
                             } else {
                                 showPermissionDialog = true
                             }
@@ -1164,6 +1209,10 @@ fun DidiDashboard(navController: NavHostController, sessionManager: SessionManag
     val languageState = LocalAppLanguage.current
     val userName by sessionManager.userName.collectAsState(initial = "Sushma Didi")
 
+    val dashVm: DidiDashboardViewModel = hiltViewModel()
+    val dashState by dashVm.state.collectAsState()
+    val stats = (dashState as? UiState.Success)?.data
+
     ResponsiveLayout(
         compact = {
             Scaffold(
@@ -1171,7 +1220,7 @@ fun DidiDashboard(navController: NavHostController, sessionManager: SessionManag
                 bottomBar = { DidiBottomBar(navController) },
                 contentWindowInsets = WindowInsets(0, 0, 0, 0)
             ) { padding ->
-                DidiContent(padding, navController, userName ?: "Sushma Didi") { showNotifications = true }
+                DidiContent(padding, navController, userName ?: "Sushma Didi", stats) { showNotifications = true }
             }
         },
         expanded = {
@@ -1241,14 +1290,14 @@ fun DidiDashboard(navController: NavHostController, sessionManager: SessionManag
                         )
                     )
                 }
-                DidiContent(PaddingValues(0.dp), navController, userName ?: "Sushma Didi") { showNotifications = true }
+                DidiContent(PaddingValues(0.dp), navController, userName ?: "Sushma Didi", stats) { showNotifications = true }
             }
         }
     )
 }
 
 @Composable
-fun DidiContent(padding: PaddingValues, navController: NavHostController, userName: String, onNotificationClick: () -> Unit) {
+fun DidiContent(padding: PaddingValues, navController: NavHostController, userName: String, stats: SdDashboard?, onNotificationClick: () -> Unit) {
     val languageState = LocalAppLanguage.current
     val context = LocalContext.current
     Column(
@@ -1292,15 +1341,16 @@ fun DidiContent(padding: PaddingValues, navController: NavHostController, userNa
             // Stats (2 columns on mobile, 4 on tablet)
             val statSpan = if (isCompact) 3 else 3
             items(4, span = { GridItemSpan(statSpan) }) { index ->
+                val dash = if (stats == null) "…" else null
                 when(index) {
-                    0 -> StatCard(languageState.value.getT("Goats Enrolled", "पंजीकृत बकरियां", "ପଞ୍ଜିକୃତ ଛେଳି"), "128", painterResource(R.drawable.ic_ewe_custom), PrimaryGreen, CardLightGreen)
-                    1 -> StatCard(languageState.value.getT("Pending Claims", "लंबित दावे", "ବାକି ରହିଥିବା ଦାବି"), "12", Icons.AutoMirrored.Filled.Assignment, AccentOrange, CardLightOrange)
-                    2 -> StatCard(languageState.value.getT("Today's Visits", "आज की मुलाकात", "ଆଜିର ପରିଦର୍ଶନ"), "24", Icons.Default.CalendarToday, InfoBlue, CardLightBlue)
+                    0 -> StatCard(languageState.value.getT("Goats Enrolled", "पंजीकृत बकरियां", "ପଞ୍ଜିକୃତ ଛେଳି"), dash ?: "${stats!!.totalEnrolled}", painterResource(R.drawable.ic_ewe_custom), PrimaryGreen, CardLightGreen)
+                    1 -> StatCard(languageState.value.getT("Pending Claims", "लंबित दावे", "ବାକି ରହିଥିବା ଦାବି"), dash ?: "${stats!!.pendingQueries}", Icons.AutoMirrored.Filled.Assignment, AccentOrange, CardLightOrange)
+                    2 -> StatCard(languageState.value.getT("Policies Issued", "जारी नीतियां", "ଜାରି ପଲିସି"), dash ?: "${stats!!.policiesIssued}", Icons.Default.CalendarToday, InfoBlue, CardLightBlue)
                     3 -> StatCard(
-                        label = languageState.value.getT("Earnings", "आय", "ଉପାର୍ଜନ"), 
-                        value = "₹8,450", 
-                        icon = Icons.Default.Payments, 
-                        iconColor = Color(0xFF9C27B0), 
+                        label = languageState.value.getT("Earnings", "आय", "ଉପାର୍ଜନ"),
+                        value = dash ?: "₹${stats!!.premiumCollected.toInt()}",
+                        icon = Icons.Default.Payments,
+                        iconColor = Color(0xFF9C27B0),
                         iconBgColor = CardLightPurple,
                         modifier = Modifier.clickable { navController.navigate("earning_history") }
                     )
@@ -1772,12 +1822,24 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
     var deathDate by remember { mutableStateOf("") }
     var deathTime by remember { mutableStateOf("") }
 
-    val goats = listOf(
-        Triple("ET-340801-0001", "Black Bengal", "12M"),
-        Triple("ET-240801-0002", "Jamunapari", "18M"),
-        Triple("ET-140801-0004", "Sirohi", "24M")
-    )
-    var selectedGoat by remember { mutableStateOf(goats[0]) }
+    val farmerVm: FarmerHomeViewModel = hiltViewModel()
+    val policiesState by farmerVm.policies.collectAsState()
+    val policies = (policiesState as? UiState.Success)?.data?.policies ?: emptyList()
+    val claimsVm: FarmerClaimsViewModel = hiltViewModel()
+    val submitState by claimsVm.submit.collectAsState()
+    val isSubmitting = submitState is SubmitState.Submitting
+    var deathDateIso by remember { mutableStateOf("") }
+    LaunchedEffect(submitState) {
+        when (val s = submitState) {
+            is SubmitState.Success -> { Toast.makeText(context, s.message ?: "Reported", Toast.LENGTH_SHORT).show(); claimsVm.resetSubmit(); onComplete() }
+            is SubmitState.Error -> { Toast.makeText(context, s.message, Toast.LENGTH_LONG).show(); claimsVm.resetSubmit() }
+            else -> {}
+        }
+    }
+
+    val goats = policies.map { Triple(it.earTagNumber, it.breed, "") }
+    var selectedIndex by remember { mutableStateOf(0) }
+    val selectedGoat = goats.getOrNull(selectedIndex) ?: Triple("—", "", "")
     var expanded by remember { mutableStateOf(false) }
 
     val calendar = Calendar.getInstance()
@@ -1900,7 +1962,7 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
                                 }
                             },
                             onClick = {
-                                selectedGoat = goat
+                                selectedIndex = goats.indexOf(goat)
                                 expanded = false
                             }
                         )
@@ -1923,6 +1985,7 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
                         context,
                         { _, year, month, dayOfMonth ->
                             deathDate = "$dayOfMonth/${month + 1}/$year"
+                            deathDateIso = String.format("%04d-%02d-%02d", year, month + 1, dayOfMonth)
                         },
                         calendar.get(Calendar.YEAR),
                         calendar.get(Calendar.MONTH),
@@ -2004,9 +2067,18 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
             Spacer(modifier = Modifier.height(32.dp))
             
             Button(
-                onClick = onComplete,
+                onClick = {
+                    val goatId = policies.getOrNull(selectedIndex)?.goatId
+                    if (goatId == null) {
+                        Toast.makeText(context, languageState.value.getT("Select a goat", "एक बकरी चुनें", "ଏକ ଛେଳି ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    // Backend accepts an ISO datetime; append a nominal time.
+                    val iso = if (deathDateIso.isNotBlank()) "${deathDateIso}T00:00:00" else ""
+                    claimsVm.reportDeath(goatId, iso)
+                },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
-                enabled = isConfirmed && deathDate.isNotBlank() && deathTime.isNotBlank(),
+                enabled = isConfirmed && deathDate.isNotBlank() && deathTime.isNotBlank() && !isSubmitting,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
             ) {
@@ -2173,7 +2245,20 @@ fun StepProgressIndicator(currentStep: Int, totalSteps: Int) {
 fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
     var currentStep by rememberSaveable { mutableIntStateOf(1) }
     val languageState = LocalAppLanguage.current
-    
+    val context = LocalContext.current
+
+    val enrollVm: EnrollmentViewModel = hiltViewModel()
+    val submitState by enrollVm.submit.collectAsState()
+    val enrollResult by enrollVm.result.collectAsState()
+    val isSubmitting = submitState is SubmitState.Submitting
+    LaunchedEffect(submitState) {
+        when (val s = submitState) {
+            is SubmitState.Success -> { currentStep = 7 }
+            is SubmitState.Error -> Toast.makeText(context, s.message, Toast.LENGTH_LONG).show()
+            else -> {}
+        }
+    }
+
     // Form State
     var farmerName by rememberSaveable { mutableStateOf("") }
     var mobileNumber by rememberSaveable { mutableStateOf("") }
@@ -2262,7 +2347,7 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                     4 -> EnrollmentTaggingStep(earTagNumber) { earTagNumber = it }
                     5 -> EnrollmentVaccinationStep()
                     6 -> EnrollmentPaymentStep()
-                    7 -> EnrollmentPolicyStep(farmerName, earTagNumber)
+                    7 -> EnrollmentPolicyStep(farmerName, earTagNumber, enrollResult)
                 }
             }
 
@@ -2290,15 +2375,44 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                 }
                 
                 Button(
-                    onClick = { if (currentStep < 7) currentStep++ else onComplete() },
-                    enabled = isStepValid,
+                    onClick = {
+                        when {
+                            currentStep < 6 -> currentStep++
+                            currentStep == 6 -> {
+                                // Submit enrollment: upload photos + POST /sd/enroll_goat.
+                                val isMale = gender == languageState.value.getT("Male", "नर", "ଅଣ୍ଡିରା")
+                                val isYears = ageUnit == languageState.value.getT("Years", "साल", "ବର୍ଷ")
+                                val ageMonths = (age.toIntOrNull() ?: 0) * (if (isYears) 12 else 1)
+                                val request = EnrollGoatRequest(
+                                    farmerName = farmerName, farmerMobile = mobileNumber,
+                                    village = village.ifBlank { null }, gpsLocation = location.ifBlank { null },
+                                    aadhaarId = aadhaar.ifBlank { null },
+                                    earTagNumber = earTagNumber, breed = breed,
+                                    gender = if (isMale) "male" else "female",
+                                    ageMonths = ageMonths, weightKg = weight.toDoubleOrNull() ?: 0.0,
+                                    color = colorMarks.ifBlank { null },
+                                    photos = emptyList(),  // filled by the view-model after upload
+                                    vaccines = emptyList(),
+                                    paymentMode = "cash", amount = 350.0,
+                                    receiptNumber = "RCP-${System.currentTimeMillis()}",
+                                )
+                                enrollVm.enroll(request, listOf(leftPhotoUri, rightPhotoUri, frontPhotoUri, tagPhotoUri).filterNotNull())
+                            }
+                            else -> onComplete()
+                        }
+                    },
+                    enabled = isStepValid && !isSubmitting,
                     modifier = Modifier.weight(1f).height(56.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f))
                 ) {
                     Text(
-                        text = if (currentStep == 7) languageState.value.getT("Finish Enrollment", "नामांकन पूरा करें", "ପଞ୍ଜିକରଣ ଶେଷ କରନ୍ତୁ") 
-                               else languageState.value.getT("Next", "अगला", "ପରବର୍ତ୍ତୀ"),
+                        text = when {
+                            isSubmitting -> languageState.value.getT("Submitting…", "प्रस्तुत हो रहा है…", "ଦାଖଲ ହେଉଛି…")
+                            currentStep == 7 -> languageState.value.getT("Finish Enrollment", "नामांकन पूरा करें", "ପଞ୍ଜିକରଣ ଶେଷ କରନ୍ତୁ")
+                            currentStep == 6 -> languageState.value.getT("Submit & Generate Policy", "जमा करें और पॉलिसी बनाएं", "ଦାଖଲ କରି ପଲିସି ପ୍ରସ୍ତୁତ କରନ୍ତୁ")
+                            else -> languageState.value.getT("Next", "अगला", "ପରବର୍ତ୍ତୀ")
+                        },
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -2640,7 +2754,7 @@ fun EnrollmentPaymentStep() {
 }
 
 @Composable
-fun EnrollmentPolicyStep(farmer: String, tag: String) {
+fun EnrollmentPolicyStep(farmer: String, tag: String, result: EnrollGoatResponse? = null) {
     val languageState = LocalAppLanguage.current
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
@@ -2660,13 +2774,13 @@ fun EnrollmentPolicyStep(farmer: String, tag: String) {
             border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                PolicyDetailRow(languageState.value.getT("Policy Number", "पॉलिसी नंबर", "ନୀତି ନମ୍ବର"), "POL-2024-00125")
-                PolicyDetailRow(languageState.value.getT("Farmer Name", "किसान का नाम", "କୃଷକଙ୍କ ନାମ"), farmer.ifBlank { "RASGJM RYU" })
-                PolicyDetailRow(languageState.value.getT("Ear Tag", "कान का टैग", "କାନ ଟ୍ୟାଗ୍"), tag.ifBlank { "ET-453678" })
+                PolicyDetailRow(languageState.value.getT("Policy Number", "पॉलिसी नंबर", "ନୀତି ନମ୍ବର"), result?.policyNumber ?: "—")
+                PolicyDetailRow(languageState.value.getT("Farmer Name", "किसान का नाम", "କୃଷକଙ୍କ ନାମ"), farmer.ifBlank { "—" })
+                PolicyDetailRow(languageState.value.getT("Ear Tag", "कान का टैग", "କାନ ଟ୍ୟାଗ୍"), tag.ifBlank { "—" })
                 PolicyDetailRow(languageState.value.getT("Premium Paid", "प्रीमियम भुगतान", "ଦିଆଯାଇଥିବା ପ୍ରିମିୟମ"), "₹ 350")
-                PolicyDetailRow(languageState.value.getT("Validity", "वैधता", "ବୈଧତା"), "01 Aug 2024 - 31 Jul 2025")
+                PolicyDetailRow(languageState.value.getT("Validity", "वैधता", "ବୈଧତା"), "${result?.validFrom ?: "—"} - ${result?.validTo ?: "—"}")
                 HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
-                PolicyDetailRow(languageState.value.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), "₹ 8,500", true)
+                PolicyDetailRow(languageState.value.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), result?.sumInsured?.let { "₹ ${it.toInt()}" } ?: "—", true)
             }
         }
         
@@ -2904,6 +3018,11 @@ fun FarmerDashboard(navController: NavHostController, sessionManager: SessionMan
     val languageState = LocalAppLanguage.current
     val userName by sessionManager.userName.collectAsState(initial = "Ramesh Naik")
 
+    val farmerVm: FarmerHomeViewModel = hiltViewModel()
+    val policiesState by farmerVm.policies.collectAsState()
+    val schedule by farmerVm.schedule.collectAsState()
+    val policies = (policiesState as? UiState.Success)?.data?.policies ?: emptyList()
+
     ResponsiveLayout(
         compact = {
             Scaffold(
@@ -2911,7 +3030,7 @@ fun FarmerDashboard(navController: NavHostController, sessionManager: SessionMan
                 bottomBar = { FarmerBottomBar(navController) },
                 contentWindowInsets = WindowInsets(0, 0, 0, 0)
             ) { padding ->
-                FarmerContent(padding, navController, userName ?: "Ramesh Naik") { showNotifications = true }
+                FarmerContent(padding, navController, userName ?: "Ramesh Naik", policies, schedule) { showNotifications = true }
             }
         },
         expanded = {
@@ -2954,16 +3073,17 @@ fun FarmerDashboard(navController: NavHostController, sessionManager: SessionMan
                         )
                     )
                 }
-                FarmerContent(PaddingValues(0.dp), navController, userName ?: "Ramesh Naik") { showNotifications = true }
+                FarmerContent(PaddingValues(0.dp), navController, userName ?: "Ramesh Naik", policies, schedule) { showNotifications = true }
             }
         }
     )
 }
 
 @Composable
-fun FarmerContent(padding: PaddingValues, navController: NavHostController, userName: String, onNotificationClick: () -> Unit) {
+fun FarmerContent(padding: PaddingValues, navController: NavHostController, userName: String, policies: List<PolicyOut>, schedule: List<VaccinationScheduleItem>, onNotificationClick: () -> Unit) {
     val languageState = LocalAppLanguage.current
     val context = LocalContext.current
+    val activeCount = policies.count { it.status == "active" }
     
     // Blue Theme Palette for Farmer
     val lightBlue = Color(0xFFE3F2FD)
@@ -3016,8 +3136,8 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
             val statSpan = if (isCompact) 3 else 6
             items(2, span = { GridItemSpan(statSpan) }) { index ->
                 when(index) {
-                    0 -> StatCard(languageState.value.getT("Active Policies", "सक्रिय नीतियां", "ସକ୍ରିୟ ନୀତି"), "02", Icons.AutoMirrored.Filled.Assignment, royalBlue, skyBlue)
-                    1 -> StatCard(languageState.value.getT("Total Goats", "कुल बकरियां", "ମୋଟ ଛେଳି"), "05", painterResource(R.drawable.ic_ewe_custom), PrimaryGreen, CardLightGreen)
+                    0 -> StatCard(languageState.value.getT("Active Policies", "सक्रिय नीतियां", "ସକ୍ରିୟ ନୀତି"), "%02d".format(activeCount), Icons.AutoMirrored.Filled.Assignment, royalBlue, skyBlue)
+                    1 -> StatCard(languageState.value.getT("Total Goats", "कुल बकरियां", "ମୋଟ ଛେଳି"), "%02d".format(policies.size), painterResource(R.drawable.ic_ewe_custom), PrimaryGreen, CardLightGreen)
                 }
             }
 
@@ -3045,7 +3165,7 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                languageState.value.getT("15 Aug 2024 (Tomorrow)", "15 अगस्त 2024 (कल)", "୧୫ ଅଗଷ୍ଟ ୨୦୨୪ (କାଲି)"),
+                                schedule.firstOrNull()?.nextVaccinationDate ?: languageState.value.getT("No upcoming dose", "कोई आगामी खुराक नहीं", "କୌଣସି ଆଗାମୀ ଡୋଜ୍ ନାହିଁ"),
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black,
                                 fontSize = 15.sp
@@ -3086,13 +3206,8 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                             fontWeight = FontWeight.Bold
                         )
                         
-                        val schedules = listOf(
-                            Triple("PPR Vaccine", "15 Aug 2024", "ET-340801-0001"),
-                            Triple("ET + TT", "20 Aug 2024", "ET-340801-0006"),
-                            Triple("FMD Vaccine", "05 Sep 2024", "ET-240801-0002"),
-                            Triple("Goat Pox", "12 Sep 2024", "ET-340801-0005"),
-                            Triple("PPR Booster", "20 Sep 2024", "ET-240801-0002")
-                        )
+                        val vaccineDisplay = mapOf("ppr" to "PPR Vaccine", "et_tt" to "ET + TT", "fmd" to "FMD Vaccine", "goat_pox" to "Goat Pox")
+                        val schedules = schedule.map { Triple(vaccineDisplay[it.vaccineType] ?: it.vaccineType, it.nextVaccinationDate ?: "—", it.earTagNumber) }
                         
                         Column(
                             modifier = Modifier
@@ -3136,7 +3251,7 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            languageState.value.getT("My Policies (2)", "मेरी नीतियां (2)", "ମୋର ନୀତିଗୁଡ଼ିକ (୨)"),
+                            languageState.value.getT("My Policies (${policies.size})", "मेरी नीतियां (${policies.size})", "ମୋର ନୀତିଗୁଡ଼ିକ (${policies.size})"),
                             style = MaterialTheme.typography.titleMedium,
                             color = royalBlue,
                             fontWeight = FontWeight.Bold
@@ -3168,12 +3283,17 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                                 }
                             }
                             Spacer(modifier = Modifier.width(12.dp))
+                            val p0 = policies.firstOrNull()
                             Column {
-                                Text("ET-340801-0001", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black)
-                                Text("Black Bengal • ${languageState.value.getT("Female", "मादा", "ମାଈ")} • 12M", color = Color.Gray, fontSize = 12.sp)
+                                Text(p0?.earTagNumber ?: "—", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black)
+                                Text(p0?.breed ?: "—", color = Color.Gray, fontSize = 12.sp)
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text(languageState.value.getT("Policy Active", "पॉलिसी सक्रिय", "ନୀତି ସକ୍ରିୟ"), color = SuccessGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                Text(languageState.value.getT("Valid till 31 May 2025", "31 मई 2025 तक मान्य", "୩୧ ମଇ ୨୦୨୫ ପର୍ଯ୍ୟନ୍ତ ବୈଧ"), fontSize = 11.sp, color = Color.Gray)
+                                val isActive = (p0?.status ?: "active") == "active"
+                                Text(
+                                    if (isActive) languageState.value.getT("Policy Active", "पॉलिसी सक्रिय", "ନୀତି ସକ୍ରିୟ") else languageState.value.getT("Policy ${p0?.status ?: ""}", "पॉलिसी ${p0?.status ?: ""}", "ନୀତି ${p0?.status ?: ""}"),
+                                    color = if (isActive) SuccessGreen else Color.Red, fontWeight = FontWeight.Bold, fontSize = 13.sp
+                                )
+                                Text(languageState.value.getT("Valid till ${p0?.validTo ?: "—"}", "${p0?.validTo ?: "—"} तक मान्य", "${p0?.validTo ?: "—"} ପର୍ଯ୍ୟନ୍ତ ବୈଧ"), fontSize = 11.sp, color = Color.Gray)
                             }
                         }
                         
@@ -3190,7 +3310,7 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                                 Text(languageState.value.getT("Report Death", "मृत्यु की सूचना", "ମୃତ୍ୟୁ ରିପୋର୍ଟ"), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
                             Button(
-                                onClick = { navController.navigate("goat_details/ET-340801-0001") },
+                                onClick = { policies.firstOrNull()?.let { navController.navigate("goat_details/${it.policyNumber}") } },
                                 modifier = Modifier.weight(1f).height(40.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
                                 shape = RoundedCornerShape(8.dp),
@@ -4649,15 +4769,70 @@ fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack
     val languageState = LocalAppLanguage.current
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableIntStateOf(0) }
-    
+
     val isFarmer = userRole == UserRole.FARMER
     val themeColor = if (isFarmer) PrimaryBlue else PrimaryGreen
 
+    // ---- real data ----
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+    var goats by remember { mutableStateOf<List<Triple<String, String, String>>>(emptyList()) }
+    var statusByTag by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var clickIdByTag by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var counts by remember { mutableStateOf(mapOf("all" to 0, "active" to 0, "expired" to 0, "claimed" to 0)) }
+
+    if (isFarmer) {
+        val farmerVm: FarmerHomeViewModel = hiltViewModel()
+        val policiesState by farmerVm.policies.collectAsState()
+        LaunchedEffect(policiesState) {
+            when (val s = policiesState) {
+                is UiState.Loading -> { isLoading = true; errorMsg = null }
+                is UiState.Error -> { isLoading = false; errorMsg = s.message }
+                is UiState.Success -> {
+                    isLoading = false; errorMsg = null
+                    val ps = s.data.policies
+                    goats = ps.map { Triple(it.earTagNumber, "${it.breed}", "") }
+                    statusByTag = ps.associate { it.earTagNumber to it.status }
+                    clickIdByTag = ps.associate { it.earTagNumber to it.policyNumber }
+                    counts = mapOf(
+                        "all" to ps.size,
+                        "active" to ps.count { it.status == "active" },
+                        "expired" to ps.count { it.status == "expired" },
+                        "claimed" to ps.count { it.status == "claimed" },
+                    )
+                }
+            }
+        }
+    } else {
+        val goatVm: GoatListViewModel = hiltViewModel()
+        val goatState by goatVm.state.collectAsState()
+        LaunchedEffect(searchQuery) { goatVm.setSearch(searchQuery) }
+        LaunchedEffect(goatState) {
+            when (val s = goatState) {
+                is UiState.Loading -> { isLoading = true; errorMsg = null }
+                is UiState.Error -> { isLoading = false; errorMsg = s.message }
+                is UiState.Success -> {
+                    isLoading = false; errorMsg = null
+                    val gs = s.data.goats
+                    goats = gs.map { Triple(it.earTagNumber, it.farmer ?: "—", it.village ?: "—") }
+                    statusByTag = gs.associate { it.earTagNumber to it.status }
+                    clickIdByTag = gs.associate { it.earTagNumber to it.id.toString() }
+                    counts = mapOf(
+                        "all" to (s.data.counts["all"] ?: gs.size),
+                        "active" to (s.data.counts["active"] ?: 0),
+                        "expired" to (s.data.counts["expired"] ?: 0),
+                        "claimed" to (s.data.counts["claimed"] ?: 0),
+                    )
+                }
+            }
+        }
+    }
+
     val tabs = listOf(
-        languageState.value.getT("All (128)", "सभी (128)", "ସମସ୍ତ (୧୨୮)"),
-        languageState.value.getT("Active (110)", "सक्रिय (110)", "ସକ୍ରିୟ (୧୧୦)"),
-        languageState.value.getT("Expired (10)", "समाप्त (10)", "ସମାପ୍ତ (୧୦)"),
-        languageState.value.getT("Claimed", "दावा किया गया", "ଦାବି ହୋଇଛି")
+        languageState.value.getT("All (${counts["all"]})", "सभी (${counts["all"]})", "ସମସ୍ତ (${counts["all"]})"),
+        languageState.value.getT("Active (${counts["active"]})", "सक्रिय (${counts["active"]})", "ସକ୍ରିୟ (${counts["active"]})"),
+        languageState.value.getT("Expired (${counts["expired"]})", "समाप्त (${counts["expired"]})", "ସମାପ୍ତ (${counts["expired"]})"),
+        languageState.value.getT("Claimed (${counts["claimed"]})", "दावा (${counts["claimed"]})", "ଦାବି (${counts["claimed"]})")
     )
 
     ResponsiveLayout(
@@ -4695,8 +4870,8 @@ fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack
                 },
                 containerColor = Color(0xFFF8F9F5)
             ) { padding ->
-                GoatListContent(padding, tabs, searchQuery, { searchQuery = it }, selectedTab, { selectedTab = it }, themeColor, isFarmer, onReportDeath = { navController.navigate("farmer_report_death") }) { tag ->
-                    navController.navigate("goat_details/$tag")
+                GoatListContent(padding, tabs, searchQuery, { searchQuery = it }, selectedTab, { selectedTab = it }, themeColor, isFarmer, goats, statusByTag, clickIdByTag, isLoading, errorMsg, onReportDeath = { navController.navigate("farmer_report_death") }) { id ->
+                    navController.navigate("goat_details/$id")
                 }
             }
         },
@@ -4746,8 +4921,8 @@ fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack
                     },
                     containerColor = Color(0xFFF8F9F5)
                 ) { padding ->
-                    GoatListContent(padding, tabs, searchQuery, { searchQuery = it }, selectedTab, { selectedTab = it }, themeColor, isFarmer, onReportDeath = { navController.navigate("farmer_report_death") }) { tag ->
-                        navController.navigate("goat_details/$tag")
+                    GoatListContent(padding, tabs, searchQuery, { searchQuery = it }, selectedTab, { selectedTab = it }, themeColor, isFarmer, goats, statusByTag, clickIdByTag, isLoading, errorMsg, onReportDeath = { navController.navigate("farmer_report_death") }) { id ->
+                        navController.navigate("goat_details/$id")
                     }
                 }
             }
@@ -4766,6 +4941,11 @@ fun GoatListContent(
     onTabChange: (Int) -> Unit,
     themeColor: Color,
     isFarmer: Boolean,
+    goats: List<Triple<String, String, String>>,
+    statusByTag: Map<String, String>,
+    clickIdByTag: Map<String, String>,
+    isLoading: Boolean,
+    errorMsg: String?,
     onReportDeath: (String) -> Unit,
     onGoatClick: (String) -> Unit
 ) {
@@ -4801,22 +4981,20 @@ fun GoatListContent(
             }
         }
 
-        val mockGoats = listOf(
-            Triple("ET-340801-0001", "Ramesh Naik", "Pipili"),
-            Triple("ET-340801-0006", "Ramesh Naik", "Pipili"),
-            Triple("ET-240801-0002", "Suresh Behera", "Balianta"),
-            Triple("ET-340801-0003", "Manoj Sahoo", "Pipili"),
-            Triple("ET-140801-0004", "Alok Dash", "Puri"),
-            Triple("ET-540801-0005", "Prakash Rout", "Cuttack")
-        )
+        if (isLoading) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = themeColor)
+        }
+        errorMsg?.let {
+            Text(it, color = Color.Red, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        }
 
-        val filteredGoats = mockGoats.filter { 
+        val filteredGoats = goats.filter {
             it.first.contains(searchQuery, ignoreCase = true) || it.second.contains(searchQuery, ignoreCase = true)
         }.filter { goat ->
             when (selectedTab) {
-                1 -> goat.first != "ET-340801-0003" // Mock Active
-                2 -> goat.first == "ET-340801-0003" // Mock Expired
-                3 -> false // Mock Claimed
+                1 -> statusByTag[goat.first] == "active"
+                2 -> statusByTag[goat.first] == "expired"
+                3 -> statusByTag[goat.first] == "claimed"
                 else -> true // All
             }
         }
@@ -4832,7 +5010,7 @@ fun GoatListContent(
             if (isFarmer) {
                 // Simple list for Farmer
                 items(filteredGoats) { goat ->
-                    val isExpired = goat.first == "ET-340801-0003"
+                    val isExpired = statusByTag[goat.first] == "expired"
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -4884,7 +5062,7 @@ fun GoatListContent(
                                     Text(languageState.value.getT("Report Death", "मृत्यु की सूचना", "ମୃତ୍ୟୁ ରିପୋର୍ଟ"), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                 }
                                 Button(
-                                    onClick = { onGoatClick(goat.first) },
+                                    onClick = { onGoatClick(clickIdByTag[goat.first] ?: goat.first) },
                                     modifier = Modifier.weight(1f).height(40.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
                                     shape = RoundedCornerShape(8.dp),
@@ -4963,9 +5141,9 @@ fun GoatListContent(
                                     Spacer(modifier = Modifier.height(12.dp))
 
                                     goats.forEachIndexed { index, goat ->
-                                        val isExpired = goat.first == "ET-340801-0003"
+                                        val isExpired = statusByTag[goat.first] == "expired"
                                         Surface(
-                                            onClick = { onGoatClick(goat.first) },
+                                            onClick = { onGoatClick(clickIdByTag[goat.first] ?: goat.first) },
                                             modifier = Modifier.fillMaxWidth(),
                                             color = Color.Transparent,
                                             shape = RoundedCornerShape(12.dp)
@@ -5032,16 +5210,26 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
     val isFarmer = userRole == UserRole.FARMER
     val themeColor = if (isFarmer) PrimaryBlue else PrimaryGreen
 
-    val mockGoats = listOf(
-        Triple("ET-340801-0001", "Ramesh Naik", "Pipili"),
-        Triple("ET-340801-0006", "Ramesh Naik", "Pipili"),
-        Triple("ET-240801-0002", "Suresh Behera", "Balianta"),
-        Triple("ET-340801-0003", "Manoj Sahoo", "Pipili"),
-        Triple("ET-140801-0004", "Alok Dash", "Puri"),
-        Triple("ET-540801-0005", "Prakash Rout", "Cuttack")
-    )
-    val goat = mockGoats.find { it.first == tag } ?: Triple(tag, "Unknown", "Unknown")
-    val isExpired = goat.first == "ET-340801-0003"
+    // Load real data. For SD/Coordinator `tag` carries the goat id; for Farmer it carries the policy number.
+    var detail by remember { mutableStateOf<GoatDetail?>(null) }
+    var policy by remember { mutableStateOf<PolicyDetail?>(null) }
+    if (isFarmer) {
+        val vm: PolicyDetailViewModel = hiltViewModel()
+        val st by vm.state.collectAsState()
+        LaunchedEffect(tag) { vm.load(tag) }
+        policy = (st as? UiState.Success)?.data
+    } else {
+        val vm: GoatDetailViewModel = hiltViewModel()
+        val st by vm.state.collectAsState()
+        LaunchedEffect(tag) { tag.toIntOrNull()?.let { vm.load(it) } }
+        detail = (st as? UiState.Success)?.data
+    }
+
+    val displayTag = detail?.earTagNumber ?: policy?.goat?.earTagNumber ?: tag
+    val statusStr = detail?.status ?: policy?.status ?: ""
+    val isExpired = statusStr == "expired"
+    val farmerName = detail?.farmer?.name ?: "—"
+    val farmerVillage = detail?.farmer?.village ?: "—"
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -5099,7 +5287,7 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
 
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        tag,
+                        displayTag,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -5121,42 +5309,53 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
                     .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Farmer Information
-                ProfileInfoSection(languageState.value.getT("Farmer Information", "किसान जानकारी", "କୃଷକ ସୂଚନା"), themeColor) {
-                    ProfileInfoItem(languageState.value.getT("Farmer Name", "किसान का नाम", "କୃଷକଙ୍କ ନାମ"), goat.second)
-                    ProfileInfoItem(languageState.value.getT("Village", "गाँव", "ଗ୍ରାମ"), goat.third)
-                    ProfileInfoItem(languageState.value.getT("Aadhaar Number", "आधार नंबर", "ଆଧାର ନମ୍ବର"), "**** **** 1234")
-                }
+                // Goat / policy source values
+                val g = detail
+                val pGoat = policy?.goat
+                val breedVal = g?.breed ?: pGoat?.breed ?: "—"
+                val genderVal = g?.gender ?: pGoat?.gender ?: "—"
+                val ageVal = (g?.ageMonths ?: pGoat?.ageMonths)?.let { "$it " + languageState.value.getT("Months", "महीने", "ମାସ") } ?: "—"
 
-                Spacer(modifier = Modifier.height(24.dp))
+                // Farmer Information (SD/Coordinator view has the farmer block)
+                if (!isFarmer) {
+                    ProfileInfoSection(languageState.value.getT("Farmer Information", "किसान जानकारी", "କୃଷକ ସୂଚନା"), themeColor) {
+                        ProfileInfoItem(languageState.value.getT("Farmer Name", "किसान का नाम", "କୃଷକଙ୍କ ନାମ"), farmerName)
+                        ProfileInfoItem(languageState.value.getT("Village", "गाँव", "ଗ୍ରାମ"), farmerVillage)
+                        ProfileInfoItem(languageState.value.getT("Mobile", "मोबाइल", "ମୋବାଇଲ୍"), g?.farmer?.mobile ?: "—")
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
 
                 // Goat Details
                 ProfileInfoSection(languageState.value.getT("Goat Details", "बकरी का विवरण", "ଛେଳି ବିବରଣୀ"), themeColor) {
-                    ProfileInfoItem(languageState.value.getT("Breed", "नस्ल", "ପ୍ରଜାତି"), "Black Bengal")
-                    ProfileInfoItem(languageState.value.getT("Gender", "लिंग", "ଲିଙ୍ଗ"), languageState.value.getT("Female", "मादा", "ମାଈ"))
-                    ProfileInfoItem(languageState.value.getT("Age", "आयु", "ବୟସ"), "14 " + languageState.value.getT("Months", "महीने", "ମାସ"))
-                    ProfileInfoItem(languageState.value.getT("Weight", "वजन", "ଓଜନ"), "19 KG")
-                    ProfileInfoItem(languageState.value.getT("Color / Marks", "रंग / निशान", "ରଙ୍ଗ / ଚିହ୍ନ"), "Black with White Spots")
+                    ProfileInfoItem(languageState.value.getT("Breed", "नस्ल", "ପ୍ରଜାତି"), breedVal)
+                    ProfileInfoItem(languageState.value.getT("Gender", "लिंग", "ଲିଙ୍ଗ"), genderVal)
+                    ProfileInfoItem(languageState.value.getT("Age", "आयु", "ବୟସ"), ageVal)
+                    g?.weightKg?.let { ProfileInfoItem(languageState.value.getT("Weight", "वजन", "ଓଜନ"), "${it} KG") }
+                    (g?.color ?: g?.identificationMark)?.let { ProfileInfoItem(languageState.value.getT("Color / Marks", "रंग / निशान", "ରଙ୍ଗ / ଚିହ୍ନ"), it) }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Policy Details
+                val pol = g?.policy
                 ProfileInfoSection(languageState.value.getT("Policy Information", "पॉलिसी जानकारी", "ନୀତି ସୂଚନା"), themeColor) {
-                    ProfileInfoItem(languageState.value.getT("Policy Number", "पॉलिसी नंबर", "ନୀତି ନମ୍ବର"), if (isExpired) "POL-2023-00567" else "POL-2024-00125")
-                    ProfileInfoItem(languageState.value.getT("Issue Date", "जारी करने की तारीख", "ପ୍ରଦାନ ତାରିଖ"), if (isExpired) "01 Jun 2023" else "01 Aug 2024")
-                    ProfileInfoItem(languageState.value.getT("End Date", "समाप्ति तिथि", "ଶେଷ ତାରିଖ"), if (isExpired) "31 May 2024" else "31 Jul 2025")
-                    ProfileInfoItem(languageState.value.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), "₹ 8,500")
+                    ProfileInfoItem(languageState.value.getT("Policy Number", "पॉलिसी नंबर", "ନୀତି ନମ୍ବର"), pol?.policyNumber ?: policy?.policyNumber ?: "—")
+                    ProfileInfoItem(languageState.value.getT("Issue Date", "जारी करने की तारीख", "ପ୍ରଦାନ ତାରିଖ"), pol?.validFrom ?: policy?.validFrom ?: "—")
+                    ProfileInfoItem(languageState.value.getT("End Date", "समाप्ति तिथि", "ଶେଷ ତାରିଖ"), pol?.validTo ?: policy?.validTo ?: "—")
+                    ProfileInfoItem(languageState.value.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), (pol?.sumInsured ?: policy?.sumInsured)?.let { "₹ ${it.toInt()}" } ?: "—")
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Vaccination History
                 ProfileInfoSection(languageState.value.getT("Vaccination History", "टीकाकरण इतिहास", "ଟୀକାକରଣ ଇତିହାସ"), themeColor) {
-                    VaccineStatusItem("PPR Vaccine", true, themeColor) {}
-                    VaccineStatusItem("ET + TT Vaccine", true, themeColor) {}
-                    VaccineStatusItem("FMD Vaccine", false, themeColor) {}
-                    VaccineStatusItem("Goat Pox Vaccine", false, themeColor) {}
+                    val vaccByType = g?.vaccinations?.associateBy { it.type } ?: emptyMap()
+                    fun done(t: String) = vaccByType[t]?.status == "done"
+                    VaccineStatusItem("PPR Vaccine", done("ppr"), themeColor) {}
+                    VaccineStatusItem("ET + TT Vaccine", done("et_tt"), themeColor) {}
+                    VaccineStatusItem("FMD Vaccine", done("fmd"), themeColor) {}
+                    VaccineStatusItem("Goat Pox Vaccine", done("goat_pox"), themeColor) {}
                 }
             }
         }
@@ -5170,9 +5369,25 @@ fun VaccineListScreen(navController: NavHostController, onBack: () -> Unit, onRe
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableIntStateOf(0) }
 
+    val vaccVm: VaccinationViewModel = hiltViewModel()
+    val vaccState by vaccVm.state.collectAsState()
+    val isLoading = vaccState is UiState.Loading
+    val errorMsg = (vaccState as? UiState.Error)?.message
+    val vaccList: List<Map<String, String>> = ((vaccState as? UiState.Success)?.data?.items ?: emptyList()).map {
+        val name = when (it.vaccineType) {
+            "et_tt" -> "ET + TT Vaccine"; "fmd" -> "FMD Vaccine"; "goat_pox" -> "Goat Pox Vaccine"; else -> "PPR Vaccine"
+        }
+        mapOf(
+            "name" to name, "tag" to (it.earTag ?: "—"),
+            "date" to (it.nextVaccinationDate ?: ""), "farmer" to (it.earTag ?: "—"),
+            "village" to "", "status" to it.status, "goatId" to it.goatId.toString(),
+        )
+    }
+
+    val counts = vaccList.groupingBy { it["status"] }.eachCount()
     val tabs = listOf(
-        languageState.value.getT("Upcoming (15)", "आगामी (15)", "ଆଗାମୀ (୧୫)"),
-        languageState.value.getT("Completed", "पूरा हुआ", "ସମ୍ପୂର୍ଣ୍ଣ"),
+        languageState.value.getT("Upcoming (${vaccList.count { it["status"] != "done" }})", "आगामी (${vaccList.count { it["status"] != "done" }})", "ଆଗାମୀ (${vaccList.count { it["status"] != "done" }})"),
+        languageState.value.getT("Completed (${counts["done"] ?: 0})", "पूरा (${counts["done"] ?: 0})", "ସମ୍ପୂର୍ଣ୍ଣ (${counts["done"] ?: 0})"),
         languageState.value.getT("All", "सभी", "ସମସ୍ତ")
     )
 
@@ -5197,7 +5412,7 @@ fun VaccineListScreen(navController: NavHostController, onBack: () -> Unit, onRe
                 bottomBar = { DidiBottomBar(navController) },
                 containerColor = Color(0xFFF8F9F5)
             ) { padding ->
-                VaccineListContent(padding, tabs, searchQuery, { searchQuery = it }, selectedTab, { selectedTab = it }, onRecord)
+                VaccineListContent(padding, tabs, searchQuery, { searchQuery = it }, selectedTab, { selectedTab = it }, vaccList, isLoading, errorMsg, onRecord)
             }
         },
         expanded = {
@@ -5240,7 +5455,7 @@ fun VaccineListScreen(navController: NavHostController, onBack: () -> Unit, onRe
                     },
                     containerColor = Color(0xFFF8F9F5)
                 ) { padding ->
-                    VaccineListContent(padding, tabs, searchQuery, { searchQuery = it }, selectedTab, { selectedTab = it }, onRecord)
+                    VaccineListContent(padding, tabs, searchQuery, { searchQuery = it }, selectedTab, { selectedTab = it }, vaccList, isLoading, errorMsg, onRecord)
                 }
             }
         }
@@ -5256,6 +5471,9 @@ fun VaccineListContent(
     onSearchChange: (String) -> Unit,
     selectedTab: Int,
     onTabChange: (Int) -> Unit,
+    vaccinations: List<Map<String, String>>,
+    isLoading: Boolean,
+    errorMsg: String?,
     onRecord: (String) -> Unit
 ) {
     val languageState = LocalAppLanguage.current
@@ -5300,18 +5518,17 @@ fun VaccineListContent(
             }
         }
 
-        val mockVaccinations = listOf(
-            mapOf("name" to "PPR Vaccine", "tag" to "ET-340801-0001", "date" to "15 Aug 2024", "farmer" to "Ramesh Naik", "village" to "Pipili"),
-            mapOf("name" to "ET + TT Vaccine", "tag" to "ET-240801-0002", "date" to "20 Aug 2024", "farmer" to "Suresh Behera", "village" to "Balianta"),
-            mapOf("name" to "FMD Vaccine", "tag" to "ET-340801-0003", "date" to "10 Jul 2024", "farmer" to "Manoj Sahoo", "village" to "Pipili"),
-            mapOf("name" to "PPR Vaccine", "tag" to "ET-140801-0004", "date" to "05 Sep 2024", "farmer" to "Alok Dash", "village" to "Puri"),
-            mapOf("name" to "Goat Pox Vaccine", "tag" to "ET-540801-0005", "date" to "12 Aug 2024", "farmer" to "Prakash Rout", "village" to "Cuttack")
-        )
+        if (isLoading) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = PrimaryGreen)
+        }
+        errorMsg?.let {
+            Text(it, color = Color.Red, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        }
 
-        val filteredVaccines = mockVaccinations.filter { 
+        val filteredVaccines = vaccinations.filter {
             (it["name"] ?: "").contains(searchQuery, ignoreCase = true) || (it["tag"] ?: "").contains(searchQuery, ignoreCase = true)
         }.filter { vaccine ->
-            val isCompleted = vaccine["tag"] == "ET-340801-0003"
+            val isCompleted = vaccine["status"] == "done"
             when (selectedTab) {
                 0 -> !isCompleted // Upcoming (Due)
                 1 -> isCompleted  // Completed
@@ -5374,9 +5591,9 @@ fun VaccineListContent(
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 vaccines.forEachIndexed { index, vaccine ->
-                                    val isCompleted = vaccine["tag"] == "ET-340801-0003"
+                                    val isCompleted = vaccine["status"] == "done"
                                     Surface(
-                                        onClick = { onRecord(vaccine["tag"] ?: "") },
+                                        onClick = { onRecord(vaccine["goatId"] ?: "") },
                                         modifier = Modifier.fillMaxWidth(),
                                         color = Color.Transparent,
                                         shape = RoundedCornerShape(12.dp)
@@ -5395,7 +5612,7 @@ fun VaccineListContent(
                                                 Text(vaccine["date"] ?: "", fontSize = 12.sp, color = Color.Black)
                                             }
                                             OutlinedButton(
-                                                onClick = { onRecord(vaccine["tag"] ?: "") },
+                                                onClick = { onRecord(vaccine["goatId"] ?: "") },
                                                 modifier = Modifier.height(32.dp),
                                                 shape = RoundedCornerShape(8.dp),
                                                 border = BorderStroke(1.dp, PrimaryGreen),
@@ -5433,8 +5650,20 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
     val context = LocalContext.current
     var vaccineType by remember { mutableStateOf("PPR Vaccine") }
     var batchNumber by remember { mutableStateOf("PPR-2406-01") }
-    var vaccinationDate by remember { mutableStateOf("15 Jun 2024") }
-    
+    var vaccinationDate by remember { mutableStateOf("") }
+    var vaccinationDateIso by remember { mutableStateOf("") }
+
+    val vaccVm: VaccinationViewModel = hiltViewModel()
+    val vaccSubmit by vaccVm.submit.collectAsState()
+    val isSaving = vaccSubmit is SubmitState.Submitting
+    LaunchedEffect(vaccSubmit) {
+        when (val s = vaccSubmit) {
+            is SubmitState.Success -> { Toast.makeText(context, s.message ?: "Saved", Toast.LENGTH_SHORT).show(); vaccVm.resetSubmit(); onBack() }
+            is SubmitState.Error -> { Toast.makeText(context, s.message, Toast.LENGTH_LONG).show(); vaccVm.resetSubmit() }
+            else -> {}
+        }
+    }
+
     var capturedPhotoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     var tempUriStr by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -5557,6 +5786,7 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
                         context,
                         { _, year, month, dayOfMonth ->
                             vaccinationDate = "$dayOfMonth/${month + 1}/$year"
+                            vaccinationDateIso = String.format("%04d-%02d-%02d", year, month + 1, dayOfMonth)
                         },
                         calendar.get(Calendar.YEAR),
                         calendar.get(Calendar.MONTH),
@@ -5591,12 +5821,35 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(32.dp))
             
             Button(
-                onClick = onBack,
+                onClick = {
+                    val goatId = tag.toIntOrNull()
+                    if (goatId == null) {
+                        Toast.makeText(context, "Invalid goat reference", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    if (vaccinationDateIso.isBlank()) {
+                        Toast.makeText(context, languageState.value.getT("Please select the vaccination date", "कृपया टीकाकरण की तारीख चुनें", "ଦୟାକରି ଟୀକାକରଣ ତାରିଖ ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    val typeCode = when (vaccineType) {
+                        "ET + TT Vaccine" -> "et_tt"
+                        "FMD Vaccine" -> "fmd"
+                        "Goat Pox Vaccine" -> "goat_pox"
+                        else -> "ppr"
+                    }
+                    vaccVm.record(
+                        RecordVaccinationRequest(
+                            goatId = goatId, vaccineType = typeCode,
+                            batchNumber = batchNumber, vaccinationDate = vaccinationDateIso,
+                        )
+                    )
+                },
+                enabled = !isSaving,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
             ) {
-                Text(languageState.value.getT("Save Record", "रिकॉर्ड सहेजें", "ରେକର୍ଡ ସଂରକ୍ଷଣ କରନ୍ତୁ"), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(if (isSaving) languageState.value.getT("Saving…", "सहेज रहा है…", "ସଂରକ୍ଷଣ…") else languageState.value.getT("Save Record", "रिकॉर्ड सहेजें", "ରେକର୍ଡ ସଂରକ୍ଷଣ କରନ୍ତୁ"), fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
             
             Spacer(modifier = Modifier.height(24.dp))
@@ -5609,10 +5862,70 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
 fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBack: () -> Unit) {
     val languageState = LocalAppLanguage.current
     var searchQuery by remember { mutableStateOf("") }
-    
+
     val isCoordinator = userRole == UserRole.COORDINATOR
     val isFarmer = userRole == UserRole.FARMER
     val themeColor = if (isCoordinator) CoordinatorOrange else if (isFarmer) PrimaryBlue else PrimaryGreen
+
+    // Coordinator claims data
+    var coClaims by remember { mutableStateOf<List<Map<String, String>>>(emptyList()) }
+    var coCounts by remember { mutableStateOf(mapOf("all" to 0, "progress" to 0, "pending" to 0, "completed" to 0)) }
+    if (isCoordinator) {
+        val claimsVm: CoordinatorClaimsViewModel = hiltViewModel()
+        val claimsState by claimsVm.state.collectAsState()
+        LaunchedEffect(claimsState) {
+            (claimsState as? UiState.Success)?.data?.claims?.let { list ->
+                coClaims = list.map {
+                    mapOf(
+                        "id" to it.claimNumber, "farmer" to (it.farmer ?: "—"),
+                        "tag" to it.earTagNumber, "status" to it.status,
+                        "date" to (it.dateOfDeath?.take(10) ?: ""),
+                        "amount" to it.sumInsured.toInt().toString(),
+                    )
+                }
+                coCounts = mapOf(
+                    "all" to list.size,
+                    "progress" to list.count { it.status == "pending" || it.status == "hold" },
+                    "pending" to list.count { it.status == "pending" },
+                    "completed" to list.count { it.status == "approved" || it.status == "rejected" || it.status == "claimed" },
+                )
+            }
+        }
+    }
+
+    // SD / Farmer claims data
+    var didiClaims by remember { mutableStateOf<List<Map<String, String>>>(emptyList()) }
+    if (userRole == UserRole.SURAKSHA_DIDI) {
+        val vm: SdClaimsViewModel = hiltViewModel()
+        val st by vm.state.collectAsState()
+        LaunchedEffect(st) {
+            (st as? UiState.Success)?.data?.claims?.let { list ->
+                didiClaims = list.map {
+                    mapOf(
+                        "id" to (it.claimNumber ?: "MORT-${it.mortalityId}"),
+                        "farmer" to (it.farmer ?: "—"), "tag" to it.earTagNumber,
+                        "status" to (it.claimStatus ?: "pending"),
+                        "date" to (it.dateOfDeath?.take(10) ?: ""),
+                    )
+                }
+            }
+        }
+    } else if (userRole == UserRole.FARMER) {
+        val vm: FarmerClaimsViewModel = hiltViewModel()
+        val st by vm.state.collectAsState()
+        LaunchedEffect(st) {
+            (st as? UiState.Success)?.data?.claims?.let { list ->
+                didiClaims = list.map {
+                    mapOf(
+                        "id" to (it.claimNumber ?: "MORT-${it.mortalityId}"),
+                        "farmer" to (it.earTagNumber), "tag" to it.earTagNumber,
+                        "status" to (it.claimStatus ?: "pending"),
+                        "date" to (it.dateOfDeath?.take(10) ?: ""),
+                    )
+                }
+            }
+        }
+    }
 
     ResponsiveLayout(
         compact = {
@@ -5644,11 +5957,11 @@ fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBac
                 containerColor = Color(0xFFF8F9F5)
             ) { padding ->
                 if (isCoordinator) {
-                    CoordinatorClaimListContent(padding, searchQuery, { searchQuery = it }, themeColor) { claimId ->
+                    CoordinatorClaimListContent(padding, searchQuery, { searchQuery = it }, themeColor, coClaims, coCounts) { claimId ->
                         navController.navigate("claim_review/$claimId")
                     }
                 } else {
-                    DidiClaimListContent(padding, searchQuery, { searchQuery = it }, themeColor, isFarmer) { claimId ->
+                    DidiClaimListContent(padding, searchQuery, { searchQuery = it }, themeColor, isFarmer, didiClaims) { claimId ->
                         navController.navigate("claim_review/$claimId")
                     }
                 }
@@ -5749,8 +6062,14 @@ fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBac
                     },
                     containerColor = Color(0xFFF8F9F5)
                 ) { padding ->
-                    DidiClaimListContent(padding, searchQuery, { searchQuery = it }, themeColor, isFarmer) { claimId ->
-                        navController.navigate("claim_review/$claimId")
+                    if (isCoordinator) {
+                        CoordinatorClaimListContent(padding, searchQuery, { searchQuery = it }, themeColor, coClaims, coCounts) { claimId ->
+                            navController.navigate("claim_review/$claimId")
+                        }
+                    } else {
+                        DidiClaimListContent(padding, searchQuery, { searchQuery = it }, themeColor, isFarmer, didiClaims) { claimId ->
+                            navController.navigate("claim_review/$claimId")
+                        }
                     }
                 }
             }
@@ -5765,6 +6084,8 @@ fun CoordinatorClaimListContent(
     searchQuery: String,
     onSearchChange: (String) -> Unit,
     themeColor: Color,
+    claims: List<Map<String, String>>,
+    counts: Map<String, Int>,
     onClaimClick: (String) -> Unit
 ) {
     val languageState = LocalAppLanguage.current
@@ -5784,14 +6105,14 @@ fun CoordinatorClaimListContent(
                 Row(modifier = Modifier.fillMaxWidth()) {
                     CoordinatorStatCard(
                         label = languageState.value.getT("Total Claims", "कुल दावे", "ମୋଟ ଦାବି"),
-                        value = "152",
+                        value = "${counts["all"] ?: 0}",
                         icon = Icons.AutoMirrored.Filled.Assignment,
                         modifier = Modifier.weight(1f)
                     )
                     Box(modifier = Modifier.width(1.dp).height(40.dp).background(Color.White.copy(alpha = 0.2f)).align(Alignment.CenterVertically))
                     CoordinatorStatCard(
                         label = languageState.value.getT("In Progress", "प्रगति में", "ପ୍ରଗତିରେ ଅଛି"),
-                        value = "54",
+                        value = "${counts["progress"] ?: 0}",
                         icon = Icons.Default.History,
                         modifier = Modifier.weight(1f)
                     )
@@ -5800,15 +6121,15 @@ fun CoordinatorClaimListContent(
                 Row(modifier = Modifier.fillMaxWidth()) {
                     CoordinatorStatCard(
                         label = languageState.value.getT("Completed", "पूरा हुआ", "ସମ୍ପୂର୍ଣ୍ଣ"),
-                        value = "68",
+                        value = "${counts["completed"] ?: 0}",
                         icon = Icons.AutoMirrored.Filled.FactCheck,
                         modifier = Modifier.weight(1f)
                     )
                     Box(modifier = Modifier.width(1.dp).height(40.dp).background(Color.White.copy(alpha = 0.2f)).align(Alignment.CenterVertically))
                     CoordinatorStatCard(
                         label = languageState.value.getT("Pending Action", "लंबित कार्रवाई", "ବାକି ଥିବା କାର୍ଯ୍ୟ"),
-                        value = "30",
-                        icon = Icons.Default.History, 
+                        value = "${counts["pending"] ?: 0}",
+                        icon = Icons.Default.History,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -5836,9 +6157,9 @@ fun CoordinatorClaimListContent(
 
         // Tabs
         val tabs = listOf(
-            languageState.value.getT("All (152)", "सभी (152)", "ସମସ୍ତ (୧୫୨)"),
-            languageState.value.getT("In Progress (54)", "प्रगति में (54)", "ପ୍ରଗତିରେ ଅଛି (୫୪)"),
-            languageState.value.getT("Pending (30)", "लंबित (30)", "ବାକି (୩୦)")
+            languageState.value.getT("All (${counts["all"] ?: 0})", "सभी (${counts["all"] ?: 0})", "ସମସ୍ତ (${counts["all"] ?: 0})"),
+            languageState.value.getT("Pending (${counts["pending"] ?: 0})", "लंबित (${counts["pending"] ?: 0})", "ବାକି (${counts["pending"] ?: 0})"),
+            languageState.value.getT("Completed (${counts["completed"] ?: 0})", "पूरा (${counts["completed"] ?: 0})", "ସମ୍ପୂର୍ଣ୍ଣ (${counts["completed"] ?: 0})")
         )
         
         TabRow(
@@ -5870,75 +6191,31 @@ fun CoordinatorClaimListContent(
             }
         }
 
-        val mockClaims = listOf(
-            mapOf("id" to "CLM7890", "farmer" to "Ramesh Kumar", "tag" to "TG-982311", "status" to "Coordinator Review", "date" to "20 May 2024", "didi" to "Sushma Didi"),
-            mapOf("id" to "CLM7885", "farmer" to "Savitri Bai", "tag" to "TG-773210", "status" to "Verification", "date" to "19 May 2024", "didi" to "Sushma Didi"),
-            mapOf("id" to "CLM7880", "farmer" to "Kamla Bai", "tag" to "TG-661122", "status" to "Didi Visit", "date" to "18 May 2024", "didi" to "Rekha Didi"),
-            mapOf("id" to "CLM7875", "farmer" to "Geeta Bai", "tag" to "TG-554433", "status" to "Pending", "date" to "17 May 2024", "didi" to "Rekha Didi"),
-            mapOf("id" to "CLM7868", "farmer" to "Mohan Lal", "tag" to "TG-332211", "status" to "Completed", "date" to "16 May 2024", "didi" to "Anjali Didi")
-        )
-
-        val groupedClaims = mockClaims.groupBy { it["didi"] ?: "Unknown" }
-        val expandedDidis = remember { mutableStateMapOf<String, Boolean>() }
+        val filtered = claims.filter {
+            (it["id"] ?: "").contains(searchQuery, true) || (it["farmer"] ?: "").contains(searchQuery, true) || (it["tag"] ?: "").contains(searchQuery, true)
+        }.filter {
+            when (selectedTab) {
+                1 -> it["status"] == "pending"
+                2 -> it["status"] in listOf("approved", "rejected", "claimed")
+                else -> true
+            }
+        }
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize(), 
-            contentPadding = PaddingValues(16.dp), 
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            groupedClaims.forEach { (didiName, claims) ->
+            if (filtered.isEmpty()) {
                 item {
-                    val isExpanded = expandedDidis[didiName] ?: false
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RoundedCornerShape(24.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { expandedDidis[didiName] = !isExpanded },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Surface(
-                                    modifier = Modifier.size(52.dp),
-                                    shape = CircleShape,
-                                    color = themeColor.copy(alpha = 0.1f)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Default.Person, null, tint = themeColor, modifier = Modifier.size(28.dp))
-                                    }
-                                }
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(didiName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = Color.Black)
-                                    Text("${claims.size} Claims by Didi", style = MaterialTheme.typography.bodySmall, color = themeColor)
-                                }
-                                Icon(
-                                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                    contentDescription = null,
-                                    tint = Color.Gray
-                                )
-                            }
-                            
-                            if (isExpanded) {
-                                Spacer(modifier = Modifier.height(16.dp))
-                                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                claims.forEachIndexed { index, claim ->
-                                    DidiClaimCard(claim, themeColor) { onClaimClick(claim["id"] ?: "") }
-                                    if (index < claims.size - 1) {
-                                        Spacer(modifier = Modifier.height(12.dp))
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    Text(
+                        languageState.value.getT("No claims found.", "कोई दावा नहीं मिला।", "କୌଣସି ଦାବି ମିଳିଲା ନାହିଁ।"),
+                        color = Color.Gray, fontSize = 13.sp, modifier = Modifier.padding(16.dp)
+                    )
                 }
+            }
+            items(filtered) { claim ->
+                DidiClaimCard(claim, themeColor) { onClaimClick(claim["id"] ?: "") }
             }
         }
     }
@@ -5974,6 +6251,7 @@ fun DidiClaimListContent(
     onSearchChange: (String) -> Unit,
     themeColor: Color,
     isFarmer: Boolean = false,
+    claims: List<Map<String, String>> = emptyList(),
     onClaimClick: (String) -> Unit
 ) {
     val languageState = LocalAppLanguage.current
@@ -6003,7 +6281,7 @@ fun DidiClaimListContent(
                             fontWeight = FontWeight.Medium
                         )
                         Text(
-                            text = "48",
+                            text = "${claims.size}",
                             fontSize = 32.sp,
                             color = Color.White,
                             fontWeight = FontWeight.ExtraBold,
@@ -6094,75 +6372,25 @@ fun DidiClaimListContent(
             }
         }
 
-        val mockClaims = listOf(
-            mapOf("id" to "CLM7890", "farmer" to "Ramesh Kumar", "tag" to "TG-982311", "status" to "In Progress", "date" to "20 May 2024"),
-            mapOf("id" to "CLM7885", "farmer" to "Savitri Bai", "tag" to "TG-773210", "status" to "Verification", "date" to "19 May 2024"),
-            mapOf("id" to "CLM7880", "farmer" to "Kamla Bai", "tag" to "TG-661122", "status" to "Didi Visit", "date" to "18 May 2024"),
-            mapOf("id" to "CLM7875", "farmer" to "Geeta Bai", "tag" to "TG-554433", "status" to "Pending", "date" to "17 May 2024")
-        )
-
-        val groupedClaims = mockClaims.groupBy { it["farmer"] ?: "Unknown" }
-        val expandedFarmers = remember { mutableStateMapOf<String, Boolean>() }
+        val filtered = claims.filter {
+            (it["id"] ?: "").contains(searchQuery, true) || (it["farmer"] ?: "").contains(searchQuery, true) || (it["tag"] ?: "").contains(searchQuery, true)
+        }
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize(), 
-            contentPadding = PaddingValues(16.dp), 
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            groupedClaims.forEach { (farmerName, claims) ->
+            if (filtered.isEmpty()) {
                 item {
-                    val isExpanded = expandedFarmers[farmerName] ?: false
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RoundedCornerShape(16.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            // Farmer Info Header
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { expandedFarmers[farmerName] = !isExpanded },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Surface(
-                                    modifier = Modifier.size(40.dp),
-                                    shape = CircleShape,
-                                    color = themeColor.copy(alpha = 0.1f)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Default.Person, null, tint = themeColor, modifier = Modifier.size(20.dp))
-                                    }
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(farmerName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.Black)
-                                    Text("${claims.size} " + languageState.value.getT("Claims by Farmer", "किसान द्वारा दावे", "କୃଷକଙ୍କ ଦ୍ୱାରା ଦାବି"), style = MaterialTheme.typography.bodySmall, color = themeColor)
-                                }
-                                Icon(
-                                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                    contentDescription = null,
-                                    tint = Color.Gray
-                                )
-                            }
-                            
-                            if (isExpanded) {
-                                Spacer(modifier = Modifier.height(12.dp))
-                                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f))
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                claims.forEachIndexed { index, claim ->
-                                    DidiClaimCard(claim, themeColor) { onClaimClick(claim["id"] ?: "") }
-                                    if (index < claims.size - 1) {
-                                        Spacer(modifier = Modifier.height(12.dp))
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    Text(
+                        languageState.value.getT("No claims yet.", "अभी तक कोई दावा नहीं।", "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ଦାବି ନାହିଁ।"),
+                        color = Color.Gray, fontSize = 13.sp, modifier = Modifier.padding(16.dp)
+                    )
                 }
+            }
+            items(filtered) { claim ->
+                DidiClaimCard(claim, themeColor) { onClaimClick(claim["id"] ?: "") }
             }
         }
     }
@@ -6219,10 +6447,12 @@ fun DidiClaimCard(claim: Map<String, String>, themeColor: Color, onClick: () -> 
                 
                 val status = claim["status"] ?: ""
                 val (statusText, statusBg, statusColor) = when(status) {
+                    "approved" -> Triple(languageState.value.getT("Approved", "स्वीकृत", "ଅନୁମୋଦିତ"), Color(0xFFE8F5E9), Color(0xFF2E7D32))
+                    "claimed" -> Triple(languageState.value.getT("Paid", "भुगतान", "ଦିଆଯାଇଛି"), Color(0xFFE8F5E9), Color(0xFF2E7D32))
+                    "rejected" -> Triple(languageState.value.getT("Rejected", "अस्वीकृत", "ପ୍ରତ୍ୟାଖ୍ୟାନ"), Color(0xFFFFEBEE), Color(0xFFC62828))
+                    "hold" -> Triple(languageState.value.getT("On Hold", "होल्ड पर", "ହୋଲ୍ଡ"), Color(0xFFE3F2FD), Color(0xFF1565C0))
                     "In Progress" -> Triple(languageState.value.getT("In Progress", "प्रगति में", "ପ୍ରଗତିରେ ଅଛି"), Color(0xFFFFF3E0), Color(0xFFE65100))
-                    "Verification" -> Triple(languageState.value.getT("Verification", "सत्यापन", "ଯାଞ୍ଚ"), Color(0xFFE8F5E9), Color(0xFF2E7D32))
-                    "Didi Visit" -> Triple(languageState.value.getT("Didi Visit", "दीदी यात्रा", "ଦିଦି ପରିଦର୍ଶନ"), Color(0xFFE3F2FD), Color(0xFF1565C0))
-                    else -> Triple(languageState.value.getT("Pending", "लंबित", "ବାକି ଅଛି"), Color(0xFFF5F5F5), Color(0xFF616161))
+                    else -> Triple(languageState.value.getT("Pending", "लंबित", "ବାକି ଅଛି"), Color(0xFFFFF3E0), Color(0xFFE65100))
                 }
                 
                 Surface(
@@ -6517,15 +6747,21 @@ fun ClaimReviewScreen(navController: NavHostController, claimId: String, userRol
         else -> PrimaryGreen
     }
 
+    val claimsVm: CoordinatorClaimsViewModel = hiltViewModel()
+    val reviewState by claimsVm.review.collectAsState()
+    LaunchedEffect(claimId) { if (userRole == UserRole.COORDINATOR) claimsVm.loadReview(claimId) }
+    val review = (reviewState as? UiState.Success)?.data
+
     val mockClaim = mapOf(
-        "id" to "CLM7890",
-        "status" to "In Progress",
-        "tag" to "TG-982311",
-        "farmer" to "Ramesh Kumar",
-        "date" to "20 May 2024",
-        "time" to "10:30 AM",
-        "policy" to "POL12345678",
-        "cause" to "High Fever"
+        "id" to (review?.claimNumber ?: claimId),
+        "status" to (review?.status ?: "—"),
+        "tag" to (review?.goat?.earTagNumber ?: "—"),
+        "farmer" to (review?.farmer ?: "—"),
+        "date" to (review?.dateOfDeath?.take(10) ?: "—"),
+        "time" to "",
+        "policy" to (review?.claimNumber ?: "—"),
+        "cause" to (review?.causeOfDeath ?: "—"),
+        "amount" to (review?.sumInsured?.toInt()?.toString() ?: "—"),
     )
 
     if (userRole == UserRole.FARMER) {
@@ -6948,8 +7184,27 @@ fun ClaimVerifyScreen(navController: NavHostController, claimId: String, userRol
     val languageState = LocalAppLanguage.current
     val context = LocalContext.current
     val themeColor = CoordinatorOrange
-    
-    var remarks by remember { mutableStateOf("Goat died due to PPR disease.") }
+
+    var remarks by remember { mutableStateOf("") }
+
+    val claimsVm: CoordinatorClaimsViewModel = hiltViewModel()
+    val submitState by claimsVm.submit.collectAsState()
+    val reviewState by claimsVm.review.collectAsState()
+    LaunchedEffect(claimId) { claimsVm.loadReview(claimId) }
+    val review = (reviewState as? UiState.Success)?.data
+    val isSubmitting = submitState is SubmitState.Submitting
+    var pendingAction by remember { mutableStateOf("") }
+    LaunchedEffect(submitState) {
+        when (val s = submitState) {
+            is SubmitState.Success -> {
+                claimsVm.resetSubmit()
+                if (pendingAction == "approve") navController.navigate("claim_payout/$claimId")
+                else navController.navigate("claim_list") { popUpTo("claim_list") { inclusive = true } }
+            }
+            is SubmitState.Error -> { Toast.makeText(context, s.message, Toast.LENGTH_LONG).show(); claimsVm.resetSubmit() }
+            else -> {}
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -6986,8 +7241,8 @@ fun ClaimVerifyScreen(navController: NavHostController, claimId: String, userRol
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "ET-240801-0001", 
-                    color = Color.Gray, 
+                    text = review?.goat?.earTagNumber ?: claimId,
+                    color = Color.Gray,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -7053,30 +7308,30 @@ fun ClaimVerifyScreen(navController: NavHostController, claimId: String, userRol
             Spacer(modifier = Modifier.height(40.dp))
 
             Button(
-                onClick = { 
-                    Toast.makeText(context, "Claim Approved", Toast.LENGTH_SHORT).show()
-                    navController.navigate("claim_payout/$claimId")
+                onClick = {
+                    pendingAction = "approve"
+                    claimsVm.review(claimId, "approve", review?.sumInsured)
                 },
+                enabled = !isSubmitting,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = themeColor)
             ) {
                 Text(
-                    text = languageState.value.getT("Approve Claim", "दावा स्वीकृत करें", "ଦାବି ଅନୁମୋଦନ କରନ୍ତୁ"), 
-                    fontWeight = FontWeight.Bold, 
+                    text = languageState.value.getT("Approve Claim", "दावा स्वीकृत करें", "ଦାବି ଅନୁମୋଦନ କରନ୍ତୁ"),
+                    fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             Button(
-                onClick = { 
-                    Toast.makeText(context, "Claim Rejected", Toast.LENGTH_SHORT).show()
-                    navController.navigate("claim_list") {
-                        popUpTo("claim_list") { inclusive = true }
-                    }
+                onClick = {
+                    pendingAction = "reject"
+                    claimsVm.review(claimId, "reject")
                 },
+                enabled = !isSubmitting,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
@@ -8229,11 +8484,27 @@ fun SetupProfileScreen(
     role: UserRole,
     initialName: String,
     initialPhone: String,
-    onComplete: (UserRole, String, String) -> Unit,
+    otp: String,
+    onComplete: (UserRole?) -> Unit,   // role -> go to dashboard; null -> pending approval
     onBack: () -> Unit
 ) {
     val languageState = LocalAppLanguage.current
     val context = LocalContext.current
+
+    val authViewModel: AuthViewModel = hiltViewModel()
+    val authState by authViewModel.authState.collectAsState()
+    val isSubmitting = authState is AuthState.Loading
+    LaunchedEffect(authState) {
+        when (val s = authState) {
+            is AuthState.Authenticated -> { onComplete(s.role); authViewModel.reset() }
+            is AuthState.SignupPendingApproval -> { onComplete(null); authViewModel.reset() }
+            is AuthState.Error -> {
+                Toast.makeText(context, s.message, Toast.LENGTH_LONG).show()
+                authViewModel.reset()
+            }
+            else -> {}
+        }
+    }
     
     // Permission Handling
     var showPermissionRationale by remember { mutableStateOf(true) }
@@ -8299,6 +8570,16 @@ fun SetupProfileScreen(
     
     var aadhaarNumber by remember { mutableStateOf("") }
     var aadhaarPhotoUri by remember { mutableStateOf<Uri?>(null) }
+
+    // Cascading location dropdowns served by the backend.
+    val locationVm: LocationViewModel = hiltViewModel()
+    val stateOptions by locationVm.states.collectAsState()
+    val districtOptions by locationVm.districts.collectAsState()
+    val blockOptions by locationVm.blocks.collectAsState()
+    val villageOptions by locationVm.villages.collectAsState()
+    LaunchedEffect(state) { district = ""; block = ""; village = ""; locationVm.loadDistricts(state) }
+    LaunchedEffect(district) { block = ""; village = ""; locationVm.loadBlocks(state, district) }
+    LaunchedEffect(block) { village = ""; locationVm.loadVillages(state, district, block) }
 
     val themeColor = when(role) {
         UserRole.FARMER -> PrimaryBlue
@@ -8475,15 +8756,39 @@ fun SetupProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Section 2: Location
+            // Section 2: Location (cascading dropdowns from backend)
             ProfileSetupSection(languageState.value.getT("Location", "स्थान", "ଅବସ୍ଥାନ"), themeColor) {
-                EnrollmentTextField(label = languageState.value.getT("State *", "राज्य *", "ରାଜ୍ୟ *"), value = state, onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) state = it }, borderColor = themeColor)
+                EnrollmentDropdownField(
+                    label = languageState.value.getT("State *", "राज्य *", "ରାଜ୍ୟ *"),
+                    selectedValue = state,
+                    options = stateOptions,
+                    onValueChange = { state = it },
+                    borderColor = themeColor
+                )
                 Spacer(modifier = Modifier.height(12.dp))
-                EnrollmentTextField(label = languageState.value.getT("District *", "जिला *", "ଜିଲ୍ଲା *"), value = district, onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) district = it }, borderColor = themeColor)
+                EnrollmentDropdownField(
+                    label = languageState.value.getT("District *", "जिला *", "ଜିଲ୍ଲା *"),
+                    selectedValue = district,
+                    options = districtOptions,
+                    onValueChange = { district = it },
+                    borderColor = themeColor
+                )
                 Spacer(modifier = Modifier.height(12.dp))
-                EnrollmentTextField(label = languageState.value.getT("Block *", "ब्लॉक *", "ବ୍ଲକ *"), value = block, onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) block = it }, borderColor = themeColor)
+                EnrollmentDropdownField(
+                    label = languageState.value.getT("Block *", "ब्लॉक *", "ବ୍ଲକ *"),
+                    selectedValue = block,
+                    options = blockOptions,
+                    onValueChange = { block = it },
+                    borderColor = themeColor
+                )
                 Spacer(modifier = Modifier.height(12.dp))
-                EnrollmentTextField(label = locationLabel, value = village, onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) village = it }, borderColor = themeColor)
+                EnrollmentDropdownField(
+                    label = locationLabel,
+                    selectedValue = village,
+                    options = villageOptions,
+                    onValueChange = { village = it },
+                    borderColor = themeColor
+                )
                 Spacer(modifier = Modifier.height(12.dp))
                 EnrollmentTextField(label = languageState.value.getT("Pincode *", "पिनकोड *", "ପିନକୋଡ୍ *"), value = pincode, onValueChange = { if(it.length <= 6) pincode = it }, keyboardType = KeyboardType.Number, borderColor = themeColor)
             }
@@ -8516,16 +8821,64 @@ fun SetupProfileScreen(
             Spacer(modifier = Modifier.height(40.dp))
 
             Button(
-                onClick = { onComplete(role, name, village) },
+                onClick = {
+                    authViewModel.completeSignup(
+                        fullName = name, phone = phone, role = role, otp = otp,
+                        village = village, aadhaarId = aadhaarNumber,
+                    )
+                },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = themeColor),
-                enabled = name.isNotBlank() && dob.isNotBlank() && state.isNotBlank() && district.isNotBlank() && block.isNotBlank() && village.isNotBlank() && pincode.length == 6 && aadhaarNumber.length == 12
+                enabled = !isSubmitting && name.isNotBlank() && dob.isNotBlank() && state.isNotBlank() && district.isNotBlank() && block.isNotBlank() && village.isNotBlank() && pincode.length == 6 && aadhaarNumber.length == 12
             ) {
                 Text(languageState.value.getT("Save & Continue", "सहेजें और जारी रखें", "ସଂରକ୍ଷଣ ଏବଂ ଜାରି ରଖନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             
             Spacer(modifier = Modifier.height(40.dp))
+        }
+    }
+}
+
+@Composable
+fun PendingApprovalScreen(onBackToLogin: () -> Unit) {
+    val languageState = LocalAppLanguage.current
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF8F9F5))
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Surface(modifier = Modifier.size(96.dp), shape = CircleShape, color = Color(0xFFFFF3E0)) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.HourglassEmpty, contentDescription = null, tint = CoordinatorOrange, modifier = Modifier.size(52.dp))
+            }
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            languageState.value.getT("Account Pending Approval", "खाता अनुमोदन लंबित", "ଖାତା ଅନୁମୋଦନ ବାକି ଅଛି"),
+            style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
+            color = Color.Black, textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            languageState.value.getT(
+                "Your registration was received. An administrator needs to approve your account before you can log in. Please check back later.",
+                "आपका पंजीकरण प्राप्त हो गया है। लॉगिन करने से पहले एक व्यवस्थापक को आपके खाते को स्वीकृत करना होगा। कृपया बाद में पुनः जांचें।",
+                "ଆପଣଙ୍କ ପଞ୍ଜିକରଣ ଗ୍ରହଣ କରାଯାଇଛି। ଲଗଇନ୍ କରିବା ପୂର୍ବରୁ ଜଣେ ପ୍ରଶାସକ ଆପଣଙ୍କ ଖାତା ଅନୁମୋଦନ କରିବେ। ଦୟାକରି ପରେ ପୁଣି ଯାଞ୍ଚ କରନ୍ତୁ।"
+            ),
+            style = MaterialTheme.typography.bodyMedium, color = Color.Gray, textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(32.dp))
+        Button(
+            onClick = onBackToLogin,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+        ) {
+            Text(languageState.value.getT("Back to Login", "लॉगिन पर वापस जाएं", "ଲଗଇନ୍ କୁ ଫେରନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 16.sp)
         }
     }
 }
@@ -8551,7 +8904,11 @@ fun ProfileSetupSection(title: String, themeColor: Color, content: @Composable C
 fun EarningHistoryScreen(onBack: () -> Unit) {
     val languageState = LocalAppLanguage.current
     val backgroundColor = Color(0xFFF8F9F5)
-    
+
+    val earningsVm: EarningsViewModel = hiltViewModel()
+    val earningsState by earningsVm.state.collectAsState()
+    val earningsData = (earningsState as? UiState.Success)?.data
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -8595,7 +8952,7 @@ fun EarningHistoryScreen(onBack: () -> Unit) {
                         horizontalAlignment = Alignment.Start
                     ) {
                         Text(languageState.value.getT("Total Earnings", "कुल आय", "ମୋଟ ଉପାର୍ଜନ"), color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
-                        Text("₹ 8,450", style = MaterialTheme.typography.headlineLarge, color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("₹ ${earningsData?.total?.toInt() ?: 0}", style = MaterialTheme.typography.headlineLarge, color = Color.White, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(12.dp))
                         Surface(color = Color.White.copy(alpha = 0.2f), shape = RoundedCornerShape(12.dp)) {
                             Text(
@@ -8623,16 +8980,23 @@ fun EarningHistoryScreen(onBack: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            val mockEarnings = listOf(
-                EarningData("Goat Enrollment", "TAG-453678 • Ramesh Naik", "+ ₹20", "2 hours ago", painterResource(R.drawable.ic_ewe_custom), PrimaryGreen),
-                EarningData("Vaccination Fee", "PPR Vaccine • 5 Goats", "+ ₹50", "Today, 10:30 AM", Icons.Default.MedicalServices, InfoBlue),
-                EarningData("Goat Enrollment", "TAG-223456 • Suresh Behera", "+ ₹20", "Yesterday", painterResource(R.drawable.ic_ewe_custom), PrimaryGreen),
-                EarningData("Vaccination Fee", "ET + TT Vaccine • 8 Goats", "+ ₹80", "2 days ago", Icons.Default.MedicalServices, InfoBlue),
-                EarningData("Mortality Report", "TAG-112233 • Manoj Sahoo", "+ ₹50", "3 days ago", Icons.Default.LocationOn, Color.Red),
-                EarningData("Goat Enrollment", "TAG-998877 • Alok Dash", "+ ₹20", "4 days ago", painterResource(R.drawable.ic_ewe_custom), PrimaryGreen)
-            )
-            
-            mockEarnings.forEach { data ->
+            val enrollIcon = painterResource(R.drawable.ic_ewe_custom)
+            val earnings = (earningsData?.items ?: emptyList()).map { e ->
+                val isVacc = e.source == "vaccination"
+                EarningData(
+                    title = if (isVacc) languageState.value.getT("Vaccination Fee", "टीकाकरण शुल्क", "ଟୀକାକରଣ ଶୁଳ୍କ")
+                            else languageState.value.getT("Goat Enrollment", "बकरी नामांकन", "ଛେଳି ପଞ୍ଜିକରଣ"),
+                    subtitle = e.earTagNumber ?: "—",
+                    amount = "+ ₹${e.amount.toInt()}",
+                    time = e.earnedOn ?: "",
+                    icon = if (isVacc) Icons.Default.MedicalServices else enrollIcon,
+                    color = if (isVacc) InfoBlue else PrimaryGreen,
+                )
+            }
+            if (earnings.isEmpty()) {
+                Text(languageState.value.getT("No earnings yet.", "अभी तक कोई आय नहीं।", "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ଉପାର୍ଜନ ନାହିଁ।"), color = Color.Gray, fontSize = 13.sp)
+            }
+            earnings.forEach { data ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
