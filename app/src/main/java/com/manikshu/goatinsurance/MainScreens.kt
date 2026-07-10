@@ -6058,12 +6058,22 @@ fun DidiClaimListContent(
             )
         )
 
+        Spacer(modifier = Modifier.height(16.dp))
+
         // Tabs
-        val tabs = listOf(
-            languageState.value.getT("All (48)", "सभी (48)", "ସମସ୍ତ (୪୮)"),
-            languageState.value.getT("My Assigned (18)", "मेरे द्वारा असाइन (18)", "ମୋ ଦ୍ଵାରା ଧାର୍ଯ୍ୟ (୧୮)"),
-            languageState.value.getT("In Progress (28)", "प्रगति में (28)", "ପ୍ରଗତିରେ ଅଛି (୨୮)")
-        )
+        val tabs = if (isFarmer) {
+            listOf(
+                languageState.value.getT("All", "सभी", "ସମସ୍ତ"),
+                languageState.value.getT("In Progress", "प्रगति में", "ପ୍ରଗତିରେ ଅଛି"),
+                languageState.value.getT("Completed", "पूरा हुआ", "ସମ୍ପୂର୍ଣ୍ଣ")
+            )
+        } else {
+            listOf(
+                languageState.value.getT("All (48)", "सभी (48)", "ସମସ୍ତ (୪୮)"),
+                languageState.value.getT("My Assigned (18)", "मेरे द्वारा असाइन (18)", "ମୋ ଦ୍ଵାରା ଧାର୍ଯ୍ୟ (୧୮)"),
+                languageState.value.getT("In Progress (28)", "प्रगति में (28)", "ପ୍ରଗତିରେ ଅଛି (୨୮)")
+            )
+        }
         
         TabRow(
             selectedTabIndex = selectedTab,
@@ -6095,13 +6105,33 @@ fun DidiClaimListContent(
         }
 
         val mockClaims = listOf(
-            mapOf("id" to "CLM7890", "farmer" to "Ramesh Kumar", "tag" to "TG-982311", "status" to "In Progress", "date" to "20 May 2024"),
-            mapOf("id" to "CLM7885", "farmer" to "Savitri Bai", "tag" to "TG-773210", "status" to "Verification", "date" to "19 May 2024"),
-            mapOf("id" to "CLM7880", "farmer" to "Kamla Bai", "tag" to "TG-661122", "status" to "Didi Visit", "date" to "18 May 2024"),
-            mapOf("id" to "CLM7875", "farmer" to "Geeta Bai", "tag" to "TG-554433", "status" to "Pending", "date" to "17 May 2024")
+            mapOf("id" to "CLM7890", "farmer" to "Ramesh Kumar", "tag" to "TG-982311", "status" to "In Progress", "date" to "20 May 2024", "didi" to "Sushma Didi"),
+            mapOf("id" to "CLM7885", "farmer" to "Savitri Bai", "tag" to "TG-773210", "status" to "Verification", "date" to "19 May 2024", "didi" to "Sushma Didi"),
+            mapOf("id" to "CLM7880", "farmer" to "Kamla Bai", "tag" to "TG-661122", "status" to "Didi Visit", "date" to "18 May 2024", "didi" to "Rekha Didi"),
+            mapOf("id" to "CLM7875", "farmer" to "Geeta Bai", "tag" to "TG-554433", "status" to "Pending", "date" to "17 May 2024", "didi" to "Rekha Didi"),
+            mapOf("id" to "CLM7860", "farmer" to "Ramesh Kumar", "tag" to "TG-112233", "status" to "Completed", "date" to "15 May 2024", "didi" to "Sushma Didi")
         )
 
-        val groupedClaims = mockClaims.groupBy { it["farmer"] ?: "Unknown" }
+        val filteredClaims = mockClaims.filter { 
+            (it["id"] ?: "").contains(searchQuery, ignoreCase = true) || 
+            (it["tag"] ?: "").contains(searchQuery, ignoreCase = true)
+        }.filter {
+            if (isFarmer) {
+                when (selectedTab) {
+                    1 -> it["status"] == "In Progress" || it["status"] == "Verification" || it["status"] == "Didi Visit"
+                    2 -> it["status"] == "Completed"
+                    else -> true
+                }
+            } else {
+                when (selectedTab) {
+                    1 -> it["didi"] == "Sushma Didi"
+                    2 -> it["status"] == "In Progress"
+                    else -> true
+                }
+            }
+        }
+
+        val groupedClaims = filteredClaims.groupBy { it["farmer"] ?: "Unknown" }
         val expandedFarmers = remember { mutableStateMapOf<String, Boolean>() }
 
         LazyColumn(
@@ -6109,54 +6139,60 @@ fun DidiClaimListContent(
             contentPadding = PaddingValues(16.dp), 
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            groupedClaims.forEach { (farmerName, claims) ->
-                item {
-                    val isExpanded = expandedFarmers[farmerName] ?: false
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RoundedCornerShape(16.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            // Farmer Info Header
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { expandedFarmers[farmerName] = !isExpanded },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Surface(
-                                    modifier = Modifier.size(40.dp),
-                                    shape = CircleShape,
-                                    color = themeColor.copy(alpha = 0.1f)
+            if (isFarmer) {
+                items(filteredClaims) { claim ->
+                    DidiClaimCard(claim, themeColor, isFarmer = true) { onClaimClick(claim["id"] ?: "") }
+                }
+            } else {
+                groupedClaims.forEach { (farmerName, claims) ->
+                    item {
+                        val isExpanded = expandedFarmers[farmerName] ?: false
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            shape = RoundedCornerShape(16.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                // Farmer Info Header
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { expandedFarmers[farmerName] = !isExpanded },
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Default.Person, null, tint = themeColor, modifier = Modifier.size(20.dp))
+                                    Surface(
+                                        modifier = Modifier.size(40.dp),
+                                        shape = CircleShape,
+                                        color = themeColor.copy(alpha = 0.1f)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(Icons.Default.Person, null, tint = themeColor, modifier = Modifier.size(20.dp))
+                                        }
                                     }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(farmerName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.Black)
+                                        Text("${claims.size} " + languageState.value.getT("Claims by Farmer", "किसान द्वारा दावे", "କୃଷକଙ୍କ ଦ୍ୱାରା ଦାବି"), style = MaterialTheme.typography.bodySmall, color = themeColor)
+                                    }
+                                    Icon(
+                                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                        contentDescription = null,
+                                        tint = Color.Gray
+                                    )
                                 }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(farmerName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.Black)
-                                    Text("${claims.size} " + languageState.value.getT("Claims by Farmer", "किसान द्वारा दावे", "କୃଷକଙ୍କ ଦ୍ୱାରା ଦାବି"), style = MaterialTheme.typography.bodySmall, color = themeColor)
-                                }
-                                Icon(
-                                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                    contentDescription = null,
-                                    tint = Color.Gray
-                                )
-                            }
-                            
-                            if (isExpanded) {
-                                Spacer(modifier = Modifier.height(12.dp))
-                                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f))
-                                Spacer(modifier = Modifier.height(12.dp))
+                                
+                                if (isExpanded) {
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f))
+                                    Spacer(modifier = Modifier.height(12.dp))
 
-                                claims.forEachIndexed { index, claim ->
-                                    DidiClaimCard(claim, themeColor) { onClaimClick(claim["id"] ?: "") }
-                                    if (index < claims.size - 1) {
-                                        Spacer(modifier = Modifier.height(12.dp))
+                                    claims.forEachIndexed { index, claim ->
+                                        DidiClaimCard(claim, themeColor) { onClaimClick(claim["id"] ?: "") }
+                                        if (index < claims.size - 1) {
+                                            Spacer(modifier = Modifier.height(12.dp))
+                                        }
                                     }
                                 }
                             }
@@ -6199,7 +6235,7 @@ fun ClaimStatRow(label: String, value: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DidiClaimCard(claim: Map<String, String>, themeColor: Color, onClick: () -> Unit) {
+fun DidiClaimCard(claim: Map<String, String>, themeColor: Color, isFarmer: Boolean = false, onClick: () -> Unit) {
     val languageState = LocalAppLanguage.current
     Card(
         onClick = onClick,
@@ -6240,7 +6276,13 @@ fun DidiClaimCard(claim: Map<String, String>, themeColor: Color, onClick: () -> 
             }
             
             Spacer(modifier = Modifier.height(8.dp))
-            Text(claim["farmer"] ?: "", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.DarkGray)
+            val displayName = if (isFarmer) {
+                val didi = claim["didi"] ?: ""
+                if (didi.isNotEmpty()) "Approved by: $didi" else "Assigned to: Sushma Didi"
+            } else {
+                claim["farmer"] ?: ""
+            }
+            Text(displayName, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.DarkGray)
             Text(
                 text = languageState.value.getT("Tag No: ", "टैग नंबर: ", "ଟ୍ୟାଗ୍ ନମ୍ବର: ") + (claim["tag"] ?: ""),
                 fontSize = 13.sp,
