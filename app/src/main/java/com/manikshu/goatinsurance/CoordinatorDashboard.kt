@@ -26,6 +26,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -46,7 +49,6 @@ val CoordinatorLightOrange = Color(0xFFFFF3E0)
 
 @Composable
 fun CoordinatorDashboard(navController: NavHostController, sessionManager: SessionManager) {
-    val languageState = LocalAppLanguage.current
     val userName by sessionManager.userName.collectAsState(initial = "lalu")
     
     Scaffold(
@@ -63,7 +65,7 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
             CoordinatorHeader(
                 navController,
                 userName ?: "lalu",
-                languageState.value.getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ"),
+                stringResource(R.string.role_coordinator),
                 onProfileClick = { navController.navigate("profile") }
             )
 
@@ -77,7 +79,7 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
                 ) {
                     CoordinatorStatCard(
                         modifier = Modifier.weight(1f),
-                        label = languageState.value.getT("Active Policies", "सक्रिय नीतियां", "ସକ୍ରିୟ ନୀତି"),
+                        label = stringResource(R.string.active_policies_label),
                         value = "1,256",
                         trend = "+4%",
                         trendColor = SuccessGreen,
@@ -86,7 +88,7 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
                     )
                     CoordinatorStatCard(
                         modifier = Modifier.weight(1f).clickable { navController.navigate("claim_list") },
-                        label = languageState.value.getT("Claims Today", "आज के दावे", "ଆଜିର ଦାବି"),
+                        label = stringResource(R.string.claims_today_label),
                         value = "18",
                         trend = "+12%",
                         trendColor = SuccessGreen,
@@ -95,7 +97,7 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
                     )
                     CoordinatorStatCard(
                         modifier = Modifier.weight(1f),
-                        label = languageState.value.getT("Mortality", "मृत्यु दर", "ମୃତ୍ୟୁ ହାର"),
+                        label = stringResource(R.string.mortality_label),
                         value = "2.35%",
                         trend = "-5%",
                         trendColor = Color.Red,
@@ -106,11 +108,11 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                PerformanceOverviewCard(languageState.value)
+                PerformanceOverviewCard()
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                LiveActivitySection(navController, languageState.value)
+                LiveActivitySection(navController)
                 
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -120,9 +122,12 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
 
 @Composable
 fun CoordinatorHeader(navController: NavHostController, name: String, role: String, onProfileClick: () -> Unit) {
-    val languageState = LocalAppLanguage.current
     var expanded by remember { mutableStateOf(false) }
-    var selectedDate by remember { mutableStateOf("Today") }
+    val todayLabel = stringResource(R.string.date_today)
+    val yesterdayLabel = stringResource(R.string.date_yesterday)
+    val thisWeekLabel = stringResource(R.string.date_this_week)
+    val thisMonthLabel = stringResource(R.string.date_this_month)
+    var selectedDate by remember(todayLabel) { mutableStateOf(todayLabel) }
 
     Surface(
         color = CoordinatorOrange,
@@ -149,7 +154,7 @@ fun CoordinatorHeader(navController: NavHostController, name: String, role: Stri
             
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = languageState.value.getT("Hello,", "नमस्ते,", "ନମସ୍କାର,"),
+                    text = stringResource(R.string.hello_comma),
                     fontSize = 14.sp,
                     color = Color.White.copy(alpha = 0.9f)
                 )
@@ -197,7 +202,13 @@ fun CoordinatorHeader(navController: NavHostController, name: String, role: Stri
                     onDismissRequest = { expanded = false },
                     modifier = Modifier.background(Color.White)
                 ) {
-                    listOf("Today", "Yesterday", "This Week", "This Month").forEach { option ->
+                    val dateOptions = listOf(
+                        todayLabel,
+                        yesterdayLabel,
+                        thisWeekLabel,
+                        thisMonthLabel
+                    )
+                    dateOptions.forEach { option ->
                         DropdownMenuItem(
                             text = { Text(option, color = Color.Black) },
                             onClick = {
@@ -288,7 +299,7 @@ fun CoordinatorStatCard(
 }
 
 @Composable
-fun PerformanceOverviewCard(language: AppLanguage) {
+fun PerformanceOverviewCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -303,12 +314,12 @@ fun PerformanceOverviewCard(language: AppLanguage) {
             ) {
                 Column {
                     Text(
-                        language.getT("Performance Overview", "प्रदर्शन अवलोकन", "ପ୍ରଦର୍ଶନ ସମୀକ୍ଷା"),
+                        stringResource(R.string.performance_overview),
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
                     )
                     Text(
-                        language.getT("Last 7 days activity", "पिछले 7 दिनों की गतिविधि", "ଗତ ୭ ଦିନର କାର୍ଯ୍ୟକଳାପ"),
+                        stringResource(R.string.last_7_days_activity),
                         fontSize = 12.sp,
                         color = Color.Gray
                     )
@@ -324,7 +335,15 @@ fun PerformanceOverviewCard(language: AppLanguage) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
-                val days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+                val days = listOf(
+        stringResource(R.string.mon),
+        stringResource(R.string.tue),
+        stringResource(R.string.wed),
+        stringResource(R.string.thu),
+        stringResource(R.string.fri),
+        stringResource(R.string.sat),
+        stringResource(R.string.sun)
+    )
                 val heights = listOf(0.6f, 0.3f, 0.7f, 0.4f, 0.8f, 0.6f, 0.7f)
                 
                 days.forEachIndexed { index, day ->
@@ -346,7 +365,7 @@ fun PerformanceOverviewCard(language: AppLanguage) {
 }
 
 @Composable
-fun LiveActivitySection(navController: NavHostController, language: AppLanguage) {
+fun LiveActivitySection(navController: NavHostController) {
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -354,12 +373,12 @@ fun LiveActivitySection(navController: NavHostController, language: AppLanguage)
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                language.getT("Live Activity", "लाइव गतिविधि", "ଲାଇଭ୍ କାର୍ଯ୍ୟକଳାପ"),
+                stringResource(R.string.live_activity),
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp
             )
             Text(
-                language.getT("Recent", "हाल ही में", "ସାମ୍ପ୍ରତିକ"),
+                stringResource(R.string.recent),
                 fontSize = 13.sp,
                 color = Color.Gray
             )
@@ -375,25 +394,25 @@ fun LiveActivitySection(navController: NavHostController, language: AppLanguage)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 LiveActivityItem(
-                    title = "Sushma Didi filed a claim",
-                    time = "2 mins ago",
-                    status = "Pending",
+                    title = stringResource(R.string.filed_a_claim, "Sushma Didi"),
+                    time = stringResource(R.string.n_mins_ago, 2),
+                    status = stringResource(R.string.status_pending),
                     statusColor = Color(0xFFFFB74D),
                     icon = Icons.AutoMirrored.Filled.Assignment
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.LightGray.copy(alpha = 0.3f))
                 LiveActivityItem(
-                    title = "Laxmi Didi completed vaccination",
-                    time = "5 mins ago",
-                    status = "Success",
-                    statusColor = SuccessGreen,
-                    icon = Icons.Default.MedicalServices
+                    title = stringResource(R.string.filed_a_claim, "Sushma Didi"),
+                    time = stringResource(R.string.n_mins_ago, 2),
+                    status = stringResource(R.string.status_pending),
+                    statusColor = Color(0xFFFFB74D),
+                    icon = Icons.AutoMirrored.Filled.Assignment
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.LightGray.copy(alpha = 0.3f))
                 LiveActivityItem(
-                    title = "New enrollment by Sushma Didi",
-                    time = "10 mins ago",
-                    status = "New",
+                    title = stringResource(R.string.new_enrollment_by, "Sushma Didi"),
+                    time = stringResource(R.string.ten_mins_ago),
+                    status = stringResource(R.string.status_new),
                     statusColor = Color(0xFF4FC3F7),
                     icon = Icons.Default.PersonAdd
                 )
@@ -407,7 +426,7 @@ fun LiveActivitySection(navController: NavHostController, language: AppLanguage)
                     border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
                 ) {
                     Text(
-                        language.getT("Full Activity Report", "पूर्ण गतिविधि रिपोर्ट", "ପୂର୍ଣ୍ଣ କାର୍ଯ୍ୟକଳାପ ରିପୋର୍ଟ"),
+                        stringResource(R.string.full_activity_report),
                         color = Color.Black,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
@@ -421,8 +440,6 @@ fun LiveActivitySection(navController: NavHostController, language: AppLanguage)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActivityReportScreen(navController: NavHostController) {
-    val languageState = LocalAppLanguage.current
-    
     Scaffold(
         topBar = {
             Surface(
@@ -432,7 +449,7 @@ fun ActivityReportScreen(navController: NavHostController) {
                 TopAppBar(
                     title = { 
                         Text(
-                            languageState.value.getT("Activity Report", "गतिविधि रिपोर्ट", "କାର୍ଯ୍ୟକଳାପ ରିପୋର୍ଟ"),
+                            stringResource(R.string.activity_report_title),
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
@@ -460,17 +477,35 @@ fun ActivityReportScreen(navController: NavHostController) {
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
             val reports = listOf(
-                Triple("Sushma Didi filed a claim", "2 mins ago", "Pending"),
-                Triple("Laxmi Didi completed vaccination", "5 mins ago", "Success"),
-                Triple("New enrollment by Sushma Didi", "10 mins ago", "New"),
-                Triple("Visit scheduled by Ramesh Didi", "1 hour ago", "Info"),
-                Triple("System maintenance update", "2 hours ago", "System"),
-                Triple("Claim #CLM1002 Approved", "5 hours ago", "Success"),
-                Triple("Farmer Ram added new goat", "Yesterday", "New"),
-                Triple("Vaccination batch #PPR-01 used", "Yesterday", "Info")
+                "claim_filed" to ("Sushma Didi" to 2),
+                "vaccination_completed" to ("Laxmi Didi" to 5),
+                "new_enrollment" to ("Sushma Didi" to 10),
+                "visit_scheduled" to ("Ramesh Didi" to 1),
+                "system_update" to ("" to 2),
+                "claim_approved" to ("CLM1002" to 5),
+                "farmer_added" to ("Ram" to 0),
+                "vaccination_batch" to ("PPR-01" to 0)
             )
 
-            items(reports) { (title, time, status) ->
+            items(reports) { (type, data) ->
+                val (title, time, status) = when(type) {
+                    "claim_filed" -> Triple(stringResource(R.string.filed_a_claim, data.first), stringResource(R.string.n_mins_ago, data.second), "Pending")
+                    "vaccination_completed" -> Triple(stringResource(R.string.completed_vaccination, data.first), stringResource(R.string.n_mins_ago, data.second), "Success")
+                    "new_enrollment" -> Triple(stringResource(R.string.new_enrollment_by, data.first), stringResource(R.string.n_mins_ago, data.second), "New")
+                    "visit_scheduled" -> Triple(stringResource(R.string.visit_scheduled_by, data.first), stringResource(R.string.n_hours_ago, data.second), "Info")
+                    "system_update" -> Triple(stringResource(R.string.system_maintenance_update), stringResource(R.string.n_hours_ago, data.second), "System")
+                    "claim_approved" -> Triple(stringResource(R.string.claim_approved_label, data.first), stringResource(R.string.n_hours_ago, data.second), "Success")
+                    "farmer_added" -> Triple(stringResource(R.string.farmer_added_new_goat, data.first), stringResource(R.string.date_yesterday), "New")
+                    "vaccination_batch" -> Triple(stringResource(R.string.vaccination_batch_used, data.first), stringResource(R.string.date_yesterday), "Info")
+                    else -> Triple("", "", "")
+                }
+
+                val statusText = when(status) {
+                    "Pending" -> stringResource(R.string.status_pending)
+                    "Success" -> stringResource(R.string.status_success)
+                    "New" -> stringResource(R.string.status_new)
+                    else -> status
+                }
                 val statusColor = when(status) {
                     "Pending" -> Color(0xFFFFB74D)
                     "Success" -> SuccessGreen
@@ -490,7 +525,7 @@ fun ActivityReportScreen(navController: NavHostController) {
                     LiveActivityItem(
                         title = title,
                         time = time,
-                        status = status,
+                        status = statusText,
                         statusColor = statusColor,
                         icon = when(status) {
                             "Pending" -> Icons.AutoMirrored.Filled.Assignment
@@ -564,7 +599,6 @@ fun LiveActivityItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClusterMapScreen(navController: NavHostController) {
-    val languageState = LocalAppLanguage.current
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableIntStateOf(0) } // 0 for Map, 1 for List
 
@@ -573,7 +607,7 @@ fun ClusterMapScreen(navController: NavHostController) {
             TopAppBar(
                 title = { 
                     Text(
-                        languageState.value.getT("Cluster Map", "क्लस्टर मानचित्र", "କ୍ଲଷ୍ଟର ମାନଚିତ୍ର"),
+                        stringResource(R.string.cluster_map_title),
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     ) 
@@ -597,7 +631,7 @@ fun ClusterMapScreen(navController: NavHostController) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                placeholder = { Text(languageState.value.getT("Search village or Didi", "गांव या दीदी खोजें", "ଗ୍ରାମ କିମ୍ବା ଦିଦି ଖୋଜନ୍ତୁ")) },
+                placeholder = { Text(stringResource(R.string.search_village_didi)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
@@ -628,7 +662,7 @@ fun ClusterMapScreen(navController: NavHostController) {
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
-                            languageState.value.getT("Map", "मानचित्र", "ମାନଚିତ୍ର"),
+                            stringResource(R.string.map),
                             fontWeight = FontWeight.Bold,
                             color = if (selectedTab == 0) Color.Black else Color.Gray,
                             fontSize = 14.sp
@@ -644,7 +678,7 @@ fun ClusterMapScreen(navController: NavHostController) {
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
-                            languageState.value.getT("List", "सूची", "ତାଲିକା"),
+                            stringResource(R.string.list),
                             fontWeight = FontWeight.Bold,
                             color = if (selectedTab == 1) Color.Black else Color.Gray,
                             fontSize = 14.sp
@@ -694,9 +728,9 @@ fun ClusterMapScreen(navController: NavHostController) {
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            LegendItem(languageState.value.getT("High Claims", "उच्च दावे", "ଉଚ୍ଚ ଦାବି"), Color.Red)
-                            LegendItem(languageState.value.getT("Medium", "मध्यम", "ମଧ୍ୟମ"), CoordinatorOrange)
-                            LegendItem(languageState.value.getT("Low", "कम", "କମ"), Color(0xFF4CAF50))
+                            LegendItem(stringResource(R.string.high_claims), Color.Red)
+                            LegendItem(stringResource(R.string.medium), CoordinatorOrange)
+                            LegendItem(stringResource(R.string.low), Color(0xFF4CAF50))
                         }
                     }
                 }
@@ -729,7 +763,7 @@ fun ClusterMapScreen(navController: NavHostController) {
                             },
                             supportingContent = { 
                                 Text(
-                                    "$didi • 5 Active Claims", 
+                                    "$didi • ${stringResource(R.string.active_claims_count, 5)}",
                                     color = Color.Gray 
                                 ) 
                             },
@@ -819,19 +853,25 @@ fun LegendItem(label: String, color: Color) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoordinatorReportsScreen(navController: NavHostController) {
-    val languageState = LocalAppLanguage.current
     var selectedTab by remember { mutableIntStateOf(0) }
-    var selectedDateRange by remember { mutableStateOf("This Month") }
+    val thisMonthLabel = stringResource(R.string.date_this_month)
+    var selectedDateRange by remember(thisMonthLabel) { mutableStateOf(thisMonthLabel) }
     var showExportModal by remember { mutableStateOf(false) }
 
-    val tabs = listOf("Enrollment", "Vaccination", "Claims", "Financial", "Performance")
+    val tabs = listOf(
+        stringResource(R.string.enrollment_tab),
+        stringResource(R.string.vaccination_tab),
+        stringResource(R.string.claims_tab),
+        stringResource(R.string.financial_tab),
+        stringResource(R.string.performance_tab)
+    )
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { 
                     Text(
-                        languageState.value.getT("Reports", "रिपोर्ट", "ରିପୋର୍ଟ"),
+                        stringResource(R.string.reports_title),
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     ) 
@@ -851,7 +891,7 @@ fun CoordinatorReportsScreen(navController: NavHostController) {
                 containerColor = CoordinatorOrange,
                 contentColor = Color.White,
                 icon = { Icon(Icons.Default.FileDownload, null) },
-                text = { Text("Export Report") }
+                text = { Text(stringResource(R.string.export_report)) }
             )
         },
         containerColor = Color(0xFFF8F9FB)
@@ -871,10 +911,10 @@ fun CoordinatorReportsScreen(navController: NavHostController) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FilterDropdown(Modifier.weight(1f), "Date Range", selectedDateRange) { selectedDateRange = it }
-                    FilterDropdown(Modifier.weight(1f), "Region", "All Regions") {}
+                    FilterDropdown(Modifier.weight(1f), stringResource(R.string.date_range_label), selectedDateRange) { selectedDateRange = it }
+                    FilterDropdown(Modifier.weight(1f), stringResource(R.string.region_label), stringResource(R.string.all_regions_label)) {}
                 }
-                FilterDropdown(Modifier.fillMaxWidth(), "Suraksha Didi", "All Didis", isSearchable = true) {}
+                FilterDropdown(Modifier.fillMaxWidth(), stringResource(R.string.suraksha_didi_label), stringResource(R.string.all_didis_label), isSearchable = true) {}
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -887,10 +927,10 @@ fun CoordinatorReportsScreen(navController: NavHostController) {
                     .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                ReportSummaryCard("Total Farmers", "856", "+12%", SuccessGreen, Icons.Default.People)
-                ReportSummaryCard("Goats Insured", "2,145", "+8%", SuccessGreen, painterResource(R.drawable.ic_ewe_custom))
-                ReportSummaryCard("Pending Claims", "14", "-5%", Color.Red, Icons.Default.Assignment)
-                ReportSummaryCard("Premium", "₹4.2L", "+15%", SuccessGreen, Icons.Default.Payments)
+                ReportSummaryCard(stringResource(R.string.total_farmers_label), "856", "+12%", SuccessGreen, Icons.Default.People)
+                ReportSummaryCard(stringResource(R.string.goats_insured_label), "2,145", "+8%", SuccessGreen, painterResource(R.drawable.ic_ewe_custom))
+                ReportSummaryCard(stringResource(R.string.pending_claims_label), "14", "-5%", Color.Red, Icons.Default.Assignment)
+                ReportSummaryCard(stringResource(R.string.premium_label), "₹4.2L", "+15%", SuccessGreen, Icons.Default.Payments)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -941,7 +981,7 @@ fun CoordinatorReportsScreen(navController: NavHostController) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text("${tabs[selectedTab]} Breakup", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.tab_breakup_title, tabs[selectedTab]), fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(16.dp))
                         // Simple bar chart visualization using Canvas
                         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -961,7 +1001,7 @@ fun CoordinatorReportsScreen(navController: NavHostController) {
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // List Area
-                Text("Detailed Data", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.detailed_data), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 repeat(5) { i ->
@@ -981,7 +1021,7 @@ fun CoordinatorReportsScreen(navController: NavHostController) {
                     border = BorderStroke(1.dp, CoordinatorOrange),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Generate Custom Report", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.generate_custom_report), fontWeight = FontWeight.Bold)
                 }
                 
                 Spacer(modifier = Modifier.height(80.dp)) // Space for FAB
@@ -993,14 +1033,14 @@ fun CoordinatorReportsScreen(navController: NavHostController) {
         AlertDialog(
             onDismissRequest = { showExportModal = false },
             confirmButton = {
-                TextButton(onClick = { showExportModal = false }) { Text("Cancel") }
+                TextButton(onClick = { showExportModal = false }) { Text(stringResource(R.string.cancel)) }
             },
-            title = { Text("Export Report") },
+            title = { Text(stringResource(R.string.export_report)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Select Format:")
-                    ExportOption("PDF Document", Icons.Default.PictureAsPdf) { showExportModal = false }
-                    ExportOption("Excel Spreadsheet", Icons.Default.Description) { showExportModal = false }
+                    Text(stringResource(R.string.select_format))
+                    ExportOption(stringResource(R.string.pdf_document), Icons.Default.PictureAsPdf) { showExportModal = false }
+                    ExportOption(stringResource(R.string.excel_spreadsheet), Icons.Default.Description) { showExportModal = false }
                 }
             },
             containerColor = Color.White
@@ -1011,6 +1051,7 @@ fun CoordinatorReportsScreen(navController: NavHostController) {
 @Composable
 fun FilterDropdown(modifier: Modifier, label: String, value: String, isSearchable: Boolean = false, onSelect: (String) -> Unit = {}) {
     var expanded by remember { mutableStateOf(false) }
+    val dateRangeLabel = stringResource(R.string.date_range_label)
     Box(modifier = modifier) {
         OutlinedTextField(
             value = value,
@@ -1031,7 +1072,15 @@ fun FilterDropdown(modifier: Modifier, label: String, value: String, isSearchabl
         )
         Box(modifier = Modifier.matchParentSize().clickable { expanded = true })
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(Color.White)) {
-            val options = if (label == "Date Range") listOf("Today", "This Week", "This Month", "Custom") else listOf("Option 1", "Option 2")
+            val options = if (label == dateRangeLabel) listOf(
+                stringResource(R.string.date_today),
+                stringResource(R.string.date_this_week),
+                stringResource(R.string.date_this_month),
+                stringResource(R.string.custom_label)
+            ) else listOf(
+                stringResource(R.string.option_1),
+                stringResource(R.string.option_2)
+            )
             options.forEach { opt ->
                 DropdownMenuItem(text = { Text(opt, color = Color.Black) }, onClick = { onSelect(opt); expanded = false })
             }
@@ -1078,7 +1127,12 @@ fun ReportDataItem(name: String, status: String, value: String) {
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(name, fontWeight = FontWeight.Bold)
+                Text(name, fontWeight = FontWeight.Bold, color = Color.Black)
+                val statusText = when(status) {
+                    "Completed" -> stringResource(R.string.status_completed)
+                    "Pending" -> stringResource(R.string.status_pending)
+                    else -> status
+                }
                 Surface(
                     color = when(status) {
                         "Completed" -> SuccessGreen.copy(alpha = 0.1f)
@@ -1088,7 +1142,7 @@ fun ReportDataItem(name: String, status: String, value: String) {
                     shape = RoundedCornerShape(4.dp)
                 ) {
                     Text(
-                        status, 
+                        statusText,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                         color = when(status) {
                             "Completed" -> SuccessGreen
@@ -1119,7 +1173,6 @@ fun ExportOption(label: String, icon: ImageVector, onClick: () -> Unit) {
 
 @Composable
 fun CoordinatorBottomBar(navController: NavHostController) {
-    val languageState = LocalAppLanguage.current
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -1138,7 +1191,7 @@ fun CoordinatorBottomBar(navController: NavHostController) {
                 }
             },
             icon = { Icon(Icons.Default.Home, null) },
-            label = { Text(languageState.value.getT("Dashboard", "डैशबोर्ड", "ଡ୍ୟାସବୋର୍ଡ"), fontSize = 10.sp) },
+            label = { Text(stringResource(R.string.dashboard), fontSize = 10.sp) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = CoordinatorOrange,
                 selectedTextColor = CoordinatorOrange,
@@ -1155,7 +1208,7 @@ fun CoordinatorBottomBar(navController: NavHostController) {
                 }
             },
             icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null) },
-            label = { Text(languageState.value.getT("Claims", "दावे", "ଦାବି"), fontSize = 10.sp) },
+            label = { Text(stringResource(R.string.claims), fontSize = 10.sp) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = CoordinatorOrange,
                 selectedTextColor = CoordinatorOrange,
@@ -1172,7 +1225,7 @@ fun CoordinatorBottomBar(navController: NavHostController) {
                 }
             },
             icon = { Icon(Icons.Default.Public, null) },
-            label = { Text(languageState.value.getT("Map", "मानचित्र", "ମାନଚିତ୍ର"), fontSize = 10.sp) },
+            label = { Text(stringResource(R.string.map), fontSize = 10.sp) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = CoordinatorOrange,
                 selectedTextColor = CoordinatorOrange,
@@ -1189,7 +1242,7 @@ fun CoordinatorBottomBar(navController: NavHostController) {
                 }
             },
             icon = { Icon(Icons.Default.BarChart, null) },
-            label = { Text(languageState.value.getT("Reports", "रिपोर्ट", "ରିପୋର୍ଟ"), fontSize = 10.sp) },
+            label = { Text(stringResource(R.string.reports), fontSize = 10.sp) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = CoordinatorOrange,
                 selectedTextColor = CoordinatorOrange,

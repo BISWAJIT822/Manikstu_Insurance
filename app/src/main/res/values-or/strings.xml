@@ -1,0 +1,535 @@
+<resources>
+    <string name="app_name">ମାଣିକଷ୍ଟୁ ବୀମା</string>
+    <string name="community_livestock_protection">ଗୋଷ୍ଠୀ ପ୍ରାଣୀସମ୍ପଦ ସୁରକ୍ଷା</string>
+    <string name="goat_insurance_title">ଛେଳି ବୀମା</string>
+
+    <!-- Roles -->
+    <string name="role_suraksha_didi">ସୁରକ୍ଷା ଦିଦି</string>
+    <string name="role_farmer">କୃଷକ</string>
+    <string name="role_coordinator">ସମନ୍ଵୟକାରୀ</string>
+
+    <!-- Common UI -->
+    <string name="yes">ହଁ</string>
+    <string name="no">ନା</string>
+    <string name="allow">ଅନୁମତି ଦିଅନ୍ତୁ</string>
+    <string name="deny">ପ୍ରତ୍ୟାଖ୍ୟାନ କରନ୍ତୁ</string>
+    <string name="ok">ଓକେ</string>
+    <string name="cancel">ବାତିଲ୍</string>
+    <string name="back">ପଛକୁ</string>
+    <string name="next">ପରବର୍ତ୍ତୀ</string>
+    <string name="save">ସଂରକ୍ଷଣ କରନ୍ତୁ</string>
+    <string name="submit">ସବମିଟ୍</string>
+    <string name="view">ଦେଖନ୍ତୁ</string>
+    <string name="edit">ସମ୍ପାଦନ</string>
+    <string name="delete">ବିଲୋପ</string>
+    <string name="search">ସନ୍ଧାନ</string>
+    <string name="done">ହୋଇଗଲା</string>
+    <string name="record">ରେକର୍ଡ</string>
+    <string name="hide">ଲୁଚାନ୍ତୁ</string>
+    <string name="online">ଅନଲାଇନ୍</string>
+    <string name="offline">ଅଫଲାଇନ୍</string>
+    <string name="coming_soon">ଖୁବ୍ ଶୀଘ୍ର ଆସୁଛି</string>
+    <string name="tap_to_capture">କ୍ୟାପଚର କରିବାକୁ ଟ୍ୟାପ୍ କରନ୍ତୁ</string>
+    <string name="tap_to_scan">ସ୍କାନ୍ କରିବାକୁ ଟ୍ୟାପ୍ କରନ୍ତୁ</string>
+    <string name="tap_to_call">କଲ୍ କରିବାକୁ ଟ୍ୟାପ୍ କରନ୍ତୁ</string>
+    <string name="tap_to_upload">ଅପଲୋଡ୍ କରିବାକୁ ଟ୍ୟାପ୍ କରନ୍ତୁ</string>
+
+    <!-- Dialogs -->
+    <string name="exit_app_title">ଆପ୍ ରୁ ବାହାରନ୍ତୁ</string>
+    <string name="exit_app_message">ଆପଣ ନିଶ୍ଚିତ ଭାବରେ ବାହାରିବାକୁ ଚାହୁଁଛନ୍ତି କି?</string>
+    <string name="permissions_required_title">ଅନୁମତି ଆବଶ୍ୟକ</string>
+    <string name="permissions_required_message">ପ୍ରାଣୀସମ୍ପଦ ଯାଞ୍ଚ କରିବା ଏବଂ ସେବା କ୍ଷେତ୍ର ରେକର୍ଡ କରିବାକୁ ଏହି ଆପ୍‌ କ୍ୟାମେରା ଏବଂ ଅବସ୍ଥାନ ଅନୁମତି ଆବଶ୍ୟକ କରେ |</string>
+
+    <!-- Auth -->
+    <string name="create_account">ଖାତା ଖୋଲନ୍ତୁ</string>
+    <string name="register_subtitle">ପ୍ରାଣୀସମ୍ପଦ ସୁରକ୍ଷା ଆରମ୍ଭ କରିବାକୁ ପଞ୍ଜିକରଣ କରନ୍ତୁ</string>
+    <string name="welcome_back">ପୁଣି ସ୍ଵାଗତ</string>
+    <string name="login_subtitle">ଆଗକୁ ବଢିବା ପାଇଁ ଲଗଇନ୍ କରନ୍ତୁ</string>
+    <string name="full_name">ପୁରା ନାମ</string>
+    <string name="mobile_number">ମୋବାଇଲ୍ ନମ୍ବର</string>
+    <string name="send_otp">ଓଟିପି ପଠାନ୍ତୁ</string>
+    <string name="already_have_account_login">ପୂର୍ବରୁ ଖାତା ଅଛି? ଲଗଇନ୍</string>
+    <string name="dont_have_account_signup">ଖାତା ନାହିଁ? ସାଇନ୍ ଅପ୍</string>
+    <string name="enter_otp_sent_to">+91 %1$s କୁ ପଠାଯାଇଥିବା ଓଟିପି ଦିଅନ୍ତୁ</string>
+    <string name="verify_next">ଯାଞ୍ଚ ଏବଂ ପରବର୍ତ୍ତୀ</string>
+    <string name="verify_login">ଯାଞ୍ଚ ଏବଂ ଲଗଇନ୍</string>
+    <string name="go_back">ପଛକୁ ଯାଆନ୍ତୁ</string>
+    <string name="change_number">ନମ୍ବର ବଦଳାନ୍ତୁ</string>
+    <string name="choose_a_role">ଗୋଟିଏ ଭୂମିକା ବାଛନ୍ତୁ</string>
+    <string name="scroll_choose_role_toast">ତଳକୁ ସ୍କ୍ରୋଲ୍ କରନ୍ତୁ ଏବଂ ଏକ ଭୂମିକା ବାଛନ୍ତୁ</string>
+
+    <!-- Dashboards -->
+    <string name="home">ମୁଖ୍ୟ ପୃଷ୍ଠା</string>
+    <string name="goats">ଛେଳି</string>
+    <string name="vaccines">ଟୀକା</string>
+    <string name="claims">ଦାବି</string>
+    <string name="help">ସାହାଯ୍ୟ</string>
+    <string name="dashboard">ଡ୍ୟାସବୋର୍ଡ</string>
+    <string name="hello_label">ନମସ୍କାର,</string>
+    <string name="welcome_label">ସ୍ଵାଗତ,</string>
+    <string name="this_month_overview">ଏହି ମାସର ସମୀକ୍ଷା</string>
+    <string name="quick_actions">ତ୍ୱରିତ କାର୍ଯ୍ୟାନୁଷ୍ଠାନ</string>
+    <string name="today_visits">ଆଜିର ପରିଦର୍ଶନ</string>
+    <string name="earnings">ଉପାର୍ଜନ</string>
+    <string name="my_policies_count">ମୋର ନୀତିଗୁଡ଼ିକ (%1$d)</string>
+    <string name="view_all">ସବୁ ଦେଖନ୍ତୁ</string>
+
+    <!-- Stats -->
+    <string name="goats_enrolled">ପଞ୍ଜିକୃତ ଛେଳି</string>
+    <string name="pending_claims">ବାକି ରହିଥିବା ଦାବି</string>
+    <string name="active_policies">ସକ୍ରିୟ ନୀତି</string>
+    <string name="total_goats">ମୋଟ ଛେଳି</string>
+    <string name="total_enrollments">ମୋଟ ପଞ୍ଜିକରଣ</string>
+    <string name="total_earnings">ମୋଟ ଉପାର୍ଜନ</string>
+    <string name="this_month">ଏହି ମାସ</string>
+
+    <!-- Actions -->
+    <string name="enroll_goat">ଛେଳି ପଞ୍ଜିକରଣ</string>
+    <string name="vaccination">ଟୀକାକରଣ</string>
+    <string name="mortality_report">ମୃତ୍ୟୁ ରିପୋର୍ଟ</string>
+    <string name="goat_list">ଛେଳି ତାଲିକା</string>
+    <string name="ai_assistant">AI ସହାୟକ</string>
+    <string name="report_death">ମୃତ୍ୟୁ ରିପୋର୍ଟ</string>
+    <string name="view_policy">ନୀତି ଦେଖନ୍ତୁ</string>
+    <string name="full_activity_report">ପୂର୍ଣ୍ଣ କାର୍ଯ୍ୟକଳାପ ରିପୋର୍ଟ</string>
+    <string name="export_report">ରିପୋର୍ଟ ରପ୍ତାନି କରନ୍ତୁ</string>
+
+    <!-- Mortality Steps -->
+    <string name="death_notification">ମୃତ୍ୟୁ ବିଜ୍ଞପ୍ତି</string>
+    <string name="site_visit">ସାଇଟ୍ ପରିଦର୍ଶନ</string>
+    <string name="carcass_verification">ଶବ ଯାଞ୍ଚ</string>
+    <string name="photo_capture">ଫଟୋ କ୍ୟାପଚର</string>
+    <string name="ai_assessment">AI ମୂଲ୍ୟାଙ୍କନ</string>
+    <string name="carcass_handover">ଶବ ହସ୍ତାନ୍ତର</string>
+    <string name="claim_submission">ଦାବି ଦାଖଲ</string>
+    <string name="status_completed">ସମ୍ପୂର୍ଣ୍ଣ</string>
+    <string name="status_in_progress">ଚାଲୁଅଛି</string>
+    <string name="status_pending">ବାକି ଅଛି</string>
+
+    <!-- Mortality Details -->
+    <string name="physical_site_visit">ସାଇଟ୍ ପରିଦର୍ଶନ</string>
+    <string name="didi_site_visit_instruction">ଦିଦି ସେହି ସ୍ଥାନକୁ ନିଜେ ଯାଇ ଶବ ଯାଞ୍ଚ କରିବା ଉଚିତ୍ |</string>
+    <string name="mark_visit_complete">ପରିଦର୍ଶନ ସମ୍ପୂର୍ଣ୍ଣ ଚିହ୍ନଟ କରନ୍ତୁ</string>
+    <string name="check_tag_breed">କାନ ଟ୍ୟାଗ୍ ଏବଂ ପ୍ରଜାତି ଯାଞ୍ଚ କରନ୍ତୁ |</string>
+    <string name="verify_continue">ଯାଞ୍ଚ କରନ୍ତୁ ଏବଂ ଜାରି ରଖନ୍ତୁ</string>
+    <string name="capture_carcass_instruction">ଶବର ସ୍ପଷ୍ଟ ଫଟୋ ନିଅନ୍ତୁ |</string>
+    <string name="save_photos">ଫଟୋ ସଂରକ୍ଷଣ କରନ୍ତୁ</string>
+    <string name="ai_checking_instruction">AI ସିଷ୍ଟମ ଫଟୋଗୁଡ଼ିକୁ ଯାଞ୍ଚ କରୁଛି...</string>
+    <string name="confirm_disposal_handover">ଶବ ବିସର୍ଜନ କିମ୍ବା ହସ୍ତାନ୍ତର ନିଶ୍ଚିତ କରନ୍ତୁ |</string>
+    <string name="confirm_handover">ହସ୍ତାନ୍ତର ନିଶ୍ଚିତ କରନ୍ତୁ</string>
+    <string name="final_review_submit">ଶେଷ ସମୀକ୍ଷା ଏବଂ ଦାବି ଦାଖଲ କରନ୍ତୁ |</string>
+    <string name="step_details">ପଦକ୍ଷେପ ବିବରଣୀ</string>
+
+    <!-- Farmer Report Death -->
+    <string name="report_goat_death">ଛେଳି ମୃତ୍ୟୁ ରିପୋର୍ଟ</string>
+    <string name="select_goat">ଛେଳି ବାଛନ୍ତୁ</string>
+    <string name="date_of_death">ମୃତ୍ୟୁର ତାରିଖ *</string>
+    <string name="time_of_death">ମୃତ୍ୟୁର ସମୟ *</string>
+    <string name="upload_photo_optional">ଫଟୋ ଅପଲୋଡ୍ କରନ୍ତୁ (ବୈକଳ୍ପିକ)</string>
+    <string name="confirm_info_correct">ମୁଁ ନିଶ୍ଚିତ କରୁଛି ଯେ ଉପରୋକ୍ତ ସୂଚନା ସଠିକ୍ ଅଟେ |</string>
+    <string name="submit_alert">ସୂଚନା ଦିଅନ୍ତୁ</string>
+    <string name="death_reported">ମୃତ୍ୟୁ ରିପୋର୍ଟ କରାଯାଇଛି</string>
+    <string name="didi_visit">ଦିଦି ପରିଦର୍ଶନ</string>
+    <string name="verification">ଯାଞ୍ଚ</string>
+    <string name="coordinator_review">ସମନ୍ଵୟକାରୀ ସମୀକ୍ଷା</string>
+    <string name="payment_sent">ଦେୟ ପଠାଯାଇଛି</string>
+
+    <!-- Enrollment -->
+    <string name="enrollment_step_n">ପଞ୍ଜିକରଣ (ପଦକ୍ଷେପ %1$d of 7)</string>
+    <string name="farmer_information">କୃଷକ ସୂଚନା</string>
+    <string name="goat_details">ଛେଳି ବିବରଣୀ</string>
+    <string name="ear_tagging">କାନ ଟ୍ୟାଗିଂ</string>
+    <string name="vaccination_history">ଟୀକାକରଣ ଇତିହାସ</string>
+    <string name="premium_payment">ପ୍ରିମିୟମ ଦେୟ</string>
+    <string name="policy_generated">ନୀତି ପ୍ରସ୍ତୁତ ହୋଇଛି</string>
+    <string name="finish_enrollment">ପଞ୍ଜିକରଣ ଶେଷ କରନ୍ତୁ</string>
+
+    <!-- Enrollment Fields -->
+    <string name="farmer_name">କୃଷକଙ୍କ ନାମ *</string>
+    <string name="village">ଗ୍ରାମ *</string>
+    <string name="gps_location">GPS ଅବସ୍ଥାନ *</string>
+    <string name="aadhaar_gov_id">ଆଧାର / ସରକାରୀ ID *</string>
+    <string name="breed">ପ୍ରଜାତି *</string>
+    <string name="gender">ଲିଙ୍ଗ *</string>
+    <string name="age_approx">ବୟସ (ପ୍ରାୟ) *</string>
+    <string name="unit">ଏକକ *</string>
+    <string name="months">ମାସ</string>
+    <string name="years">ବର୍ଷ</string>
+    <string name="weight_approx">ଓଜନ (ପ୍ରୟ) *</string>
+    <string name="color_marks">ରଙ୍ଗ / ଚିହ୍ନ *</string>
+    <string name="upload_4_photos_instruction">ଦୟାକରି ଛେଳିର ୪ଟି ବାଧ୍ୟତାମୂଳକ ଫଟୋ ଅପଲୋଡ୍ କରନ୍ତୁ |</string>
+    <string name="left_side">ବାମ ପାର୍ଶ୍ୱ</string>
+    <string name="right_side">ଡାହାଣ ପାର୍ଶ୍ୱ</string>
+    <string name="front_view">ସମ୍ମୁଖ ଦୃଶ୍ୟ</string>
+    <string name="ear_tag">କାନ ଟ୍ୟାଗ୍</string>
+    <string name="ensure_clear_photos">ଭଲ ଆଲୋକରେ ସ୍ପଷ୍ଟ ଫଟୋ ନିଶ୍ଚିତ କରନ୍ତୁ</string>
+    <string name="ear_tag_number">କାନ ଟ୍ୟାଗ୍ ନମ୍ବର *</string>
+    <string name="scan_qr_code_optional">QR କୋଡ୍ ସ୍କାନ୍ କରନ୍ତୁ (ବୈକଳ୍ପିକ)</string>
+    <string name="scan_ear_tag_qr">କାନ ଟ୍ୟାଗ୍ QR କୋଡ୍ ସ୍କାନ୍ କରନ୍ତୁ</string>
+    <string name="ear_tag_verified_successfully">କାନ ଟ୍ୟାଗ୍ ସଫଳତାର ସହିତ ଯାଞ୍ଚ ହୋଇଛି</string>
+    <string name="next_vaccination_due">ପରବର୍ତ୍ତୀ ଟୀକାକରଣ ବାକି</string>
+    <string name="total_premium_amount">ମୋଟ ପ୍ରିମିୟମ ପରିମାଣ</string>
+    <string name="select_payment_method">ଦେୟ ପଦ୍ଧତି ଚୟନ କରନ୍ତୁ</string>
+    <string name="receipt_number">ରସିଦ ନମ୍ବର</string>
+    <string name="policy_generated_successfully">ନୀତି ସଫଳତାର ସହିତ ପ୍ରସ୍ତୁତ ହୋଇଛି!</string>
+    <string name="policy_number">ନୀତି ନମ୍ବର</string>
+    <string name="premium_paid">ଦିଆଯାଇଥିବା ପ୍ରିମିୟମ</string>
+    <string name="validity">ବୈଧତା</string>
+    <string name="sum_insured">ବୀମା ରାଶି</string>
+    <string name="download_certificate">ପ୍ରମାଣପତ୍ର ଡାଉନଲୋଡ୍ କରନ୍ତୁ</string>
+
+    <!-- Profile & Settings -->
+    <string name="profile_settings">ପ୍ରୋଫାଇଲ୍ ସେଟିଙ୍ଗ୍ସ</string>
+    <string name="update_profile_photo">ପ୍ରୋଫାଇଲ୍ ଫଟୋ ଅପଡେଟ୍ କରନ୍ତୁ</string>
+    <string name="choose_source">ଏକ ଉତ୍ସ ବାଛନ୍ତୁ</string>
+    <string name="camera">କ୍ୟାମେରା</string>
+    <string name="gallery">ଗ୍ୟାଲେରୀ</string>
+    <string name="account_details">ଖାତା ବିବରଣୀ</string>
+    <string name="app_settings">ଆପ୍ ସେଟିଙ୍ଗ୍ସ</string>
+    <string name="enable_notifications">ବିଜ୍ଞପ୍ତି ସକ୍ଷମ କରନ୍ତୁ</string>
+    <string name="language">ଭାଷା</string>
+    <string name="support_legal">ସମର୍ଥନ ଏବଂ ଆଇନଗତ</string>
+    <string name="help_support">ସାହାଯ୍ୟ ଏବଂ ସମର୍ଥନ</string>
+    <string name="privacy_policy">ଗୋପନୀୟତା ନୀତି</string>
+    <string name="terms_of_service">ସେବା ସର୍ତ୍ତାବଳୀ</string>
+    <string name="logout">ଲଗ୍ ଆଉଟ୍</string>
+    <string name="version">ସଂସ୍କରଣ %1$s</string>
+
+    <!-- Help & Support -->
+    <string name="faqs">FAQs</string>
+    <string name="faqs_subtitle">ବାରମ୍ବାର ପଚରାଯାଉଥିବା ପ୍ରଶ୍ନ</string>
+    <string name="contact_support">ସହାୟତା ସହିତ ଯୋଗାଯୋଗ କରନ୍ତୁ</string>
+    <string name="contact_support_subtitle">ଆମର ଟିମ୍ ସହିତ ଚାଟ୍ କରନ୍ତୁ</string>
+    <string name="call_support">କଲ୍ ସହାୟତା</string>
+    <string name="report_an_issue">ଏକ ସମସ୍ୟା ରିପୋର୍ଟ କରନ୍ତୁ</string>
+    <string name="report_issue_subtitle">ଆମକୁ ଆପଣଙ୍କର ସମସ୍ୟା ଜଣାନ୍ତୁ</string>
+    <string name="something_not_working">କିଛି କାମ କରୁନାହିଁ କି?</string>
+    <string name="report_bug">ଏକ ବଗ୍ ରିପୋର୍ଟ କରନ୍ତୁ</string>
+    <string name="feature_request">ଫିଚର୍ ଅନୁରୋଧ</string>
+    <string name="general_feedback">ସାଧାରଣ ମତାମତ</string>
+    <string name="view_my_reports">ମୋର ରିପୋର୍ଟ ଦେଖନ୍ତୁ</string>
+    <string name="issue_type">ସମସ୍ୟାର ପ୍ରକାର</string>
+    <string name="category">ବର୍ଗ</string>
+    <string name="select_category">ବର୍ଗ ଚୟନ କରନ୍ତୁ</string>
+    <string name="issue_title">ସମସ୍ୟାର ଶୀର୍ଷକ *</string>
+    <string name="brief_description_placeholder">ସମସ୍ୟାର ସଂକ୍ଷିପ୍ତ ବର୍ଣ୍ଣନା କରନ୍ତୁ</string>
+    <string name="describe_the_issue">ସମସ୍ୟାର ବର୍ଣ୍ଣନା କରନ୍ତୁ *</string>
+    <string name="issue_desc_placeholder">ଦୟାକରି ପଦକ୍ଷେପଗୁଡିକ ପ୍ରଦାନ କରନ୍ତୁ, କ’ଣ ଘଟିଲା, ଏବଂ ଆପଣ କ’ଣ ଆଶା କରିଥିଲେ |</string>
+    <string name="attach_screenshot_optional">ସ୍କ୍ରିନସଟ୍ / ଭିଡିଓ ସଂଲଗ୍ନ କରନ୍ତୁ (ବୈକଳ୍ପିକ)</string>
+    <string name="submit_issue">ସମସ୍ୟା ଦାଖଲ କରନ୍ତୁ</string>
+    <string name="thank_you">ଧନ୍ୟବାଦ!</string>
+    <string name="issue_reported_successfully">ଆପଣଙ୍କର ସମସ୍ୟା ସଫଳତାର ସହିତ ରିପୋର୍ଟ କରାଯାଇଛି |</string>
+    <string name="ticket_details">ଟିକେଟ୍ ବିବରଣୀ</string>
+    <string name="ticket_id">ଟିକେଟ୍ ID</string>
+    <string name="reported_date">ରିପୋର୍ଟ ତାରିଖ</string>
+    <string name="status">ସ୍ଥିତି</string>
+    <string name="review_soon_message">ଆମେ ଆପଣଙ୍କର ସମସ୍ୟାର ସମୀକ୍ଷା କରିବୁ ଏବଂ ଶୀଘ୍ର ଆପଣଙ୍କ ସହିତ ଯୋଗାଯୋଗ କରିବୁ |</string>
+    <string name="back_to_home">ମୁଖ୍ୟ ପୃଷ୍ଠାକୁ ଫେରନ୍ତୁ</string>
+    <string name="my_reports">ମୋର ରିପୋର୍ଟ</string>
+    <string name="cant_find_issue">ଆପଣଙ୍କ ସମସ୍ୟା ପାଇଲେ ନାହିଁ କି?</string>
+    <string name="contact_support_direct">ଆମର ସହାୟତା ଟିମ୍ ସହିତ ସିଧାସଳଖ ଯୋଗାଯୋଗ କରନ୍ତୁ |</string>
+
+    <!-- Goat & Vaccine Lists -->
+    <string name="all_count">ସମସ୍ତ (%1$d)</string>
+    <string name="active_count">ସକ୍ରିୟ (%1$d)</string>
+    <string name="expired_count">ସମାପ୍ତ (%1$d)</string>
+    <string name="claimed">ଦାବି ହୋଇଛି</string>
+    <string name="search_goat_placeholder">କାନ ଟ୍ୟାଗ୍ କିମ୍ବା କୃଷକଙ୍କ ନାମ ଅନୁସାରେ ଖୋଜନ୍ତୁ</string>
+    <string name="registered_goats">ପଞ୍ଜିକୃତ ଛେଳି</string>
+    <string name="goats_registered_count">%1$d ଛେଳି ପଞ୍ଜିକୃତ</string>
+    <string name="aadhaar_number">ଆଧାର ନମ୍ବର</string>
+    <string name="age">ବୟସ</string>
+    <string name="weight">ଓଜନ</string>
+    <string name="color_marks_label">ରଙ୍ଗ / ଚିହ୍ନ</string>
+    <string name="policy_information">ନୀତି ସୂଚନା</string>
+    <string name="issue_date">ପ୍ରଦାନ ତାରିଖ</string>
+    <string name="end_date">ଶେଷ ତାରିଖ</string>
+    <string name="upcoming_count">ଆଗାମୀ (%1$d)</string>
+    <string name="search_vaccine_placeholder">କାନ ଟ୍ୟାଗ୍ କିମ୍ବା ଟୀକା ନାମ ଅନୁସାରେ ଖୋଜନ୍ତୁ</string>
+    <string name="vaccinations_pending_scheduled">%1$d ଟୀକାକରଣ ବାକି ଅଛି</string>
+    <string name="record_vaccination">ଟୀକାକରଣ ରେକର୍ଡ କରନ୍ତୁ</string>
+    <string name="vaccine_type">ଟୀକା ପ୍ରକାର *</string>
+    <string name="batch_number">ବ୍ୟାଚ୍ ନମ୍ବର *</string>
+    <string name="vaccination_date">ଟୀକାକରଣ ତାରିଖ *</string>
+    <string name="photo_vaccine_label">ଫଟୋ (ଟୀକା ଲେବଲ୍) *</string>
+    <string name="save_record">ରେକର୍ଡ ସଂରକ୍ଷଣ କରନ୍ତୁ</string>
+
+    <!-- Claims List -->
+    <string name="all_total_count">ସମସ୍ତ (%1$d)</string>
+    <string name="my_assigned_count">ମୋ ଦ୍ଵାରା ଧାର୍ଯ୍ୟ (%1$d)</string>
+    <string name="in_progress_count">ପ୍ରଗତିରେ ଅଛି (%1$d)</string>
+    <string name="search_claim_placeholder">ଦାବି ID, କୃଷକ, ଟ୍ୟାଗ୍ ନମ୍ବର ଦ୍ୱାରା ଖୋଜନ୍ତୁ</string>
+    <string name="total_claims">ମୋଟ ଦାବି</string>
+    <string name="claims_by_farmer">%1$d କୃଷକଙ୍କ ଦ୍ୱାରା ଦାବି</string>
+    <string name="tag_no_label">ଟ୍ୟାଗ୍ ନମ୍ବର: %1$s</string>
+    <string name="reported_on_label">ରିପୋର୍ଟ ତାରିଖ: %1$s</string>
+    <string name="approved_by_label">%1$s ଦ୍ୱାରା ଅନୁମୋଦିତ</string>
+    <string name="assigned_to_label">%1$s ଙ୍କୁ ଧାର୍ଯ୍ୟ କରାଯାଇଛି</string>
+    <string name="claim_details">ଦାବି ବିବରଣୀ</string>
+    <string name="claim_progress">ଦାବି ପ୍ରଗତି</string>
+    <string name="claim_information">ଦାବି ସୂଚନା</string>
+    <string name="uploaded_documents">ଅପଲୋଡ୍ ହୋଇଥିବା ଦଲିଲ</string>
+    <string name="documents_secured_tip">ସମସ୍ତ ଦଲିଲ ସୁରକ୍ଷିତ ଏବଂ କେବଳ ଦାବି ଯାଞ୍ଚ ପାଇଁ ବ୍ୟବହୃତ ହୁଏ |</string>
+
+    <!-- Claim Payout -->
+    <string name="bank_details">ବ୍ୟାଙ୍କ ବିବରଣୀ</string>
+    <string name="enter_bank_details_instruction">ଦେୟ ପାଇଁ ବ୍ୟାଙ୍କ ବିବରଣୀ ଦିଅନ୍ତୁ</string>
+    <string name="acc_holder_name">ଖାତାଧାରୀଙ୍କ ନାମ *</string>
+    <string name="bank_name">ବ୍ୟାଙ୍କ ନାମ *</string>
+    <string name="acc_number">ଖାତା ନମ୍ବର *</string>
+    <string name="ifsc_code">IFSC କୋଡ୍ *</string>
+    <string name="branch">ଶାଖା *</string>
+    <string name="upload_passbook_instruction">ପାସବୁକ୍ / ବାତିଲ୍ ଚେକ୍ ଅପଲୋଡ୍ କରନ୍ତୁ *</string>
+    <string name="verify_claim">ଦାବି ଯାଞ୍ଚ କରନ୍ତୁ</string>
+    <string name="verification_checklist">ଯାଞ୍ଚ ଚେକଲିଷ୍ଟ</string>
+    <string name="remarks_optional">ମନ୍ତବ୍ୟ (ବୈକଳ୍ପିକ)</string>
+    <string name="approve_claim">ଦାବି ଅନୁମୋଦନ କରନ୍ତୁ</string>
+    <string name="reject_claim">ଦାବି ପ୍ରତ୍ୟାଖ୍ୟାନ କରନ୍ତୁ</string>
+    <string name="claim_payout">ଦାବି ପରିଶୋଧ</string>
+    <string name="confirm_payout">ପରିଶୋଧ ନିଶ୍ଚିତ କରନ୍ତୁ</string>
+    <string name="payout_successful">ପରିଶୋଧ ସଫଳ</string>
+    <string name="approved_amount">ଅନୁମୋଦିତ ପରିମାଣ</string>
+    <string name="payout_mode">ପରିଶୋଧ ପଦ୍ଧତି</string>
+    <string name="bank_transfer">ବ୍ୟାଙ୍କ ଟ୍ରାନ୍ସଫର</string>
+    <string name="mark_as_paid">ପରିଶୋଧିତ ଚିହ୍ନଟ କରନ୍ତୁ</string>
+
+    <!-- Support Chat -->
+    <string name="support_team">ସହାୟତା ଟିମ୍</string>
+    <string name="type_message">ଗୋଟିଏ ବାର୍ତ୍ତା ଲେଖନ୍ତୁ ...</string>
+    <string name="start_conversation">ଏକ କଥାବାର୍ତ୍ତା ଆରମ୍ଭ କରନ୍ତୁ</string>
+    <string name="start_conversation_subtitle">ଦୟାକରି କିଛି ବିବରଣୀ ପ୍ରଦାନ କରନ୍ତୁ ଯାହା ଦ୍ୱାରା ଆମେ ଆପଣଙ୍କୁ ଭଲ ଭାବରେ ସାହାଯ୍ୟ କରିପାରିବୁ |</string>
+    <string name="subject">ବିଷୟ</string>
+    <string name="select_topic">ଏକ ବିଷୟ ବାଛନ୍ତୁ</string>
+    <string name="description">ବିବରଣୀ</string>
+    <string name="tell_us_more">ଆପଣଙ୍କର ସମସ୍ୟା ବିଷୟରେ ଆମକୁ ଅଧିକ କୁହନ୍ତୁ ...</string>
+    <string name="attach_screenshot">ସ୍କ୍ରିନସଟ୍ ସଂଲଗ୍ନ କରନ୍ତୁ (ବୈକଳ୍ପିକ)</string>
+    <string name="start_chat">ଚାଟ୍ ଆରମ୍ଭ କରନ୍ତୁ</string>
+    <string name="we_are_here_to_help">ଆମେ ଆପଣଙ୍କୁ ସାହାଯ୍ୟ କରିବାକୁ ଏଠାରେ ଅଛୁ!</string>
+    <string name="chat_quick_solutions">ତ୍ୱରିତ ସମାଧାନ ପାଇଁ ଆମର ସହାୟତା ଟିମ୍ ସହିତ ଚାଟ୍ କରନ୍ତୁ |</string>
+    <string name="quick_response">ତ୍ୱରିତ ପ୍ରତିକ୍ରିୟା</string>
+    <string name="expert_support">ବିଶେଷଜ୍ଞ ସହାୟତା</string>
+    <string name="safe_secure">ସୁରକ୍ଷିତ ଏବଂ ନିରାପଦ</string>
+    <string name="choose_support_way">ସହାୟତା ପାଇବା ପାଇଁ ଏକ ଉପାୟ ବାଛନ୍ତୁ</string>
+    <string name="view_previous_conversations">ପୂର୍ବ କଥାବାର୍ତ୍ତା ଦେଖନ୍ତୁ</string>
+    <string name="support_hours">ସହାୟତା ସମୟ</string>
+
+    <!-- Legal Details -->
+    <string name="privacy_matters">ଆପଣଙ୍କ ଗୋପନୀୟତା ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ</string>
+    <string name="privacy_intro">ଆମେ ଆପଣଙ୍କର ବ୍ୟକ୍ତିଗତ ସୂଚନାକୁ ସୁରକ୍ଷିତ ରଖିବା ଏବଂ ଏହାର ବ୍ୟବହାର ବିଷୟରେ ସ୍ୱଚ୍ଛ ରହିବାକୁ ପ୍ରତିଶ୍ରୁତିବଦ୍ଧ |</string>
+    <string name="in_this_policy">ଏହି ନୀତିରେ</string>
+    <string name="privacy_agreement_tip">ଆମର ଆପ୍ ବ୍ୟବହାର କରି, ଆପଣ ଏହି ନୀତି ଅନୁଯାୟୀ ସୂଚନା ସଂଗ୍ରହ ଏବଂ ବ୍ୟବହାର କରିବାକୁ ସମ୍ମତ ହୁଅନ୍ତି |</string>
+    <string name="terms_trust">ଆମର ସର୍ତ୍ତାବଳୀ, ଆପଣଙ୍କ ବିଶ୍ୱାସ</string>
+    <string name="terms_intro">ସ୍ଵାଗତ! ଦୟାକରି ଆମର ଆପ୍ ବ୍ୟବହାର କରିବା ପୂର୍ବରୁ ଏହି ସେବା ସର୍ତ୍ତାବଳୀକୁ ଧ୍ୟାନର ସହିତ ପଢନ୍ତୁ | ଆପ୍ ବ୍ୟବହାର କରି, ଆପଣ ଏହି ନିୟମ ଏବଂ ସର୍ତ୍ତାବଳୀରେ ସମ୍ମତ ହୁଅନ୍ତି |</string>
+    <string name="in_this_document">ଏହି ଦଲିଲରେ</string>
+    <string name="terms_binding_tip">ଏହି ସର୍ତ୍ତାବଳୀ ଆପଣଙ୍କ ଏବଂ ଆମ କମ୍ପାନୀ ମଧ୍ୟରେ ଆଇନଗତ ଭାବରେ ବାଧ୍ୟତାମୂଳକ |</string>
+
+    <!-- Coordinator -->
+    <string name="active_policies_label">ସକ୍ରିୟ ନୀତି</string>
+    <string name="claims_today_label">ଆଜିର ଦାବି</string>
+    <string name="mortality_label">ମୃତ୍ୟୁ ହାର</string>
+    <string name="performance_overview">ପ୍ରଦର୍ଶନ ସମୀକ୍ଷା</string>
+    <string name="last_7_days_activity">ଗତ ୭ ଦିନର କାର୍ଯ୍ୟକଳାପ</string>
+    <string name="live_activity">ଲାଇଭ୍ କାର୍ଯ୍ୟକଳାପ</string>
+    <string name="recent">ସାମ୍ପ୍ରତିକ</string>
+    <string name="cluster_map">କ୍ଲଷ୍ଟର ମାନଚିତ୍ର</string>
+    <string name="search_village_didi">ଗ୍ରାମ କିମ୍ବା ଦିଦି ଖୋଜନ୍ତୁ</string>
+    <string name="map">ମାନଚିତ୍ର</string>
+    <string name="list">ତାଲିକା</string>
+    <string name="high_claims">ଉଚ୍ଚ ଦାବି</string>
+    <string name="medium">ମଧ୍ୟମ</string>
+    <string name="low">କମ</string>
+    <string name="reports">ରିପୋର୍ଟ</string>
+    <string name="total_farmers">ମୋଟ କୃଷକ</string>
+    <string name="goats_insured">ବିମାଭୁକ୍ତ ଛେଳି</string>
+    <string name="premium">ପ୍ରିମିୟମ</string>
+
+    <!-- Additional -->
+    <string name="female">ମାଈ</string>
+    <string name="male">ଅଣ୍ଡିରା</string>
+    <string name="policy_active">ନୀତି ସକ୍ରିୟ</string>
+    <string name="policy_expired">ନୀତି ସମାପ୍ତ</string>
+    <string name="valid_till">%1$s ପର୍ଯ୍ୟନ୍ତ ବୈଧ</string>
+    <string name="expired_on">%1$s ରେ ସମାପ୍ତ</string>
+    <string name="version_label">ସଂସ୍କରଣ %1$s</string>
+    <string name="hello_comma">ନମସ୍କାର,</string>
+    <string name="welcome_comma">ସ୍ଵାଗତ,</string>
+    <string name="setup_profile">ପ୍ରୋଫାଇଲ୍ ସେଟଅପ୍</string>
+    <string name="basic_info">ମୌଳିକ ସୂଚନା</string>
+    <string name="location">ଅବସ୍ଥାନ</string>
+    <string name="identity_kyc">ପରିଚୟ / KYC</string>
+    <string name="aadhaar_photo_optional">ଆଧାର ଫଟୋ (ବୈକଳ୍ପିକ)</string>
+    <string name="save_continue">ସଂରକ୍ଷଣ ଏବଂ ଜାରି ରଖନ୍ତୁ</string>
+    <string name="state">ରାଜ୍ୟ *</string>
+    <string name="district">ଜିଲ୍ଲା *</string>
+    <string name="block">ବ୍ଲକ *</string>
+    <string name="pincode">ପିନକୋଡ୍ *</string>
+    <string name="aadhaar_number_label">ଆଧାର ନମ୍ବର *</string>
+    <string name="date_of_birth">ଜନ୍ମ ତାରିଖ *</string>
+
+    <string name="tab_breakup_title">%1$s ବ୍ରେକଅପ୍</string>
+    <string name="detailed_data">ବିସ୍ତୃତ ତଥ୍ୟ</string>
+    <string name="generate_custom_report">କଷ୍ଟମ୍ ରିପୋର୍ଟ ପ୍ରସ୍ତୁତ କରନ୍ତୁ</string>
+    <string name="select_format">ଫର୍ମାଟ୍ ବାଛନ୍ତୁ:</string>
+    <string name="pdf_document">PDF ଦଲିଲ</string>
+    <string name="excel_spreadsheet">Excel ସ୍ପ୍ରେଡସିଟ୍</string>
+
+    <string name="date_today">ଆଜି</string>
+    <string name="date_yesterday">ଗତକାଲି</string>
+    <string name="date_this_week">ଏହି ସପ୍ତାହ</string>
+    <string name="date_this_month">ଏହି ମାସ</string>
+    <string name="date_range_label">ତାରିଖ ପରିସର</string>
+    <string name="region_label">ଅଞ୍ଚଳ</string>
+    <string name="all_regions_label">ସମସ୍ତ ଅଞ୍ଚଳ</string>
+    <string name="suraksha_didi_label">ସୁରକ୍ଷା ଦିଦି</string>
+    <string name="all_didis_label">ସମସ୍ତ ଦିଦି</string>
+    <string name="total_farmers_label">ମୋଟ କୃଷକ</string>
+    <string name="goats_insured_label">ବିମାଭୁକ୍ତ ଛେଳି</string>
+    <string name="pending_claims_label">ବାକି ରହିଥିବା ଦାବି</string>
+    <string name="premium_label">ପ୍ରିମିୟମ</string>
+    <string name="enrollment_tab">ପଞ୍ଜିକରଣ</string>
+    <string name="vaccination_tab">ଟୀକାକରଣ</string>
+    <string name="claims_tab">ଦାବି</string>
+    <string name="financial_tab">ଆର୍ଥିକ</string>
+    <string name="performance_tab">ପ୍ରଦର୍ଶନ</string>
+    <string name="activity_report_title">କାର୍ଯ୍ୟକଳାପ ରିପୋର୍ଟ</string>
+    <string name="cluster_map_title">କ୍ଲଷ୍ଟର ମାନଚିତ୍ର</string>
+    <string name="reports_title">ରିପୋର୍ଟ</string>
+
+    <string name="premium_collection">ପ୍ରିମିୟମ ସଂଗ୍ରହ</string>
+    <string name="total_premium_with_value">ମୋଟ ପ୍ରିମିୟମ: ₹%1$s</string>
+    <string name="insurance_company">ବୀମା କମ୍ପାନୀ</string>
+    <string name="vaccination_program">ଟୀକାକରଣ କାର୍ଯ୍ୟକ୍ରମ</string>
+    <string name="suraksha_didi_fee">ସୁରକ୍ଷା ଦିଦି ଶୁଳ୍କ</string>
+    <string name="fpc_corpus_fund">FPC କର୍ପସ ପାଣ୍ଠି</string>
+    <string name="confirm_payment_generate_receipt">ଦେୟ ନିଶ୍ଚିତ କରନ୍ତୁ ଏବଂ ରସିଦ ପ୍ରସ୍ତୁତ କରନ୍ତୁ</string>
+    <string name="camera_permission_required">କ୍ୟାମେରା ଅନୁମତି ଆବଶ୍ୟକ</string>
+    <string name="submit_claim">ଦାବି ସବମିଟ୍ କରନ୍ତୁ</string>
+
+    <string name="carcass_verification_step_1">ପଦକ୍ଷେପ ୧: ଶବ ଯାଞ୍ଚ</string>
+    <string name="check_tag_breed_step_2">ପଦକ୍ଷେପ ୨: କାନ ଟ୍ୟାଗ୍ ଏବଂ ପ୍ରଜାତି ଯାଞ୍ଚ କରନ୍ତୁ</string>
+    <string name="capture_farmer_site_photo_step_3">ପଦକ୍ଷେପ ୩: କୃଷକ ଏବଂ ସାଇଟ୍ ଫଟୋ ନିଅନ୍ତୁ</string>
+    <string name="capture_farmer_site_instruction">ଶବ ସହିତ ସାଇଟରେ କୃଷକଙ୍କର ଏକ ଫଟୋ ନିଅନ୍ତୁ |</string>
+    <string name="cause_of_death_sign_step_4">ପଦକ୍ଷେପ ୪: ମୃତ୍ୟୁର କାରଣ ଏବଂ ସ୍ଵାକ୍ଷର</string>
+    <string name="claim_id_placeholder">ଦାବି #%1$s</string>
+
+    <string name="full_name_placeholder">ପୁରା ନାମ</string>
+    <string name="mobile_number_placeholder">୧୦-ଅଙ୍କ ବିଶିଷ୍ଟ ନମ୍ବର</string>
+    <string name="village_placeholder">ଗ୍ରାମର ନାମ</string>
+    <string name="gps_location_placeholder">ସ୍ୱୟଂଚାଳିତ ଭାବେ ଅବସ୍ଥାନ ନିଅନ୍ତୁ</string>
+    <string name="aadhaar_placeholder">୧୨-ଅଙ୍କ ବିଶିଷ୍ଟ ନମ୍ବର</string>
+    <string name="age_placeholder">୧୨</string>
+    <string name="weight_placeholder">୧୮</string>
+    <string name="color_marks_placeholder">ଧଳା ଦାଗ ସହିତ କଳା</string>
+    <string name="ear_tag_number_placeholder">ଉଦାହରଣ: ET-240801</string>
+    <string name="total_premium_with_value_rs">₹ %1$s</string>
+    <string name="policy_number_value">POL-2024-00125</string>
+    <string name="farmer_name_placeholder">ରାମ କୁମାର</string>
+    <string name="ear_tag_value">ET-453678</string>
+    <string name="validity_value">୦୧ ଅଗଷ୍ଟ ୨୦୨୪ - ୩୧ ଜୁଲାଇ ୨୦୨୫</string>
+    <string name="sum_insured_value">₹ ୮,୫୦୦</string>
+    <string name="premium_paid_value">₹ ୩୫୦</string>
+    <string name="premium_amount_editable">ପ୍ରିମିୟମ ପରିମାଣ (ଆବଶ୍ୟକ ହେଲେ ସଂପାଦନ ଯୋଗ୍ୟ)</string>
+
+    <string name="payment_method_cash">ନଗଦ</string>
+    <string name="payment_method_upi">UPI</string>
+    <string name="payment_method_wallet">ୱାଲେଟ୍</string>
+    <string name="vaccine_ppr">PPR ଟୀକା</string>
+    <string name="vaccine_ettt">ET + TT ଟୀକା</string>
+    <string name="vaccine_fmd">FMD ଟୀକା</string>
+    <string name="vaccine_goat_pox">ଛେଳି ବସନ୍ତ (Goat Pox) ଟୀକା</string>
+    <string name="given">ଦିଆଯାଇଛି</string>
+    <string name="pending">ବାକି ଅଛି</string>
+    <string name="capture">କ୍ୟାପଚର</string>
+
+    <string name="my_goats">ମୋର ଛେଳି</string>
+
+    <string name="vaccination_due">ଟୀକାକରଣ ବାକି</string>
+    <string name="claim_approved">ଦାବି ଅନୁମୋଦିତ</string>
+    <string name="notifications">ବିଜ୍ଞପ୍ତି</string>
+    <string name="saved">ସଂରକ୍ଷିତ</string>
+
+    <string name="enrollment_tab_title">ପଞ୍ଜିକରଣ</string>
+    <string name="vaccination_tab_title">ଟୀକାକରଣ</string>
+    <string name="claims_tab_title">ଦାବି</string>
+    <string name="financial_tab_title">ଆର୍ଥିକ</string>
+    <string name="performance_tab_title">ପ୍ରଦର୍ଶନ</string>
+
+    <string name="in_progress">ପ୍ରଗତିରେ ଅଛି</string>
+    <string name="pending_action">ବାକି ଥିବା କାର୍ଯ୍ୟ</string>
+    <string name="claims_by_didi">%1$d ଦିଦିଙ୍କ ଦ୍ୱାରା ଦାବି</string>
+    <string name="verification_in_progress">ଯାଞ୍ଚ ଚାଲୁଛି</string>
+    <string name="claim_rejected">ଦାବି ପ୍ରତ୍ୟାଖ୍ୟାନ</string>
+    <string name="approved">ଅନୁମୋଦିତ</string>
+    <string name="rejected">ପ୍ରତ୍ୟାଖ୍ୟାନ</string>
+    <string name="custom_label">କଷ୍ଟମ୍</string>
+    <string name="option_1">ବିକଳ୍ପ ୧</string>
+    <string name="option_2">ବିକଳ୍ପ ୨</string>
+    <string name="goat_enrollment">ଛେଳି ପଞ୍ଜିକରଣ</string>
+    <string name="vaccination_fee">ଟୀକାକରଣ ଶୁଳ୍କ</string>
+    <string name="two_hours_ago">୨ ଘଣ୍ଟା ପୂର୍ବରୁ</string>
+    <string name="today_at">ଆଜି, %1$s</string>
+    <string name="yesterday">ଗତକାଲି</string>
+    <string name="n_days_ago">%1$d ଦିନ ପୂର୍ବରୁ</string>
+    <string name="black_bengal">ବ୍ଲାକ୍ ବେଙ୍ଗଲ୍</string>
+    <string name="jamunapari">ଜମୁନାପାରୀ</string>
+    <string name="sirohi">ସିରୋହି</string>
+    <string name="barbari">ବରବରୀ</string>
+    <string name="beetal">ବିଟଲ୍</string>
+    <string name="ganjam">ଗଞ୍ଜାମ</string>
+    <string name="osmanabadi">ଓସମାନାବାଦୀ</string>
+    <string name="mon">ସୋମ</string>
+    <string name="tue">ମଙ୍ଗଳ</string>
+    <string name="wed">ବୁଧ</string>
+    <string name="thu">ଗୁରୁ</string>
+    <string name="fri">ଶୁକ୍ର</string>
+    <string name="sat">ଶନି</string>
+    <string name="sun">ରବି</string>
+    <string name="vaccine_ppr_booster">PPR ବୁଷ୍ଟର</string>
+    <string name="claim_id_label_colon">ଦାବି ID: </string>
+    <string name="approved_by_label_colon">%1$s ଦ୍ୱାରା ଅନୁମୋଦିତ</string>
+    <string name="assigned_to_sushma_didi">ସୁଷମା ଦିଦିଙ୍କୁ ଦିଆଯାଇଛି</string>
+    <string name="other_label">ଅନ୍ୟାନ୍ୟ</string>
+    <string name="vaccine_ppr_label">PPR ଟୀକା</string>
+    <string name="vaccine_ettt_label">ET + TT ଟୀକା</string>
+    <string name="vaccine_fmd_label">FMD ଟୀକା</string>
+    <string name="vaccine_goat_pox_label">ଛେଳି ବସନ୍ତ ଟୀକା</string>
+    <string name="age_months_suffix">%1$d ମାସ</string>
+    <string name="breed_gender_age_format">%1$s • %2$s • %3$s</string>
+    <string name="color_marks_value">ଧଳା ଦାଗ ସହିତ କଳା</string>
+    <string name="new_enrollment_by">%1$s ଦ୍ୱାରା ନୂତନ ପଞ୍ଜିକରଣ</string>
+    <string name="ten_mins_ago">୧୦ ମିନିଟ୍ ପୂର୍ବରୁ</string>
+    <string name="status_new">ନୂଆ</string>
+    <string name="claim_submitted_by">%1$s ଦ୍ୱାରା ଦାବି ଦାଖଲ କରାଯାଇଛି</string>
+    <string name="two_hours_ago_label">୨ ଘଣ୍ଟା ପୂର୍ବରୁ</string>
+    <string name="n_mins_ago">%1$d ମିନିଟ୍ ପୂର୍ବରୁ</string>
+    <string name="n_hours_ago">%1$d ଘଣ୍ଟା ପୂର୍ବରୁ</string>
+    <string name="filed_a_claim">%1$s ଏକ ଦାବି ଦାଖଲ କଲେ</string>
+    <string name="completed_vaccination">%1$s ଟୀକାକରଣ ସମ୍ପୂର୍ଣ୍ଣ କଲେ</string>
+    <string name="visit_scheduled_by">%1$s ଦ୍ୱାରା ପରିଦର୍ଶନ ନିର୍ଦ୍ଧାରିତ ହୋଇଛି</string>
+    <string name="system_maintenance_update">ସିଷ୍ଟମ୍ ରକ୍ଷଣାବେକ୍ଷଣ ଅପଡେଟ୍</string>
+    <string name="claim_approved_label">ଦାବି #%1$s ଅନୁମୋଦିତ</string>
+    <string name="farmer_added_new_goat">%1$s ନୂଆ ଛେଳି ଯୋଡିଲେ</string>
+    <string name="vaccination_batch_used">ଟୀକାକରଣ ବ୍ୟାଚ୍ #%1$s ବ୍ୟବହୃତ ହୋଇଛି</string>
+    <string name="status_success">ସଫଳ</string>
+    <string name="active_claims_count">%1$d ସକ୍ରିୟ ଦାବି</string>
+    <string name="enrollment_issue">ପଞ୍ଜିକରଣ ସମସ୍ୟା</string>
+    <string name="claim_process">ଦାବି ପ୍ରକ୍ରିୟା</string>
+    <string name="overview_label">ସମୀକ୍ଷା</string>
+    <string name="documents_label">ଦଲିଲ</string>
+    <string name="death_reported_label">ମୃତ୍ୟୁ ରିପୋର୍ଟ କରାଯାଇଛି</string>
+    <string name="didi_site_visit_label">ଦିଦିଙ୍କ ସାଇଟ୍ ପରିଦର୍ଶନ</string>
+    <string name="verification_label">ଯାଞ୍ଚ</string>
+    <string name="coordinator_review_label">ସମନ୍ଵୟକାରୀ ସମୀକ୍ଷା</string>
+    <string name="payment_sent_label">ଦେୟ ପଠାଯାଇଛି</string>
+    <string name="upcoming_label">ଆଗାମୀ</string>
+    <string name="payment_issue">ଦେୟ ସମସ୍ୟା</string>
+    <string name="policy_status">ନୀତି ସ୍ଥିତି</string>
+    <string name="technical_support">ଯାନ୍ତ୍ରିକ ସହାୟତା</string>
+    <string name="billing">ବିଲିଂ</string>
+    <string name="information">ସୂଚନା</string>
+    <string name="feedback">ମତାମତ</string>
+    <string name="app_crash">ଆପ୍ କ୍ରାସ୍</string>
+    <string name="login_issue">ଲଗଇନ୍ ସମସ୍ୟା</string>
+    <string name="payment_failed">ଦେୟ ବିଫଳ</string>
+    <string name="missing_data">ତଥ୍ୟ ମିଳୁନାହିଁ</string>
+</resources>

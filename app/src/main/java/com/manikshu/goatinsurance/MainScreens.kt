@@ -121,12 +121,23 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.res.stringResource
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import kotlinx.coroutines.launch
+
+fun AppLanguage.getT(en: String, hi: String, or: String): String {
+    return when (this) {
+        AppLanguage.ENGLISH -> en
+        AppLanguage.HINDI -> hi
+        AppLanguage.ODIA -> or
+    }
+}
 
 val LocalWindowSizeClass = staticCompositionLocalOf<WindowSizeClass?> { null }
 val LocalAppLanguage = compositionLocalOf { mutableStateOf(AppLanguage.ENGLISH) }
@@ -139,7 +150,6 @@ fun AppNavigation(navController: NavHostController, sessionManager: SessionManag
     val scope = rememberCoroutineScope()
     val userRole by sessionManager.userRole.collectAsState(initial = null)
     val context = LocalContext.current
-    val languageState = LocalAppLanguage.current
     
     var showExitDialog by remember { mutableStateOf(false) }
 
@@ -154,16 +164,16 @@ fun AppNavigation(navController: NavHostController, sessionManager: SessionManag
     if (showExitDialog) {
         AlertDialog(
             onDismissRequest = { showExitDialog = false },
-            title = { Text(languageState.value.getT("Exit App", "ऐप से बाहर निकलें", "ଆପ୍ ରୁ ବାହାରନ୍ତୁ"), fontWeight = FontWeight.Bold, color = Color.Black) },
-            text = { Text(languageState.value.getT("Are you sure you want to exit?", "क्या आप वाकई बाहर निकलना चाहते हैं?", "ଆପଣ ନିଶ୍ଚିତ ଭାବରେ ବାହାରିବାକୁ ଚାହୁଁଛନ୍ତି କି?"), color = Color.Black) },
+            title = { Text(stringResource(R.string.exit_app_title), fontWeight = FontWeight.Bold, color = Color.Black) },
+            text = { Text(stringResource(R.string.exit_app_message), color = Color.Black) },
             confirmButton = {
                 TextButton(onClick = { (context as? Activity)?.finish() }) {
-                    Text(languageState.value.getT("Yes", "हाँ", "ହଁ"), fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(stringResource(R.string.yes), fontWeight = FontWeight.Bold, color = Color.Black)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showExitDialog = false }) {
-                    Text(languageState.value.getT("No", "नहीं", "ନା"), fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(stringResource(R.string.no), fontWeight = FontWeight.Bold, color = Color.Black)
                 }
             },
             containerColor = Color.White,
@@ -511,20 +521,16 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String) -> Unit, onNavigateToLo
     ) { permissions ->
         val allGranted = permissions.values.all { it }
         if (!allGranted) {
-            Toast.makeText(context, languageState.value.getT("Required permissions denied.", "आवश्यक अनुमतियां अस्वीकार कर दी गईं।", "ଆବଶ୍ୟକ ଅନୁମତି ପ୍ରତ୍ୟାଖ୍ୟାନ କରାଯାଇଛି |"), Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.getString(R.string.permissions_required_message), Toast.LENGTH_LONG).show()
         }
     }
     
     if (showPermissionDialog) {
         AlertDialog(
             onDismissRequest = { showPermissionDialog = false },
-            title = { Text(languageState.value.getT("Permissions Required", "अनुमतियाँ आवश्यक हैं", "ଅନୁମତି ଆବଶ୍ୟକ"), fontWeight = FontWeight.Bold) },
+            title = { Text(stringResource(R.string.permissions_required_title), fontWeight = FontWeight.Bold) },
             text = { 
-                Text(languageState.value.getT(
-                    "This app needs Camera and Location access to verify livestock and record service areas.",
-                    "पशुधन को सत्यापित करने और सेवा क्षेत्रों को रिकॉर्ड करने के लिए इस ऐप को कैमरा और स्थान पहुंच की आवश्यकता है।",
-                    "ପ୍ରାଣୀସମ୍ପଦ ଯାଞ୍ଚ କରିବା ଏବଂ ସେବା କ୍ଷେତ୍ର ରେକର୍ଡ କରିବାକୁ ଏହି ଆପ୍‌ କ୍ୟାମେରା ଏବଂ ଅବସ୍ଥାନ ଅନୁମତି ଆବଶ୍ୟକ କରେ |"
-                ))
+                Text(stringResource(R.string.permissions_required_message))
             },
             confirmButton = {
                 TextButton(
@@ -533,12 +539,12 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String) -> Unit, onNavigateToLo
                         permissionLauncher.launch(permissionsToRequest)
                     }
                 ) {
-                    Text(languageState.value.getT("Allow", "अनुमति दें", "ଅନୁମତି ଦିଅନ୍ତୁ"))
+                    Text(stringResource(R.string.allow))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showPermissionDialog = false }) {
-                    Text(languageState.value.getT("Deny", "अस्वीकार करें", "ପ୍ରତ୍ୟାଖ୍ୟାନ କରନ୍ତୁ"))
+                    Text(stringResource(R.string.deny))
                 }
             },
             shape = RoundedCornerShape(16.dp)
@@ -580,288 +586,12 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String) -> Unit, onNavigateToLo
                 ) {
                     Icon(Icons.Default.Public, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(languageState.value.code, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                }
-
-                MaterialTheme(
-                    colorScheme = MaterialTheme.colorScheme.copy(surface = Color.White.copy(alpha = 0.9f))
-                ) {
-                    DropdownMenu(
-                        expanded = showLanguagePicker,
-                        onDismissRequest = { showLanguagePicker = false }
-                    ) {
-                        DropdownMenuItem(text = { Text("English") }, onClick = { languageState.value = AppLanguage.ENGLISH; showLanguagePicker = false })
-                        DropdownMenuItem(text = { Text("हिन्दी") }, onClick = { languageState.value = AppLanguage.HINDI; showLanguagePicker = false })
-                        DropdownMenuItem(text = { Text("ଓଡ଼ିଆ") }, onClick = { languageState.value = AppLanguage.ODIA; showLanguagePicker = false })
-                    }
-                }
-            }
-
-            // Logo and Title
-            Column(
-                modifier = Modifier.align(Alignment.Center).padding(top = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Surface(
-                    modifier = Modifier.size(120.dp),
-                    shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.2f)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            painterResource(R.drawable.ic_logo_custom),
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(120.dp)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    languageState.value.getT("GOAT INSURANCE", "बकरी बीमा", "ଛେଳି ବୀମା"),
-                    style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.Bold, letterSpacing = 1.sp
-                )
-                Text(
-                    languageState.value.getT("Community Livestock Protection", "सामुदायिक पशुधन संरक्षण", "ଗୋଷ୍ଠୀ ପ୍ରାଣୀସମ୍ପଦ ସୁରକ୍ଷା"),
-                    style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f)
-                )
-            }
-        }
-
-        // SignUp Card
-        Card(
-            modifier = Modifier.padding(horizontal = 24.dp).offset(y = (-40).dp).fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(vertical = 32.dp, horizontal = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    languageState.value.getT("Create Account", "खाता बनाएं", "ଖାତା ଖୋଲନ୍ତୁ"),
-                    style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold
-                )
-                Text(
-                    languageState.value.getT("Register to start protecting livestock", "पशुधन की सुरक्षा शुरू करने के लिए पंजीकरण करें", "ପ୍ରାଣୀସମ୍ପଦ ସୁରକ୍ଷା ଆରମ୍ଭ କରିବାକୁ ପଞ୍ଜିକରଣ କରନ୍ତୁ"),
-                    style = MaterialTheme.typography.bodyMedium, color = Color.Gray, textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(32.dp))
-
-                if (step == 1) {
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) name = it },
-                        placeholder = { Text(languageState.value.getT("Full Name", "पूरा नाम", "ପୁରା ନାମ"), color = Color.Gray) },
-                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = Color.DarkGray) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f), focusedBorderColor = PrimaryGreen)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = phone,
-                        onValueChange = { if (it.length <= 10) phone = it },
-                        placeholder = { Text(languageState.value.getT("Mobile Number", "मोबाइल नंबर", "ମୋବାଇଲ୍ ନମ୍ବର"), color = Color.Gray) },
-                        leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = Color.DarkGray) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f), focusedBorderColor = PrimaryGreen)
-                    )
-                    
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = { 
-                            if (selectedRole == null) {
-                                Toast.makeText(context, languageState.value.getT("Scroll down and choose a role", "नीचे स्क्रॉल करें और एक भूमिका चुनें", "ତଳକୁ ସ୍କ୍ରୋଲ୍ କରନ୍ତୁ ଏବଂ ଏକ ଭୂମିକା ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show()
-                            } else {
-                                step = 2 
-                            }
-                        },
-                        enabled = (name.isNotBlank() && phone.length == 10),
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f))
-                    ) {
-                        Text(languageState.value.getT("Send OTP", "ओटीपी भेजें", "ଓଟିପି ପଠାନ୍ତୁ"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
                     Text(
-                        text = languageState.value.getT("Already have an account? Login", "पहले से खाता है? लॉगिन करें", "ପୂର୍ବରୁ ଖାତା ଅଛି? ଲଗଇନ୍"),
-                        color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp,
-                        modifier = Modifier.clickable { onNavigateToLogin() }
+                        text = languageState.value.code.uppercase(),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
                     )
-                } else {
-                    Text(languageState.value.getT("Enter 6-digit OTP sent to +91 $phone", "+91 $phone पर भेजा गया ओटीपी दर्ज करें", "+91 $phone କୁ ପଠାଯାଇଥିବା ଓଟିପି ଦିଅନ୍ତୁ"), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
-                    Spacer(modifier = Modifier.height(24.dp))
-                    OtpInput(otp, { otp = it }, onDone = { 
-                        if (otp.length == 6) {
-                            val allGranted = permissionsToRequest.all {
-                                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-                            }
-                            if (allGranted) {
-                                onVerifyOtp(selectedRole!!, name, phone)
-                            } else {
-                                showPermissionDialog = true
-                            }
-                        }
-                    })
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = { 
-                            val allGranted = permissionsToRequest.all {
-                                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-                            }
-                            if (allGranted) {
-                                onVerifyOtp(selectedRole!!, name, phone)
-                            } else {
-                                showPermissionDialog = true
-                            }
-                        },
-                        enabled = otp.length == 6,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
-                    ) { Text(languageState.value.getT("Verify & Next", "सत्यापित करें और अगला", "ଯାଞ୍ଚ ଏବଂ ପରବର୍ତ୍ତୀ"), fontSize = 16.sp, fontWeight = FontWeight.Bold) }
-                    
-                    TextButton(onClick = { step = 1 }) { Text(languageState.value.getT("Go Back", "वापस जाएं", "ପଛକୁ ଯାଆନ୍ତୁ"), color = PrimaryGreen) }
-                }
-            }
-        }
-
-        if (step == 1) {
-            // Divider
-            Row(modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.LightGray.copy(alpha = 0.5f))
-                Text(languageState.value.getT("choose a role", "एक भूमिका चुनें", "ଗୋଟିଏ ଭୂମିକା ବାଛନ୍ତୁ"), modifier = Modifier.padding(horizontal = 16.dp), color = Color.Gray, fontSize = 14.sp)
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.LightGray.copy(alpha = 0.5f))
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Role Selection
-            Row(modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                RoleCard(UserRole.SURAKSHA_DIDI, languageState.value.getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି"), Icons.Default.Person, selectedRole == UserRole.SURAKSHA_DIDI, modifier = Modifier.weight(1f)) { selectedRole = it }
-                RoleCard(UserRole.FARMER, languageState.value.getT("Farmer", "किसान", "କୃଷକ"), Icons.Default.Agriculture, selectedRole == UserRole.FARMER, modifier = Modifier.weight(1f)) { selectedRole = it }
-                RoleCard(UserRole.COORDINATOR, languageState.value.getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ"), Icons.Default.Badge, selectedRole == UserRole.COORDINATOR, modifier = Modifier.weight(1f)) { selectedRole = it }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-        }
-
-        // Footer
-        Row(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(languageState.value.getT("Version 1.0.0", "संस्करण 1.0.0", "ସଂସ୍କରଣ ୧.୦.୦"), color = Color.Gray, fontSize = 12.sp)
-            Surface(color = Color(0xFFE8F5E9), shape = RoundedCornerShape(16.dp)) {
-                Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF4CAF50)))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(languageState.value.getT("Online", "ऑनलाइन", "ଅନଲାଇନ୍"), color = Color(0xFF4CAF50), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-    }
-}
-
-// --- SCREENS ---
-
-@Composable
-fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Unit) {
-    var phone by remember { mutableStateOf("") }
-    var otp by remember { mutableStateOf("") }
-    var step by remember { mutableIntStateOf(1) }
-    var selectedRole by remember { mutableStateOf<UserRole?>(null) }
-    
-    val context = LocalContext.current
-    val languageState = LocalAppLanguage.current
-
-    // Permission Handling
-    var showPermissionDialog by remember { mutableStateOf(false) }
-    val permissionsToRequest = arrayOf(
-        Manifest.permission.CAMERA,
-        Manifest.permission.ACCESS_FINE_LOCATION,
-        Manifest.permission.ACCESS_COARSE_LOCATION
-    )
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val allGranted = permissions.values.all { it }
-        if (!allGranted) {
-            Toast.makeText(context, languageState.value.getT("Required permissions denied.", "आवश्यक अनुमतियां अस्वीकार कर दी गईं।", "ଆବଶ୍ୟକ ଅନୁମତି ପ୍ରତ୍ୟାଖ୍ୟାନ କରାଯାଇଛି |"), Toast.LENGTH_LONG).show()
-        }
-    }
-    
-    if (showPermissionDialog) {
-        AlertDialog(
-            onDismissRequest = { showPermissionDialog = false },
-            title = { Text(languageState.value.getT("Permissions Required", "अनुमतियाँ आवश्यक हैं", "ଅନୁମତି ଆବଶ୍ୟକ"), fontWeight = FontWeight.Bold, color = Color.Black) },
-            text = { 
-                Text(languageState.value.getT(
-                    "This app needs Camera and Location access to verify livestock and record service areas.",
-                    "पशुधन को सत्यापित करने और सेवा क्षेत्रों को रिकॉर्ड करने के लिए इस ऐप को कैमरा और स्थान पहुंच की आवश्यकता है।",
-                    "ପ୍ରାଣୀସମ୍ପଦ ଯାଞ୍ଚ କରିବା ଏବଂ ସେବା କ୍ଷେତ୍ର ରେକର୍ଡ କରିବାକୁ ଏହି ଆପ୍‌ କ୍ୟାମେରା ଏବଂ ଅବସ୍ଥାନ ଅନୁମତି ଆବଶ୍ୟକ କରେ |"
-                ), color = Color.Black)
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showPermissionDialog = false
-                        permissionLauncher.launch(permissionsToRequest)
-                    }
-                ) {
-                    Text(languageState.value.getT("Allow", "अनुमति दें", "ଅନୁମତି ଦିଅନ୍ତୁ"))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showPermissionDialog = false }) {
-                    Text(languageState.value.getT("Deny", "अस्वीकार करें", "ପ୍ରତ୍ୟାଖ୍ୟାନ କରନ୍ତୁ"))
-                }
-            },
-            shape = RoundedCornerShape(16.dp)
-        )
-    }
-
-    var showLanguagePicker by remember { mutableStateOf(false) }
-
-    val backgroundColor = Color(0xFFF8F9F5)
-    
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .navigationBarsPadding()
-            .background(backgroundColor)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Green Header
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(320.dp)
-                .clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp))
-                .background(PrimaryGreen)
-        ) {
-            // Language selector
-            Surface(
-                onClick = { showLanguagePicker = true },
-                color = Color.White.copy(alpha = 0.15f),
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 48.dp, end = 24.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Public, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(languageState.value.code, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                 }
 
@@ -918,14 +648,314 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    languageState.value.getT("GOAT INSURANCE", "बकरी बीमा", "ଛେଳି ବୀମା"),
+                    stringResource(R.string.goat_insurance_title),
+                    style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.Bold, letterSpacing = 1.sp
+                )
+                Text(
+                    stringResource(R.string.community_livestock_protection),
+                    style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f)
+                )
+            }
+        }
+
+        // SignUp Card
+        Card(
+            modifier = Modifier.padding(horizontal = 24.dp).offset(y = (-40).dp).fillMaxWidth(),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(vertical = 32.dp, horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    stringResource(R.string.create_account),
+                    style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold
+                )
+                Text(
+                    stringResource(R.string.register_subtitle),
+                    style = MaterialTheme.typography.bodyMedium, color = Color.Gray, textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(32.dp))
+
+                if (step == 1) {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) name = it },
+                        placeholder = { Text(stringResource(R.string.full_name), color = Color.Gray) },
+                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = Color.DarkGray) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f), focusedBorderColor = PrimaryGreen)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = phone,
+                        onValueChange = { if (it.length <= 10) phone = it },
+                        placeholder = { Text(stringResource(R.string.mobile_number), color = Color.Gray) },
+                        leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = Color.DarkGray) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f), focusedBorderColor = PrimaryGreen)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = { 
+                            if (selectedRole == null) {
+                                Toast.makeText(context, context.getString(R.string.scroll_choose_role_toast), Toast.LENGTH_SHORT).show()
+                            } else {
+                                step = 2 
+                            }
+                        },
+                        enabled = (name.isNotBlank() && phone.length == 10),
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f))
+                    ) {
+                        Text(stringResource(R.string.send_otp), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        text = stringResource(R.string.already_have_account_login),
+                        color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                        modifier = Modifier.clickable { onNavigateToLogin() }
+                    )
+                } else {
+                    Text(stringResource(R.string.enter_otp_sent_to, phone), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+                    Spacer(modifier = Modifier.height(24.dp))
+                    OtpInput(otp, { otp = it }, onDone = { 
+                        if (otp.length == 6) {
+                            val allGranted = permissionsToRequest.all {
+                                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                            }
+                            if (allGranted) {
+                                onVerifyOtp(selectedRole!!, name, phone)
+                            } else {
+                                showPermissionDialog = true
+                            }
+                        }
+                    })
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = { 
+                            val allGranted = permissionsToRequest.all {
+                                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                            }
+                            if (allGranted) {
+                                onVerifyOtp(selectedRole!!, name, phone)
+                            } else {
+                                showPermissionDialog = true
+                            }
+                        },
+                        enabled = otp.length == 6,
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+                    ) { Text(stringResource(R.string.verify_next), fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+                    
+                    TextButton(onClick = { step = 1 }) { Text(stringResource(R.string.go_back), color = PrimaryGreen) }
+                }
+            }
+        }
+
+        if (step == 1) {
+            // Divider
+            Row(modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.LightGray.copy(alpha = 0.5f))
+                Text(stringResource(R.string.choose_a_role), modifier = Modifier.padding(horizontal = 16.dp), color = Color.Gray, fontSize = 14.sp)
+                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.LightGray.copy(alpha = 0.5f))
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Role Selection
+            Row(modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                RoleCard(UserRole.SURAKSHA_DIDI, stringResource(R.string.role_suraksha_didi), Icons.Default.Person, selectedRole == UserRole.SURAKSHA_DIDI, modifier = Modifier.weight(1f)) { selectedRole = it }
+                RoleCard(UserRole.FARMER, stringResource(R.string.role_farmer), Icons.Default.Agriculture, selectedRole == UserRole.FARMER, modifier = Modifier.weight(1f)) { selectedRole = it }
+                RoleCard(UserRole.COORDINATOR, stringResource(R.string.role_coordinator), Icons.Default.Badge, selectedRole == UserRole.COORDINATOR, modifier = Modifier.weight(1f)) { selectedRole = it }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+
+        // Footer
+        Row(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.version_label, "1.0.0"), color = Color.Gray, fontSize = 12.sp)
+            Surface(color = Color(0xFFE8F5E9), shape = RoundedCornerShape(16.dp)) {
+                Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF4CAF50)))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(stringResource(R.string.online), color = Color(0xFF4CAF50), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+// --- SCREENS ---
+
+@Composable
+fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Unit) {
+    var phone by remember { mutableStateOf("") }
+    var otp by remember { mutableStateOf("") }
+    var step by remember { mutableIntStateOf(1) }
+    var selectedRole by remember { mutableStateOf<UserRole?>(null) }
+    
+    val context = LocalContext.current
+    val languageState = LocalAppLanguage.current
+
+    // Permission Handling
+    var showPermissionDialog by remember { mutableStateOf(false) }
+    val permissionsToRequest = arrayOf(
+        Manifest.permission.CAMERA,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    )
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.values.all { it }
+        if (!allGranted) {
+            Toast.makeText(context, context.getString(R.string.permissions_required_message), Toast.LENGTH_LONG).show()
+        }
+    }
+    
+    if (showPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showPermissionDialog = false },
+            title = { Text(stringResource(R.string.permissions_required_title), fontWeight = FontWeight.Bold, color = Color.Black) },
+            text = { 
+                Text(stringResource(R.string.permissions_required_message), color = Color.Black)
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showPermissionDialog = false
+                        permissionLauncher.launch(permissionsToRequest)
+                    }
+                ) {
+                    Text(stringResource(R.string.allow))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPermissionDialog = false }) {
+                    Text(stringResource(R.string.deny))
+                }
+            },
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    var showLanguagePicker by remember { mutableStateOf(false) }
+
+    val backgroundColor = Color(0xFFF8F9F5)
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .navigationBarsPadding()
+            .background(backgroundColor)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Green Header
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(320.dp)
+                .clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp))
+                .background(PrimaryGreen)
+        ) {
+            // Language selector
+            Surface(
+                onClick = { showLanguagePicker = true },
+                color = Color.White.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 48.dp, end = 24.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Public, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = languageState.value.code.uppercase(),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                }
+
+                MaterialTheme(
+                    colorScheme = MaterialTheme.colorScheme.copy(surface = Color.White.copy(alpha = 0.9f))
+                ) {
+                    DropdownMenu(
+                        expanded = showLanguagePicker,
+                        onDismissRequest = { showLanguagePicker = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("English") },
+                            onClick = {
+                                languageState.value = AppLanguage.ENGLISH
+                                showLanguagePicker = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("हिन्दी") },
+                            onClick = {
+                                languageState.value = AppLanguage.HINDI
+                                showLanguagePicker = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("ଓଡ଼ିଆ") },
+                            onClick = {
+                                languageState.value = AppLanguage.ODIA
+                                showLanguagePicker = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Logo and Title
+            Column(
+                modifier = Modifier.align(Alignment.Center).padding(top = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Surface(
+                    modifier = Modifier.size(120.dp),
+                    shape = CircleShape,
+                    color = Color.White.copy(alpha = 0.2f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            painterResource(R.drawable.ic_logo_custom),
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(120.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    stringResource(R.string.goat_insurance_title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 )
                 Text(
-                    languageState.value.getT("Community Livestock Protection", "सामुदायिक पशुधन संरक्षण", "ଗୋଷ୍ଠୀ ପ୍ରାଣୀସମ୍ପଦ ସୁରକ୍ଷା"),
+                    stringResource(R.string.community_livestock_protection),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.8f)
                 )
@@ -947,12 +977,12 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    languageState.value.getT("Welcome Back", "वापसी पर स्वागत है", "ପୁଣି ସ୍ଵାଗତ"),
+                    stringResource(R.string.welcome_back),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    languageState.value.getT("Login to your account to continue", "जारी रखने के लिए लॉगिन करें", "ଆଗକୁ ବଢିବା ପାଇଁ ଲଗଇନ୍ କରନ୍ତୁ"),
+                    stringResource(R.string.login_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.Gray
                 )
@@ -962,7 +992,7 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                     OutlinedTextField(
                         value = phone,
                         onValueChange = { if (it.length <= 10) phone = it },
-                        placeholder = { Text(languageState.value.getT("Mobile Number", "मोबाइल नंबर", "ମୋବାଇଲ୍ ନମ୍ବର"), color = Color.Gray) },
+                        placeholder = { Text(stringResource(R.string.mobile_number), color = Color.Gray) },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = Color.DarkGray) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         singleLine = true,
@@ -979,7 +1009,7 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                     Button(
                         onClick = { 
                             if (selectedRole == null) {
-                                Toast.makeText(context, languageState.value.getT("Scroll down and choose a role", "नीचे स्क्रॉल करें और एक भूमिका चुनें", "ତଳକୁ ସ୍କ୍ରୋଲ୍ କରନ୍ତୁ ଏବଂ ଏକ ଭୂମିକା ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.scroll_choose_role_toast), Toast.LENGTH_SHORT).show()
                             } else {
                                 step = 2 
                             }
@@ -994,18 +1024,18 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                             disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f)
                         )
                     ) {
-                        Text(languageState.value.getT("Send OTP", "ओटीपी भेजें", "ଓଟିପି ପଠାନ୍ତୁ"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(stringResource(R.string.send_otp), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(
-                        text = languageState.value.getT("Don't have an account? Sign Up", "खाता नहीं है? साइन अप करें", "ଖାତା ନାହିଁ? ସାଇନ୍ ଅପ୍"),
+                        text = stringResource(R.string.dont_have_account_signup),
                         color = PrimaryGreen,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         modifier = Modifier.clickable { onNavigateToSignUp() }
                     )
                 } else {
-                    Text(languageState.value.getT("Enter 6-digit OTP sent to +91 $phone", "+91 $phone पर भेजा गया ओटीपी दर्ज करें", "+91 $phone କୁ ପଠାଯାଇଥିବା ଓଟିପି ଦିଅନ୍ତୁ"), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+                    Text(stringResource(R.string.enter_otp_sent_to, phone), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
                     Spacer(modifier = Modifier.height(24.dp))
                     OtpInput(otp, { otp = it }, onDone = { 
                         if (otp.length == 6) {
@@ -1035,9 +1065,9 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
-                    ) { Text(languageState.value.getT("Verify & Login", "सत्यापित करें और लॉगिन", "ଯାଞ୍ଚ ଏବଂ ଲଗଇନ୍"), fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+                    ) { Text(stringResource(R.string.verify_login), fontSize = 16.sp, fontWeight = FontWeight.Bold) }
                     
-                    TextButton(onClick = { step = 1 }) { Text(languageState.value.getT("Change Number", "नंबर बदलें", "ନମ୍ବର ବଦଳାନ୍ତୁ"), color = PrimaryGreen) }
+                    TextButton(onClick = { step = 1 }) { Text(stringResource(R.string.change_number), color = PrimaryGreen) }
                 }
             }
         }
@@ -1052,7 +1082,7 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
             ) {
                 HorizontalDivider(modifier = Modifier.weight(1f), color = Color.LightGray.copy(alpha = 0.5f))
                 Text(
-                    languageState.value.getT("choose a role", "एक भूमिका चुनें", "ଗୋଟିଏ ଭୂମିକା ବାଛନ୍ତୁ"),
+                    stringResource(R.string.choose_a_role),
                     modifier = Modifier.padding(horizontal = 16.dp),
                     color = Color.Gray,
                     fontSize = 14.sp
@@ -1069,9 +1099,9 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                RoleCard(UserRole.SURAKSHA_DIDI, languageState.value.getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି"), Icons.Default.Person, selectedRole == UserRole.SURAKSHA_DIDI, modifier = Modifier.weight(1f)) { selectedRole = it }
-                RoleCard(UserRole.FARMER, languageState.value.getT("Farmer", "किसान", "କୃଷକ"), Icons.Default.Agriculture, selectedRole == UserRole.FARMER, modifier = Modifier.weight(1f)) { selectedRole = it }
-                RoleCard(UserRole.COORDINATOR, languageState.value.getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ"), Icons.Default.Badge, selectedRole == UserRole.COORDINATOR, modifier = Modifier.weight(1f)) { selectedRole = it }
+                RoleCard(UserRole.SURAKSHA_DIDI, stringResource(R.string.role_suraksha_didi), Icons.Default.Person, selectedRole == UserRole.SURAKSHA_DIDI, modifier = Modifier.weight(1f)) { selectedRole = it }
+                RoleCard(UserRole.FARMER, stringResource(R.string.role_farmer), Icons.Default.Agriculture, selectedRole == UserRole.FARMER, modifier = Modifier.weight(1f)) { selectedRole = it }
+                RoleCard(UserRole.COORDINATOR, stringResource(R.string.role_coordinator), Icons.Default.Badge, selectedRole == UserRole.COORDINATOR, modifier = Modifier.weight(1f)) { selectedRole = it }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -1085,7 +1115,7 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(languageState.value.getT("Version 1.0.0", "संस्करण 1.0.0", "ସଂସ୍କରଣ ୧.୦.୦"), color = Color.Gray, fontSize = 12.sp)
+            Text(stringResource(R.string.version_label, "1.0.0"), color = Color.Gray, fontSize = 12.sp)
             Surface(
                 color = Color(0xFFE8F5E9),
                 shape = RoundedCornerShape(16.dp)
@@ -1096,7 +1126,7 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                 ) {
                     Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF4CAF50)))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(languageState.value.getT("Online", "ऑनलाइन", "ଅନଲାଇନ୍"), color = Color(0xFF4CAF50), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.online), color = Color(0xFF4CAF50), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1161,7 +1191,6 @@ fun RoleCard(role: UserRole, label: String, icon: ImageVector, isSelected: Boole
 fun DidiDashboard(navController: NavHostController, sessionManager: SessionManager) {
     var showNotifications by remember { mutableStateOf(false) }
     if (showNotifications) NotificationSheet(themeColor = PrimaryGreen) { showNotifications = false }
-    val languageState = LocalAppLanguage.current
     val userName by sessionManager.userName.collectAsState(initial = "Sushma Didi")
 
     ResponsiveLayout(
@@ -1191,7 +1220,7 @@ fun DidiDashboard(navController: NavHostController, sessionManager: SessionManag
                             }
                         }, 
                         icon = { Icon(Icons.Default.Home, null) }, 
-                        label = { Text(languageState.value.getT("Home", "होम", "ମୁଖ୍ୟ ପୃଷ୍ଠା")) },
+                        label = { Text(stringResource(R.string.home)) },
                         colors = NavigationRailItemDefaults.colors(
                             selectedIconColor = PrimaryGreen,
                             selectedTextColor = PrimaryGreen,
@@ -1211,7 +1240,7 @@ fun DidiDashboard(navController: NavHostController, sessionManager: SessionManag
                             }
                         }, 
                         icon = { Icon(painterResource(R.drawable.ic_ewe_custom), null) }, 
-                        label = { Text(languageState.value.getT("Goats", "बकरियां", "ଛେଳି")) },
+                        label = { Text(stringResource(R.string.goats)) },
                         colors = NavigationRailItemDefaults.colors(
                             selectedIconColor = PrimaryGreen,
                             selectedTextColor = PrimaryGreen,
@@ -1231,7 +1260,7 @@ fun DidiDashboard(navController: NavHostController, sessionManager: SessionManag
                             }
                         }, 
                         icon = { Icon(Icons.Default.MedicalServices, null) }, 
-                        label = { Text(languageState.value.getT("Vaccines", "टीकाकरण", "ଟୀକା")) },
+                        label = { Text(stringResource(R.string.vaccines)) },
                         colors = NavigationRailItemDefaults.colors(
                             selectedIconColor = PrimaryGreen,
                             selectedTextColor = PrimaryGreen,
@@ -1249,7 +1278,6 @@ fun DidiDashboard(navController: NavHostController, sessionManager: SessionManag
 
 @Composable
 fun DidiContent(padding: PaddingValues, navController: NavHostController, userName: String, onNotificationClick: () -> Unit) {
-    val languageState = LocalAppLanguage.current
     val context = LocalContext.current
     Column(
         modifier = Modifier
@@ -1260,7 +1288,7 @@ fun DidiContent(padding: PaddingValues, navController: NavHostController, userNa
         DashboardHeader(
             navController,
             userName,
-            languageState.value.getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି"),
+            stringResource(R.string.role_suraksha_didi),
             onNotificationClick,
             hasNotifications = true,
             onProfileClick = { navController.navigate("profile") }
@@ -1281,7 +1309,7 @@ fun DidiContent(padding: PaddingValues, navController: NavHostController, userNa
                 Column {
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(
-                        languageState.value.getT("This Month Overview", "इस महीने का अवलोकन", "ଏହି ମାସର ସମୀକ୍ଷା"),
+                        stringResource(R.string.this_month_overview),
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.Black,
                         fontWeight = FontWeight.Bold
@@ -1293,11 +1321,11 @@ fun DidiContent(padding: PaddingValues, navController: NavHostController, userNa
             val statSpan = if (isCompact) 3 else 3
             items(4, span = { GridItemSpan(statSpan) }) { index ->
                 when(index) {
-                    0 -> StatCard(languageState.value.getT("Goats Enrolled", "पंजीकृत बकरियां", "ପଞ୍ଜିକୃତ ଛେଳି"), "128", painterResource(R.drawable.ic_ewe_custom), PrimaryGreen, CardLightGreen)
-                    1 -> StatCard(languageState.value.getT("Pending Claims", "लंबित दावे", "ବାକି ରହିଥିବା ଦାବି"), "12", Icons.AutoMirrored.Filled.Assignment, AccentOrange, CardLightOrange)
-                    2 -> StatCard(languageState.value.getT("Today's Visits", "आज की मुलाकात", "ଆଜିର ପରିଦର୍ଶନ"), "24", Icons.Default.CalendarToday, InfoBlue, CardLightBlue)
+                    0 -> StatCard(stringResource(R.string.goats_enrolled), "128", painterResource(R.drawable.ic_ewe_custom), PrimaryGreen, CardLightGreen)
+                    1 -> StatCard(stringResource(R.string.pending_claims), "12", Icons.AutoMirrored.Filled.Assignment, AccentOrange, CardLightOrange)
+                    2 -> StatCard(stringResource(R.string.today_visits), "24", Icons.Default.CalendarToday, InfoBlue, CardLightBlue)
                     3 -> StatCard(
-                        label = languageState.value.getT("Earnings", "आय", "ଉପାର୍ଜନ"), 
+                        label = stringResource(R.string.earnings), 
                         value = "₹8,450", 
                         icon = Icons.Default.Payments, 
                         iconColor = Color(0xFF9C27B0), 
@@ -1311,7 +1339,7 @@ fun DidiContent(padding: PaddingValues, navController: NavHostController, userNa
                 Column {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        languageState.value.getT("Quick Actions", "त्वरित कार्रवाइयां", "ତ୍ୱରିତ କାର୍ଯ୍ୟାନୁଷ୍ଠାନ"),
+                        stringResource(R.string.quick_actions),
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.Black,
                         fontWeight = FontWeight.Bold
@@ -1323,14 +1351,14 @@ fun DidiContent(padding: PaddingValues, navController: NavHostController, userNa
             val actionSpan = if (isCompact) 2 else 2
             items(6, span = { GridItemSpan(actionSpan) }) { index ->
                 when(index) {
-                    0 -> QuickActionGridCard(languageState.value.getT("Enroll Goat", "बकरी का नामांकन", "ଛେଳି ପଞ୍ଜିକରଣ"), painterResource(R.drawable.ic_ewe_custom), PrimaryGreen, CardLightGreen) { navController.navigate("enrollment") }
-                    1 -> QuickActionGridCard(languageState.value.getT("Vaccination", "टीकाकरण", "ଟୀକାକରଣ"), Icons.Default.MedicalServices, InfoBlue, CardLightBlue) { navController.navigate("vaccine_list") }
-                    2 -> QuickActionGridCard(languageState.value.getT("Mortality Report", "मृत्यु रिपोर्ट", "ମୃତ୍ୟୁ ରିପୋର୍ଟ"), Icons.Default.LocationOn, Color(0xFFD32F2F), CardLightRed) { navController.navigate("mortality_report") }
-                    3 -> QuickActionGridCard(languageState.value.getT("Claims", "दावे", "ଦାବି"), Icons.AutoMirrored.Filled.Assignment, AccentOrange, CardLightOrange) { navController.navigate("claim_list") }
-                    4 -> QuickActionGridCard(languageState.value.getT("Goat List", "बकरियों की सूची", "ଛେଳି ତାଲିକା"), Icons.AutoMirrored.Filled.FactCheck, Color(0xFF2E7D32), CardLightGreen) { navController.navigate("goat_list") }
+                    0 -> QuickActionGridCard(stringResource(R.string.enroll_goat), painterResource(R.drawable.ic_ewe_custom), PrimaryGreen, CardLightGreen) { navController.navigate("enrollment") }
+                    1 -> QuickActionGridCard(stringResource(R.string.vaccination), Icons.Default.MedicalServices, InfoBlue, CardLightBlue) { navController.navigate("vaccine_list") }
+                    2 -> QuickActionGridCard(stringResource(R.string.mortality_report), Icons.Default.LocationOn, Color(0xFFD32F2F), CardLightRed) { navController.navigate("mortality_report") }
+                    3 -> QuickActionGridCard(stringResource(R.string.claims), Icons.AutoMirrored.Filled.Assignment, AccentOrange, CardLightOrange) { navController.navigate("claim_list") }
+                    4 -> QuickActionGridCard(stringResource(R.string.goat_list), Icons.AutoMirrored.Filled.FactCheck, Color(0xFF2E7D32), CardLightGreen) { navController.navigate("goat_list") }
                     5 -> {
-                        val comingSoonMsg = languageState.value.getT("Coming Soon", "जल्द ही आ रहा है", "ଖୁବ୍ ଶୀଘ୍ର ଆସୁଛି")
-                        QuickActionGridCard(languageState.value.getT("AI Assistant", "AI सहायक", "AI ସହାୟକ"), Icons.Default.AccountBox, Color(0xFF7B1FA2), CardLightPurple) {
+                        val comingSoonMsg = context.getString(R.string.coming_soon)
+                        QuickActionGridCard(stringResource(R.string.ai_assistant), Icons.Default.AccountBox, Color(0xFF7B1FA2), CardLightPurple) {
                             Toast.makeText(context, comingSoonMsg, Toast.LENGTH_SHORT).show()
                         }
                     }
@@ -1374,24 +1402,23 @@ fun EarningItem(title: String, subtitle: String, amount: String, time: String, i
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PremiumCollectionScreen(onComplete: () -> Unit) {
-    val languageState = LocalAppLanguage.current
     Scaffold(
         modifier = Modifier.fillMaxSize().navigationBarsPadding(),
-        topBar = { CenterAlignedTopAppBar(title = { Text(languageState.value.getT("Premium Collection", "प्रीमियम संग्रह", "ପ୍ରିମିୟମ ସଂଗ୍ରହ")) }) }
+        topBar = { CenterAlignedTopAppBar(title = { Text(stringResource(R.string.premium_collection)) }) }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).padding(16.dp)) {
             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(languageState.value.getT("Total Premium: ₹350", "कुल प्रीमियम: ₹350", "ମୋଟ ପ୍ରିମିୟମ: ₹୩୫୦"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.total_premium_with_value, "350"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    BreakdownItem(languageState.value.getT("Insurance Company", "बीमा कंपनी", "ବୀମା କମ୍ପାନୀ"), "₹240")
-                    BreakdownItem(languageState.value.getT("Vaccination Program", "टीकाकरण कार्यक्रम", "ଟୀକାକରଣ କାର୍ଯ୍ୟକ୍ରମ"), "₹80")
-                    BreakdownItem(languageState.value.getT("Suraksha Didi Fee", "सुरक्षा दीदी शुल्क", "ସୁରକ୍ଷା ଦିଦି ଶୁଳ୍କ"), "₹20")
-                    BreakdownItem(languageState.value.getT("FPC Corpus Fund", "एफपीसी कॉर्पस फंड", "FPC କର୍ପସ ପାଣ୍ଠି"), "₹10")
+                    BreakdownItem(stringResource(R.string.insurance_company), "₹240")
+                    BreakdownItem(stringResource(R.string.vaccination_program), "₹80")
+                    BreakdownItem(stringResource(R.string.suraksha_didi_fee), "₹20")
+                    BreakdownItem(stringResource(R.string.fpc_corpus_fund), "₹10")
                 }
             }
             Spacer(modifier = Modifier.weight(1f))
-            Button(onClick = onComplete, modifier = Modifier.fillMaxWidth()) { Text(languageState.value.getT("Confirm Payment & Generate Receipt", "भुगतान की पुष्टि करें और रसीद उत्पन्न करें", "ଦେୟ ନିଶ୍ଚିତ କରନ୍ତୁ ଏବଂ ରସିଦ ପ୍ରସ୍ତୁତ କରନ୍ତୁ")) }
+            Button(onClick = onComplete, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.confirm_payment_generate_receipt)) }
         }
     }
 }
@@ -1409,48 +1436,45 @@ data class MortalityStepData(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MortalityReportScreen(onBack: () -> Unit, onComplete: () -> Unit) {
-    val languageState = LocalAppLanguage.current
-    val context = LocalContext.current
-    
     // 0: Notification, 1: Visit, 2: Verification, 3: Photos, 4: AI, 5: Handover, 6: Claim
     var currentStepIndex by rememberSaveable { mutableIntStateOf(2) } 
     var detailStepIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     
     val steps = listOf(
         MortalityStepData(
-            languageState.value.getT("Death Notification", "मृत्यु की सूचना", "ମୃତ୍ୟୁ ବିଜ୍ଞପ୍ତି"),
+            stringResource(R.string.death_notification),
             if (currentStepIndex > 0) MortalityStepStatus.COMPLETED else if (currentStepIndex == 0) MortalityStepStatus.IN_PROGRESS else MortalityStepStatus.PENDING,
-            if (currentStepIndex > 0) languageState.value.getT("Completed", "पूरा हुआ", "ସମ୍ପୂର୍ଣ୍ଣ") else if (currentStepIndex == 0) languageState.value.getT("In Progress", "प्रगति पर है", "ଚାଲୁଅଛି") else languageState.value.getT("Pending", "लंबित", "ବାକି ଅଛି")
+            if (currentStepIndex > 0) stringResource(R.string.status_completed) else if (currentStepIndex == 0) stringResource(R.string.status_in_progress) else stringResource(R.string.status_pending)
         ),
         MortalityStepData(
-            languageState.value.getT("Site Visit", "साइट दौरा", "ସାଇଟ୍ ପରିଦର୍ଶନ"),
+            stringResource(R.string.site_visit),
             if (currentStepIndex > 1) MortalityStepStatus.COMPLETED else if (currentStepIndex == 1) MortalityStepStatus.IN_PROGRESS else MortalityStepStatus.PENDING,
-            if (currentStepIndex > 1) languageState.value.getT("Completed", "पूरा हुआ", "ସମ୍ପୂର୍ଣ୍ଣ") else if (currentStepIndex == 1) languageState.value.getT("In Progress", "प्रगति पर है", "ଚାଲୁଅଛି") else languageState.value.getT("Pending", "लंबित", "ବାକି ଅଛି")
+            if (currentStepIndex > 1) stringResource(R.string.status_completed) else if (currentStepIndex == 1) stringResource(R.string.status_in_progress) else stringResource(R.string.status_pending)
         ),
         MortalityStepData(
-            languageState.value.getT("Carcass Verification", "शव सत्यापन", "ଶବ ଯାଞ୍ଚ"),
+            stringResource(R.string.carcass_verification),
             if (currentStepIndex > 2) MortalityStepStatus.COMPLETED else if (currentStepIndex == 2) MortalityStepStatus.IN_PROGRESS else MortalityStepStatus.PENDING,
-            if (currentStepIndex > 2) languageState.value.getT("Completed", "पूरा हुआ", "ସମ୍ପୂର୍ଣ୍ଣ") else if (currentStepIndex == 2) languageState.value.getT("In Progress", "प्रगति पर है", "ଚାଲୁଅଛି") else languageState.value.getT("Pending", "लंबित", "ବାକି ଅଛି")
+            if (currentStepIndex > 2) stringResource(R.string.status_completed) else if (currentStepIndex == 2) stringResource(R.string.status_in_progress) else stringResource(R.string.status_pending)
         ),
         MortalityStepData(
-            languageState.value.getT("Photo Capture", "फोटो कैप्चर", "ଫଟୋ କ୍ୟାପଚର"),
+            stringResource(R.string.photo_capture),
             if (currentStepIndex > 3) MortalityStepStatus.COMPLETED else if (currentStepIndex == 3) MortalityStepStatus.IN_PROGRESS else MortalityStepStatus.PENDING,
-            if (currentStepIndex > 3) languageState.value.getT("Completed", "पूरा हुआ", "ସମ୍ପୂର୍ଣ୍ଣ") else if (currentStepIndex == 3) languageState.value.getT("In Progress", "प्रगति पर है", "ଚାଲୁଅଛି") else languageState.value.getT("Pending", "लंबित", "ବାକି ଅଛି")
+            if (currentStepIndex > 3) stringResource(R.string.status_completed) else if (currentStepIndex == 3) stringResource(R.string.status_in_progress) else stringResource(R.string.status_pending)
         ),
         MortalityStepData(
-            languageState.value.getT("AI Assessment", "AI मूल्यांकन", "AI ମୂଲ୍ୟାଙ୍କନ"),
+            stringResource(R.string.ai_assessment),
             if (currentStepIndex > 4) MortalityStepStatus.COMPLETED else if (currentStepIndex == 4) MortalityStepStatus.IN_PROGRESS else MortalityStepStatus.PENDING,
-            if (currentStepIndex > 4) languageState.value.getT("Completed", "पूरा हुआ", "ସମ୍ପୂର୍ଣ୍ଣ") else if (currentStepIndex == 4) languageState.value.getT("In Progress", "प्रगति पर है", "ଚାଲୁଅଛି") else languageState.value.getT("Pending", "लंबित", "ବାକି ଅଛି")
+            if (currentStepIndex > 4) stringResource(R.string.status_completed) else if (currentStepIndex == 4) stringResource(R.string.status_in_progress) else stringResource(R.string.status_pending)
         ),
         MortalityStepData(
-            languageState.value.getT("Carcass Handover", "शव हैंडओवर", "ଶବ ହସ୍ତାନ୍ତର"),
+            stringResource(R.string.carcass_handover),
             if (currentStepIndex > 5) MortalityStepStatus.COMPLETED else if (currentStepIndex == 5) MortalityStepStatus.IN_PROGRESS else MortalityStepStatus.PENDING,
-            if (currentStepIndex > 5) languageState.value.getT("Completed", "पूरा हुआ", "ସମ୍ପୂର୍ଣ୍ଣ") else if (currentStepIndex == 5) languageState.value.getT("In Progress", "प्रगति पर है", "ଚାଲୁଅଛି") else languageState.value.getT("Pending", "लंबित", "ବାକି ଅଛି")
+            if (currentStepIndex > 5) stringResource(R.string.status_completed) else if (currentStepIndex == 5) stringResource(R.string.status_in_progress) else stringResource(R.string.status_pending)
         ),
         MortalityStepData(
-            languageState.value.getT("Claim Submission", "दावा प्रस्तुत करना", "ଦାବି ଦାଖଲ"),
+            stringResource(R.string.claim_submission),
             if (currentStepIndex > 6) MortalityStepStatus.COMPLETED else if (currentStepIndex == 6) MortalityStepStatus.IN_PROGRESS else MortalityStepStatus.PENDING,
-            if (currentStepIndex > 6) languageState.value.getT("Completed", "पूरा हुआ", "ସମ୍ପୂର୍ଣ୍ଣ") else if (currentStepIndex == 6) languageState.value.getT("In Progress", "प्रगति पर है", "ଚାଲୁଅଛି") else languageState.value.getT("Pending", "लंबित", "ବାକି ଅଛି")
+            if (currentStepIndex > 6) stringResource(R.string.status_completed) else if (currentStepIndex == 6) stringResource(R.string.status_in_progress) else stringResource(R.string.status_pending)
         )
     )
 
@@ -1469,12 +1493,12 @@ fun MortalityReportScreen(onBack: () -> Unit, onComplete: () -> Unit) {
             modifier = Modifier.fillMaxSize().navigationBarsPadding(),
             topBar = { 
                 TopAppBar(
-                    title = { Text(languageState.value.getT("Mortality Report", "मृत्यु रिपोर्ट", "ମୃତ୍ୟୁ ରିପୋର୍ଟ"), fontWeight = FontWeight.Bold) },
+                    title = { Text(stringResource(R.string.mortality_report), fontWeight = FontWeight.Bold) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
+                                contentDescription = stringResource(R.string.back),
                                 tint = Color.White
                             )
                         }
@@ -1529,7 +1553,6 @@ fun MortalityReportScreen(onBack: () -> Unit, onComplete: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MortalityStepDetailScreen(stepIndex: Int, onBack: () -> Unit, onComplete: () -> Unit) {
-    val languageState = LocalAppLanguage.current
     val context = LocalContext.current
     
     var capturedPhotoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
@@ -1549,7 +1572,7 @@ fun MortalityStepDetailScreen(stepIndex: Int, onBack: () -> Unit, onComplete: ()
         if (isGranted) {
             tempUriStr?.let { cameraLauncher.launch(Uri.parse(it)) }
         } else {
-            Toast.makeText(context, languageState.value.getT("Camera permission required", "कैमरा अनुमति आवश्यक है", "କ୍ୟାମେରା ଅନୁମତି ଆବଶ୍ୟକ"), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.camera_permission_required), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -1578,7 +1601,7 @@ fun MortalityStepDetailScreen(stepIndex: Int, onBack: () -> Unit, onComplete: ()
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(languageState.value.getT("Step Details", "कदम का विवरण", "ପଦକ୍ଷେପ ବିବରଣୀ")) },
+                title = { Text(stringResource(R.string.step_details)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
@@ -1590,28 +1613,28 @@ fun MortalityStepDetailScreen(stepIndex: Int, onBack: () -> Unit, onComplete: ()
         Column(modifier = Modifier.padding(padding).padding(20.dp).fillMaxSize()) {
             when(stepIndex) {
                 1 -> { // Site Visit
-                    Text("Physical Site Visit", style = MaterialTheme.typography.headlineSmall)
+                    Text(stringResource(R.string.physical_site_visit), style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Didi must physically visit the location where the carcass is located.")
+                    Text(stringResource(R.string.didi_site_visit_instruction))
                     Spacer(modifier = Modifier.weight(1f))
                     Button(onClick = onComplete, modifier = Modifier.fillMaxWidth()) {
-                        Text("Mark Visit Complete")
+                        Text(stringResource(R.string.mark_visit_complete))
                     }
                 }
                 2 -> { // Carcass Verification
-                    Text("Carcass Verification", style = MaterialTheme.typography.headlineSmall)
+                    Text(stringResource(R.string.carcass_verification), style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Check tag number and breed.")
+                    Text(stringResource(R.string.check_tag_breed))
                     // checklist logic here...
                     Spacer(modifier = Modifier.weight(1f))
                     Button(onClick = onComplete, modifier = Modifier.fillMaxWidth()) {
-                        Text("Verify & Continue")
+                        Text(stringResource(R.string.verify_continue))
                     }
                 }
                 3 -> { // Photo Capture
-                    Text("Photo Capture", style = MaterialTheme.typography.headlineSmall)
+                    Text(stringResource(R.string.photo_capture), style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Capture clear photos of the carcass.")
+                    Text(stringResource(R.string.capture_carcass_instruction))
                     
                     Spacer(modifier = Modifier.height(24.dp))
                     
@@ -1634,7 +1657,7 @@ fun MortalityStepDetailScreen(stepIndex: Int, onBack: () -> Unit, onComplete: ()
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(48.dp), tint = Color.Gray)
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Text(languageState.value.getT("Tap to Capture", "कैप्चर करने के लिए टैप करें", "କ୍ୟାପଚର କରିବାକୁ ଟ୍ୟାପ୍ କରନ୍ତୁ"), color = Color.Gray)
+                                    Text(stringResource(R.string.tap_to_capture), color = Color.Gray)
                                 }
                             }
                         }
@@ -1642,14 +1665,14 @@ fun MortalityStepDetailScreen(stepIndex: Int, onBack: () -> Unit, onComplete: ()
                     
                     Spacer(modifier = Modifier.weight(1f))
                     Button(onClick = onComplete, enabled = capturedPhotoUri != null, modifier = Modifier.fillMaxWidth()) {
-                        Text("Save Photos")
+                        Text(stringResource(R.string.save_photos))
                     }
                 }
                 4 -> { // AI Assessment
-                    Text("AI Assessment", style = MaterialTheme.typography.headlineSmall)
+                    Text(stringResource(R.string.ai_assessment), style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(16.dp))
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-                    Text("Backend AI model is checking the photos...", modifier = Modifier.padding(top = 16.dp))
+                    Text(stringResource(R.string.ai_checking_instruction), modifier = Modifier.padding(top = 16.dp))
                     
                     LaunchedEffect(Unit) {
                         kotlinx.coroutines.delay(3000)
@@ -1657,21 +1680,21 @@ fun MortalityStepDetailScreen(stepIndex: Int, onBack: () -> Unit, onComplete: ()
                     }
                 }
                 5 -> { // Carcass Handover
-                    Text("Carcass Handover", style = MaterialTheme.typography.headlineSmall)
+                    Text(stringResource(R.string.carcass_handover), style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Confirm disposal or handover.")
+                    Text(stringResource(R.string.confirm_disposal_handover))
                     Spacer(modifier = Modifier.weight(1f))
                     Button(onClick = onComplete, modifier = Modifier.fillMaxWidth()) {
-                        Text("Confirm Handover")
+                        Text(stringResource(R.string.confirm_handover))
                     }
                 }
                 6 -> { // Claim Submission
-                    Text("Claim Submission", style = MaterialTheme.typography.headlineSmall)
+                    Text(stringResource(R.string.claim_submission), style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Final review and submit claim.")
+                    Text(stringResource(R.string.final_review_submit))
                     Spacer(modifier = Modifier.weight(1f))
                     Button(onClick = onComplete, modifier = Modifier.fillMaxWidth()) {
-                        Text("Submit Claim")
+                        Text(stringResource(R.string.submit_claim))
                     }
                 }
             }
@@ -1765,7 +1788,6 @@ fun MortalityVerticalStepItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
-    val languageState = LocalAppLanguage.current
     val context = LocalContext.current
     var isConfirmed by remember { mutableStateOf(false) }
     
@@ -1798,7 +1820,7 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
         if (isGranted) {
             tempUriStr?.let { cameraLauncher.launch(Uri.parse(it)) }
         } else {
-            Toast.makeText(context, languageState.value.getT("Camera permission required", "कैमरा अनुमति आवश्यक है", "କ୍ୟାମେରା ଅନୁମତି ଆବଶ୍ୟକ"), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.camera_permission_required), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -1828,10 +1850,10 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
         modifier = Modifier.fillMaxSize().navigationBarsPadding(),
         topBar = {
             TopAppBar(
-                title = { Text(languageState.value.getT("Report Goat Death", "बकरी की मृत्यु की रिपोर्ट", "ଛେଳି ମୃତ୍ୟୁ ରିପୋର୍ଟ"), color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.report_goat_death), color = Color.White, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back), tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBlue)
@@ -1849,7 +1871,7 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
             // Select Goat
             Text(
                 buildAnnotatedString {
-                    append(languageState.value.getT("Select Goat", "बकरी चुनें", "ଛେଳି ବାଛନ୍ତୁ"))
+                    append(stringResource(R.string.select_goat))
                     withStyle(style = SpanStyle(color = Color.Red)) { append(" *") }
                 },
                 fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black
@@ -1878,9 +1900,12 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
                             }
                         }
                         Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column {
+                            val blackBengal = stringResource(R.string.black_bengal)
+                            val female = stringResource(R.string.female)
+                            val age = stringResource(R.string.age_months_suffix, 12)
                             Text(selectedGoat.first, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black)
-                            Text("${selectedGoat.second} • ${languageState.value.getT("Female", "मादा", "ମାଈ")} • ${selectedGoat.third}", color = Color.Gray, fontSize = 13.sp)
+                            Text(stringResource(R.string.breed_gender_age_format, blackBengal, female, age), color = Color.Gray, fontSize = 13.sp)
                         }
                         Icon(Icons.Default.ArrowDropDown, null, tint = Color.LightGray)
                     }
@@ -1912,7 +1937,7 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
 
             // Date of Death
             EnrollmentTextField(
-                label = languageState.value.getT("Date of Death *", "मृत्यु की तारीख *", "ମୃତ୍ୟୁର ତାରିଖ *"),
+                label = stringResource(R.string.date_of_death),
                 value = deathDate,
                 onValueChange = { deathDate = it },
                 placeholder = "DD/MM/YYYY",
@@ -1935,7 +1960,7 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
 
             // Time of Death
             EnrollmentTextField(
-                label = languageState.value.getT("Time of Death *", "मृत्यु का समय *", "ମୃତ୍ୟୁର ସମୟ *"),
+                label = stringResource(R.string.time_of_death),
                 value = deathTime,
                 onValueChange = { deathTime = it },
                 placeholder = "HH:MM AM/PM",
@@ -1960,7 +1985,7 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
 
             // Photo Upload
             Text(
-                languageState.value.getT("Upload Photo (Optional)", "फोटो अपलोड करें (वैकल्पिक)", "ଫଟୋ ଅପଲୋଡ୍ କରନ୍ତୁ (ବୈକଳ୍ପିକ)"),
+                stringResource(R.string.upload_photo_optional),
                 fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -1995,7 +2020,7 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
                     colors = CheckboxDefaults.colors(checkedColor = PrimaryBlue)
                 )
                 Text(
-                    languageState.value.getT("I confirm the above information is correct.", "मैं पुष्टि करता हूं कि उपरोक्त जानकारी सही है।", "ମୁଁ ନିଶ୍ଚିତ କରୁଛି ଯେ ଉପରୋକ୍ତ ସୂଚନା ସଠିକ୍ ଅଟେ |"),
+                    stringResource(R.string.confirm_info_correct),
                     fontSize = 13.sp, color = Color.Black
                 )
             }
@@ -2010,7 +2035,7 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
             ) {
-                Text(languageState.value.getT("Submit Alert", "अलर्ट भेजें", "ସୂଚନା ଦିଅନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(stringResource(R.string.submit_alert), fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
         }
     }
@@ -2018,17 +2043,16 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
 
 @Composable
 fun ClaimStatusTracker() {
-    val languageState = LocalAppLanguage.current
     val stages = listOf(
-        languageState.value.getT("Death Reported", "मृत्यु की सूचना दी गई", "ମୃତ୍ୟୁ ରିପୋର୍ଟ କରାଯାଇଛି"),
-        languageState.value.getT("Didi Site Visit", "दीदी का साइट दौरा", "ଦିଦିଙ୍କ ସାଇଟ୍ ପରିଦର୍ଶନ"),
-        languageState.value.getT("Verification", "सत्यापन", "ଯାଞ୍ଚ"),
-        languageState.value.getT("Coordinator Review", "समन्वयक समीक्षा", "ସମନ୍ଵୟକାରୀ ସମୀକ୍ଷା"),
-        languageState.value.getT("Payment Sent", "भुगतान भेज दिया गया", "ଦେୟ ପଠାଯାଇଛି")
+        stringResource(R.string.death_reported),
+        stringResource(R.string.didi_visit),
+        stringResource(R.string.verification),
+        stringResource(R.string.coordinator_review),
+        stringResource(R.string.payment_sent)
     )
     val currentStage = 2
     Column(modifier = Modifier.fillMaxSize().navigationBarsPadding().padding(16.dp)) {
-        Text(languageState.value.getT("Claim #CLM7890", "दावा #CLM7890", "ଦାବି #CLM7890"), style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.claim_id_placeholder, "CLM7890"), style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
         stages.forEachIndexed { index, stage ->
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -2051,10 +2075,9 @@ fun BreakdownItem(label: String, value: String) {
 
 @Composable
 fun MortalityStep1(photoUri: Uri?, onCapture: () -> Unit) {
-    val languageState = LocalAppLanguage.current
-    Text(languageState.value.getT("Step 1: Carcass Verification", "चरण 1: शव सत्यापन", "ପଦକ୍ଷେପ ୧: ଶବ ଯାଞ୍ଚ"), style = MaterialTheme.typography.titleLarge)
+    Text(stringResource(R.string.carcass_verification_step_1), style = MaterialTheme.typography.titleLarge)
     Spacer(modifier = Modifier.height(8.dp))
-    Text(languageState.value.getT("Capture clear photo of the carcass with the ear tag visible.", "कान के टैग के साथ शव की स्पष्ट फोटो लें।", "କାନ ଟ୍ୟାଗ୍ ସହିତ ଶବର ସ୍ପଷ୍ଟ ଫଟୋ ନିଅନ୍ତୁ |"), color = Color.Gray)
+    Text(stringResource(R.string.capture_carcass_instruction), color = Color.Gray)
     Spacer(modifier = Modifier.height(24.dp))
     Surface(
         onClick = onCapture,
@@ -2075,7 +2098,7 @@ fun MortalityStep1(photoUri: Uri?, onCapture: () -> Unit) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(48.dp), tint = Color.Gray)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(languageState.value.getT("Tap to Capture", "कैप्चर करने के लिए टैप करें", "କ୍ୟାପଚର କରିବାକୁ ଟ୍ୟାପ୍ କରନ୍ତୁ"), color = Color.Gray)
+                    Text(stringResource(R.string.tap_to_capture), color = Color.Gray)
                 }
             }
         }
@@ -2084,15 +2107,13 @@ fun MortalityStep1(photoUri: Uri?, onCapture: () -> Unit) {
 
 @Composable
 fun MortalityStep2() { 
-    val languageState = LocalAppLanguage.current
-    Text(languageState.value.getT("Step 2: Check Ear Tag & Breed", "चरण 2: कान का टैग और नस्ल की जाँच करें", "ପଦକ୍ଷେପ ୨: କାନ ଟ୍ୟାଗ୍ ଏବଂ ପ୍ରଜାତି ଯାଞ୍ଚ କରନ୍ତୁ")) 
+    Text(stringResource(R.string.check_tag_breed_step_2)) 
 }
 @Composable
 fun MortalityStep3(photoUri: Uri?, onCapture: () -> Unit) { 
-    val languageState = LocalAppLanguage.current
-    Text(languageState.value.getT("Step 3: Capture Farmer & Site Photo", "चरण 3: किसान और साइट की फोटो लें", "ପଦକ୍ଷେପ ୩: କୃଷକ ଏବଂ ସାଇଟ୍ ଫଟୋ ନିଅନ୍ତୁ"), style = MaterialTheme.typography.titleLarge) 
+    Text(stringResource(R.string.capture_farmer_site_photo_step_3), style = MaterialTheme.typography.titleLarge) 
     Spacer(modifier = Modifier.height(8.dp))
-    Text(languageState.value.getT("Capture a photo of the farmer at the site with the carcass.", "शव के साथ साइट पर किसान की एक फोटो लें।", "ଶବ ସହିତ ସାଇଟରେ କୃଷକଙ୍କର ଏକ ଫଟୋ ନିଅନ୍ତୁ |"), color = Color.Gray)
+    Text(stringResource(R.string.capture_farmer_site_instruction), color = Color.Gray)
     Spacer(modifier = Modifier.height(24.dp))
     Surface(
         onClick = onCapture,
@@ -2113,7 +2134,7 @@ fun MortalityStep3(photoUri: Uri?, onCapture: () -> Unit) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(48.dp), tint = Color.Gray)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(languageState.value.getT("Tap to Capture", "कैप्चर करने के लिए टैप करें", "କ୍ୟାପଚର କରିବାକୁ ଟ୍ୟାପ୍ କରନ୍ତୁ"), color = Color.Gray)
+                    Text(stringResource(R.string.tap_to_capture), color = Color.Gray)
                 }
             }
         }
@@ -2121,8 +2142,7 @@ fun MortalityStep3(photoUri: Uri?, onCapture: () -> Unit) {
 }
 @Composable
 fun MortalityStep4() { 
-    val languageState = LocalAppLanguage.current
-    Text(languageState.value.getT("Step 4: Cause of Death & Sign", "चरण 4: मृत्यु का कारण और हस्ताक्षर", "ପଦକ୍ଷେପ ୪: ମୃତ୍ୟୁର କାରଣ ଏବଂ ସ୍ଵାକ୍ଷର")) 
+    Text(stringResource(R.string.cause_of_death_sign_step_4))
 }
 
 @Composable
@@ -2172,7 +2192,6 @@ fun StepProgressIndicator(currentStep: Int, totalSteps: Int) {
 @Composable
 fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
     var currentStep by rememberSaveable { mutableIntStateOf(1) }
-    val languageState = LocalAppLanguage.current
     
     // Form State
     var farmerName by rememberSaveable { mutableStateOf("") }
@@ -2182,9 +2201,9 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
     var aadhaar by rememberSaveable { mutableStateOf("") }
     
     var breed by rememberSaveable { mutableStateOf("Black Bengal") }
-    var gender by rememberSaveable { mutableStateOf(languageState.value.getT("Female", "मादा", "ମାଈ")) }
+    var gender by rememberSaveable { mutableStateOf("") }
     var age by rememberSaveable { mutableStateOf("") }
-    var ageUnit by rememberSaveable { mutableStateOf(languageState.value.getT("Months", "महीने", "ମାସ")) }
+    var ageUnit by rememberSaveable { mutableStateOf("") }
     var weight by rememberSaveable { mutableStateOf("") }
     var colorMarks by rememberSaveable { mutableStateOf("") }
     
@@ -2197,14 +2216,20 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
     var tagPhotoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     
     val steps = listOf(
-        languageState.value.getT("Farmer Information", "किसान जानकारी", "କୃଷକ ସୂଚନା"),
-        languageState.value.getT("Goat Details", "बकरी का विवरण", "ଛେଳି ବିବରଣୀ"),
-        languageState.value.getT("Photo Capture", "फोटो कैप्चर", "ଫଟୋ କ୍ୟାପଚର"),
-        languageState.value.getT("Ear Tagging", "कान की टैगिंग", "କାନ ଟ୍ୟାଗିଂ"),
-        languageState.value.getT("Vaccination History", "टीकाकरण इतिहास", "ଟୀକାକରଣ ଇତିହାସ"),
-        languageState.value.getT("Premium Payment", "प्रीमियम भुगतान", "ପ୍ରିମିୟମ ଦେୟ"),
-        languageState.value.getT("Policy Generated", "पॉलिसी जेनरेट हुई", "ନୀତି ପ୍ରସ୍ତୁତ ହୋଇଛି")
+        stringResource(R.string.farmer_information),
+        stringResource(R.string.goat_details),
+        stringResource(R.string.photo_capture),
+        stringResource(R.string.ear_tagging),
+        stringResource(R.string.vaccination_history),
+        stringResource(R.string.premium_payment),
+        stringResource(R.string.policy_generated)
     )
+
+    val femaleLabel = stringResource(R.string.female)
+    val monthsLabel = stringResource(R.string.months)
+    
+    if (gender.isEmpty()) gender = femaleLabel
+    if (ageUnit.isEmpty()) ageUnit = monthsLabel
 
     Scaffold(
         modifier = Modifier.fillMaxSize().navigationBarsPadding(),
@@ -2218,7 +2243,7 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                 ),
                 title = { 
                     Text(
-                        languageState.value.getT("Enrollment (Step $currentStep of 7)", "नामांकन (चरण $currentStep of 7)", "ପଞ୍ଜିକରଣ (ପଦକ୍ଷେପ $currentStep of 7)"),
+                        stringResource(R.string.enrollment_step_n, currentStep),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     ) 
@@ -2285,7 +2310,7 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                         shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, PrimaryGreen)
                     ) {
-                        Text(languageState.value.getT("Back", "पीछे", "ପଛକୁ"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.back), color = PrimaryGreen, fontWeight = FontWeight.Bold)
                     }
                 }
                 
@@ -2297,8 +2322,8 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f))
                 ) {
                     Text(
-                        text = if (currentStep == 7) languageState.value.getT("Finish Enrollment", "नामांकन पूरा करें", "ପଞ୍ଜିକରଣ ଶେଷ କରନ୍ତୁ") 
-                               else languageState.value.getT("Next", "अगला", "ପରବର୍ତ୍ତୀ"),
+                        text = if (currentStep == 7) stringResource(R.string.finish_enrollment) 
+                               else stringResource(R.string.next),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -2310,32 +2335,38 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
 
 @Composable
 fun EnrollmentFarmerStep(name: String, onNameChange: (String) -> Unit, phone: String, onPhoneChange: (String) -> Unit, village: String, onVillageChange: (String) -> Unit, location: String, onLocationChange: (String) -> Unit, aadhaar: String, onAadhaarChange: (String) -> Unit) {
-    val languageState = LocalAppLanguage.current
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        EnrollmentTextField(label = languageState.value.getT("Farmer Name *", "किसान का नाम *", "କୃଷକଙ୍କ ନାମ *"), value = name, onValueChange = onNameChange, placeholder = "Full Name")
-        EnrollmentTextField(label = languageState.value.getT("Mobile Number *", "मोबाइल नंबर *", "ମୋବାଇଲ୍ ନମ୍ବର *"), value = phone, onValueChange = onPhoneChange, placeholder = "10-digit number", keyboardType = KeyboardType.Phone, prefix = "+91 ")
-        EnrollmentTextField(label = languageState.value.getT("Village *", "गाँव *", "ଗ୍ରାମ *"), value = village, onValueChange = onVillageChange, placeholder = "Village Name")
-        EnrollmentTextField(label = languageState.value.getT("GPS Location *", "जीपीएस स्थान *", "GPS ଅବସ୍ଥାନ *"), value = location, onValueChange = onLocationChange, placeholder = "Auto-fetch coordinates", trailingIcon = Icons.Default.LocationOn)
-        EnrollmentTextField(label = languageState.value.getT("Aadhaar / Gov ID *", "आधार / सरकारी आईडी *", "ଆଧାର / ସରକାରୀ ID *"), value = aadhaar, onValueChange = onAadhaarChange, placeholder = "12-digit number", keyboardType = KeyboardType.Number)
+        EnrollmentTextField(label = stringResource(R.string.farmer_name), value = name, onValueChange = onNameChange, placeholder = stringResource(R.string.full_name_placeholder))
+        EnrollmentTextField(label = stringResource(R.string.mobile_number), value = phone, onValueChange = onPhoneChange, placeholder = stringResource(R.string.mobile_number_placeholder), keyboardType = KeyboardType.Phone, prefix = "+91 ")
+        EnrollmentTextField(label = stringResource(R.string.village), value = village, onValueChange = onVillageChange, placeholder = stringResource(R.string.village_placeholder))
+        EnrollmentTextField(label = stringResource(R.string.gps_location), value = location, onValueChange = onLocationChange, placeholder = stringResource(R.string.gps_location_placeholder), trailingIcon = Icons.Default.LocationOn)
+        EnrollmentTextField(label = stringResource(R.string.aadhaar_gov_id), value = aadhaar, onValueChange = onAadhaarChange, placeholder = stringResource(R.string.aadhaar_placeholder), keyboardType = KeyboardType.Number)
     }
 }
 
 @Composable
 fun EnrollmentGoatStep(breed: String, onBreedChange: (String) -> Unit, gender: String, onGenderChange: (String) -> Unit, age: String, onAgeChange: (String) -> Unit, ageUnit: String, onAgeUnitChange: (String) -> Unit, weight: String, onWeightChange: (String) -> Unit, color: String, onColorChange: (String) -> Unit) {
-    val languageState = LocalAppLanguage.current
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         EnrollmentDropdownField(
-            label = languageState.value.getT("Breed *", "नस्ल *", "ପ୍ରଜାତି *"),
+            label = stringResource(R.string.breed),
             selectedValue = breed,
-            options = listOf("Black Bengal", "Jamunapari", "Sirohi", "Barbari", "Beetal", "Ganjam", "Osmanabadi"),
+            options = listOf(
+                stringResource(R.string.black_bengal),
+                stringResource(R.string.jamunapari),
+                stringResource(R.string.sirohi),
+                stringResource(R.string.barbari),
+                stringResource(R.string.beetal),
+                stringResource(R.string.ganjam),
+                stringResource(R.string.osmanabadi)
+            ),
             onValueChange = onBreedChange
         )
         EnrollmentDropdownField(
-            label = languageState.value.getT("Gender *", "लिंग *", "ଲିଙ୍ଗ *"),
+            label = stringResource(R.string.gender),
             selectedValue = gender,
             options = listOf(
-                languageState.value.getT("Female", "मादा", "ମାଈ"),
-                languageState.value.getT("Male", "नर", "ଅଣ୍ଡିରା")
+                stringResource(R.string.female),
+                stringResource(R.string.male)
             ),
             onValueChange = onGenderChange
         )
@@ -2346,23 +2377,23 @@ fun EnrollmentGoatStep(breed: String, onBreedChange: (String) -> Unit, gender: S
             verticalAlignment = Alignment.Bottom
         ) {
             Box(modifier = Modifier.weight(0.6f)) {
-                EnrollmentTextField(label = languageState.value.getT("Age (Approx) *", "आयु (लगभग) *", "ବୟସ (ପ୍ରାୟ) *"), value = age, onValueChange = onAgeChange, placeholder = "12", keyboardType = KeyboardType.Number)
+                EnrollmentTextField(label = stringResource(R.string.age_approx), value = age, onValueChange = onAgeChange, placeholder = stringResource(R.string.age_placeholder), keyboardType = KeyboardType.Number)
             }
             Box(modifier = Modifier.weight(0.4f)) {
                 EnrollmentDropdownField(
-                    label = languageState.value.getT("Unit *", "इकाई *", "ଏକକ *"),
+                    label = stringResource(R.string.unit),
                     selectedValue = ageUnit,
                     options = listOf(
-                        languageState.value.getT("Months", "महीने", "ମାସ"),
-                        languageState.value.getT("Years", "साल", "ବର୍ଷ")
+                        stringResource(R.string.months),
+                        stringResource(R.string.years)
                     ),
                     onValueChange = onAgeUnitChange
                 )
             }
         }
 
-        EnrollmentTextField(label = languageState.value.getT("Weight (Approx) *", "वजन (लगभग) *", "ଓଜନ (ପ୍ରୟ) *"), value = weight, onValueChange = onWeightChange, placeholder = "18", keyboardType = KeyboardType.Number, suffix = "KG")
-        EnrollmentTextField(label = languageState.value.getT("Color / Marks *", "रंग / निशान *", "ରଙ୍ଗ / ଚିହ୍ନ *"), value = color, onValueChange = onColorChange, placeholder = "Black with White Spots")
+        EnrollmentTextField(label = stringResource(R.string.weight_approx), value = weight, onValueChange = onWeightChange, placeholder = stringResource(R.string.weight_placeholder), keyboardType = KeyboardType.Number, suffix = "KG")
+        EnrollmentTextField(label = stringResource(R.string.color_marks), value = color, onValueChange = onColorChange, placeholder = stringResource(R.string.color_marks_placeholder))
     }
 }
 
@@ -2374,7 +2405,6 @@ fun EnrollmentPhotoStep(
     tagUri: Uri?, onTagCapture: (Uri) -> Unit
 ) {
     val context = LocalContext.current
-    val languageState = LocalAppLanguage.current
 
     var tempUriStr by rememberSaveable { mutableStateOf<String?>(null) }
     var captureType by rememberSaveable { mutableStateOf("") }
@@ -2399,7 +2429,7 @@ fun EnrollmentPhotoStep(
         if (isGranted) {
             tempUriStr?.let { cameraLauncher.launch(Uri.parse(it)) }
         } else {
-            Toast.makeText(context, languageState.value.getT("Camera permission required", "कैमरा अनुमति आवश्यक है", "କ୍ୟାମେରା ଅନୁମତି ଆବଶ୍ୟକ"), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.camera_permission_required), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -2429,20 +2459,20 @@ fun EnrollmentPhotoStep(
 
     Column {
         Text(
-            languageState.value.getT("Please upload 4 mandatory photos of the goat.", "कृपया बकरी की 4 अनिवार्य फोटो अपलोड करें।", "ଦୟାକରି ଛେଳିର ୪ଟି ବାଧ୍ୟତାମୂଳକ ଫଟୋ ଅପଲୋଡ୍ କରନ୍ତୁ |"),
+            stringResource(R.string.upload_4_photos_instruction),
             style = MaterialTheme.typography.bodyMedium, color = Color.Gray
         )
         Spacer(modifier = Modifier.height(24.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             PhotoCaptureBox(
-                languageState.value.getT("Left Side", "बाईं ओर", "ବାମ ପାର୍ଶ୍ୱ"),
+                stringResource(R.string.left_side),
                 uri = leftUri,
                 modifier = Modifier.weight(1f)
             ) {
                 launchCamera("left")
             }
             PhotoCaptureBox(
-                languageState.value.getT("Right Side", "दाईं ओर", "ଡାହାଣ ପାର୍ଶ୍ୱ"),
+                stringResource(R.string.right_side),
                 uri = rightUri,
                 modifier = Modifier.weight(1f)
             ) {
@@ -2452,14 +2482,14 @@ fun EnrollmentPhotoStep(
         Spacer(modifier = Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             PhotoCaptureBox(
-                languageState.value.getT("Front View", "सामने का दृश्य", "ସମ୍ମୁଖ ଦୃଶ୍ୟ"),
+                stringResource(R.string.front_view),
                 uri = frontUri,
                 modifier = Modifier.weight(1f)
             ) {
                 launchCamera("front")
             }
             PhotoCaptureBox(
-                languageState.value.getT("Ear Tag", "कान का टैग", "କାନ ଟ୍ୟାଗ୍"),
+                stringResource(R.string.ear_tag),
                 uri = tagUri,
                 modifier = Modifier.weight(1f)
             ) {
@@ -2480,7 +2510,7 @@ fun EnrollmentPhotoStep(
                 Icon(Icons.Default.Info, null, tint = InfoBlue, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    languageState.value.getT("Ensure clear photos in good lighting", "अच्छी रोशनी में स्पष्ट फोटो सुनिश्चित करें", "ଭଲ ଆଲୋକରେ ସ୍ପଷ୍ଟ ଫଟୋ ନିଶ୍ଚିତ କରନ୍ତୁ"),
+                    stringResource(R.string.ensure_clear_photos),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Black
                 )
@@ -2491,7 +2521,6 @@ fun EnrollmentPhotoStep(
 
 @Composable
 fun EnrollmentTaggingStep(earTag: String, onTagChange: (String) -> Unit) {
-    val languageState = LocalAppLanguage.current
     val context = LocalContext.current
     
     val scanLauncher = rememberLauncherForActivityResult(
@@ -2503,12 +2532,12 @@ fun EnrollmentTaggingStep(earTag: String, onTagChange: (String) -> Unit) {
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        EnrollmentTextField(label = languageState.value.getT("Ear Tag Number *", "कान का टैग नंबर *", "କାନ ଟ୍ୟାଗ୍ ନମ୍ବର *"), value = earTag, onValueChange = onTagChange, placeholder = "e.g. ET-240801")
+        EnrollmentTextField(label = stringResource(R.string.ear_tag_number), value = earTag, onValueChange = onTagChange, placeholder = stringResource(R.string.ear_tag_number_placeholder))
         
         Spacer(modifier = Modifier.height(24.dp))
         
         Text(
-            languageState.value.getT("Scan QR Code (Optional)", "क्यूआर कोड स्कैन करें (वैकल्पिक)", "QR କୋଡ୍ ସ୍କାନ୍ କରନ୍ତୁ (ବୈକଳ୍ପିକ)"),
+            stringResource(R.string.scan_qr_code_optional),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
             color = Color.Black
@@ -2520,7 +2549,7 @@ fun EnrollmentTaggingStep(earTag: String, onTagChange: (String) -> Unit) {
             onClick = { 
                 val options = com.journeyapps.barcodescanner.ScanOptions()
                 options.setDesiredBarcodeFormats(com.journeyapps.barcodescanner.ScanOptions.QR_CODE)
-                options.setPrompt(languageState.value.getT("Scan Ear Tag QR Code", "कान के टैग का क्यूआर कोड स्कैन करें", "କାନ ଟ୍ୟାଗ୍ QR କୋଡ୍ ସ୍କାନ୍ କରନ୍ତୁ"))
+                options.setPrompt(context.getString(R.string.scan_ear_tag_qr))
                 options.setBeepEnabled(true)
                 options.setOrientationLocked(false)
                 scanLauncher.launch(options)
@@ -2542,7 +2571,7 @@ fun EnrollmentTaggingStep(earTag: String, onTagChange: (String) -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    languageState.value.getT("Tap to scan", "स्कैन करने के लिए टैप करें", "ସ୍କାନ୍ କରିବାକୁ ଟ୍ୟାପ୍ କରନ୍ତୁ"), 
+                    stringResource(R.string.tap_to_scan), 
                     color = Color.Gray, 
                     fontSize = 14.sp
                 )
@@ -2560,7 +2589,7 @@ fun EnrollmentTaggingStep(earTag: String, onTagChange: (String) -> Unit) {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    languageState.value.getT("Ear Tag Verified Successfully", "कान का टैग सफलतापूर्वक सत्यापित", "କାନ ଟ୍ୟାଗ୍ ସଫଳତାର ସହିତ ଯାଞ୍ଚ ହୋଇଛି"),
+                    stringResource(R.string.ear_tag_verified_successfully),
                     color = PrimaryGreen,
                     fontWeight = FontWeight.Medium,
                     fontSize = 14.sp
@@ -2572,17 +2601,16 @@ fun EnrollmentTaggingStep(earTag: String, onTagChange: (String) -> Unit) {
 
 @Composable
 fun EnrollmentVaccinationStep() {
-    val languageState = LocalAppLanguage.current
     var pprGiven by remember { mutableStateOf(true) }
     var etttGiven by remember { mutableStateOf(true) }
     var fmdGiven by remember { mutableStateOf(false) }
     var poxGiven by remember { mutableStateOf(false) }
     
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        VaccineStatusItem("PPR Vaccine", pprGiven) { pprGiven = it }
-        VaccineStatusItem("ET + TT Vaccine", etttGiven) { etttGiven = it }
-        VaccineStatusItem("FMD Vaccine", fmdGiven) { fmdGiven = it }
-        VaccineStatusItem("Goat Pox Vaccine", poxGiven) { poxGiven = it }
+        VaccineStatusItem(stringResource(R.string.vaccine_ppr), pprGiven) { pprGiven = it }
+        VaccineStatusItem(stringResource(R.string.vaccine_ettt), etttGiven) { etttGiven = it }
+        VaccineStatusItem(stringResource(R.string.vaccine_fmd), fmdGiven) { fmdGiven = it }
+        VaccineStatusItem(stringResource(R.string.vaccine_goat_pox), poxGiven) { poxGiven = it }
         
         Spacer(modifier = Modifier.height(12.dp))
         
@@ -2595,7 +2623,7 @@ fun EnrollmentVaccinationStep() {
                 Icon(Icons.Default.CalendarToday, null, tint = Color.DarkGray, modifier = Modifier.size(24.dp))
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
-                    Text(languageState.value.getT("Next Vaccination Due", "अगला टीकाकरण देय", "ପରବର୍ତ୍ତୀ ଟୀକାକରଣ ବାକି"), fontSize = 12.sp, color = Color.Gray)
+                    Text(stringResource(R.string.next_vaccination_due), fontSize = 12.sp, color = Color.Gray)
                     Text("15 Aug 2024", fontWeight = FontWeight.Bold, color = Color.Black)
                 }
             }
@@ -2605,7 +2633,6 @@ fun EnrollmentVaccinationStep() {
 
 @Composable
 fun EnrollmentPaymentStep() {
-    val languageState = LocalAppLanguage.current
     var selectedMethod by remember { mutableStateOf("Cash") }
     
     Column {
@@ -2618,30 +2645,29 @@ fun EnrollmentPaymentStep() {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(languageState.value.getT("Total Premium Amount", "कुल प्रीमियम राशि", "ମୋଟ ପ୍ରିମିୟମ ପରିମାଣ"), fontSize = 14.sp, color = Color.Gray)
-                Text("₹ 350", style = MaterialTheme.typography.headlineLarge, color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.total_premium_amount), fontSize = 14.sp, color = Color.Gray)
+                Text(stringResource(R.string.total_premium_with_value_rs, "350"), style = MaterialTheme.typography.headlineLarge, color = PrimaryGreen, fontWeight = FontWeight.Bold)
             }
         }
         
         Spacer(modifier = Modifier.height(24.dp))
-        Text(languageState.value.getT("Select Payment Method", "भुगतान विधि चुनें", "ଦେୟ ପଦ୍ଧତି ଚୟନ କରନ୍ତୁ"), fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.select_payment_method), fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PaymentMethodChip("Cash", selectedMethod == "Cash", modifier = Modifier.weight(1f)) { selectedMethod = "Cash" }
-            PaymentMethodChip("UPI", selectedMethod == "UPI", modifier = Modifier.weight(1f)) { selectedMethod = "UPI" }
-            PaymentMethodChip("Wallet", selectedMethod == "Wallet", modifier = Modifier.weight(1f)) { selectedMethod = "Wallet" }
+            PaymentMethodChip(stringResource(R.string.payment_method_cash), selectedMethod == "Cash", modifier = Modifier.weight(1f)) { selectedMethod = "Cash" }
+            PaymentMethodChip(stringResource(R.string.payment_method_upi), selectedMethod == "UPI", modifier = Modifier.weight(1f)) { selectedMethod = "UPI" }
+            PaymentMethodChip(stringResource(R.string.payment_method_wallet), selectedMethod == "Wallet", modifier = Modifier.weight(1f)) { selectedMethod = "Wallet" }
         }
         
         Spacer(modifier = Modifier.height(24.dp))
-        EnrollmentTextField(label = languageState.value.getT("Premium Amount (editable if needed)", "प्रीमियम राशि (यदि आवश्यक हो तो संपादन योग्य)", "ପ୍ରିମିୟମ ପରିମାଣ (ଆବଶ୍ୟକ ହେଲେ ସଂପାଦନ ଯୋଗ୍ୟ)"), value = "350", onValueChange = {}, prefix = "₹")
+        EnrollmentTextField(label = stringResource(R.string.premium_amount_editable), value = "350", onValueChange = {}, prefix = "₹")
         Spacer(modifier = Modifier.height(16.dp))
-        EnrollmentTextField(label = languageState.value.getT("Receipt Number", "रसीद संख्या", "ରସିଦ ନମ୍ବର"), value = "RCP-240801-001", onValueChange = {}, leadingIcon = Icons.Default.Receipt)
+        EnrollmentTextField(label = stringResource(R.string.receipt_number), value = "RCP-240801-001", onValueChange = {}, leadingIcon = Icons.Default.Receipt)
     }
 }
 
 @Composable
 fun EnrollmentPolicyStep(farmer: String, tag: String) {
-    val languageState = LocalAppLanguage.current
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier.size(64.dp).clip(CircleShape).background(Color(0xFFE8F5E9)),
@@ -2650,7 +2676,7 @@ fun EnrollmentPolicyStep(farmer: String, tag: String) {
             Icon(Icons.Default.VerifiedUser, null, tint = SuccessGreen, modifier = Modifier.size(32.dp))
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Text(languageState.value.getT("Policy Generated Successfully!", "पॉलिसी सफलतापूर्वक जेनरेट हुई!", "ନୀତି ସଫଳତାର ସହିତ ପ୍ରସ୍ତୁତ ହୋଇଛି!"), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Text(stringResource(R.string.policy_generated_successfully), fontWeight = FontWeight.Bold, fontSize = 18.sp)
         
         Spacer(modifier = Modifier.height(24.dp))
         
@@ -2660,13 +2686,13 @@ fun EnrollmentPolicyStep(farmer: String, tag: String) {
             border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                PolicyDetailRow(languageState.value.getT("Policy Number", "पॉलिसी नंबर", "ନୀତି ନମ୍ବର"), "POL-2024-00125")
-                PolicyDetailRow(languageState.value.getT("Farmer Name", "किसान का नाम", "କୃଷକଙ୍କ ନାମ"), farmer.ifBlank { "RASGJM RYU" })
-                PolicyDetailRow(languageState.value.getT("Ear Tag", "कान का टैग", "କାନ ଟ୍ୟାଗ୍"), tag.ifBlank { "ET-453678" })
-                PolicyDetailRow(languageState.value.getT("Premium Paid", "प्रीमियम भुगतान", "ଦିଆଯାଇଥିବା ପ୍ରିମିୟମ"), "₹ 350")
-                PolicyDetailRow(languageState.value.getT("Validity", "वैधता", "ବୈଧତା"), "01 Aug 2024 - 31 Jul 2025")
+                PolicyDetailRow(stringResource(R.string.policy_number), stringResource(R.string.policy_number_value))
+                PolicyDetailRow(stringResource(R.string.farmer_name), farmer.ifBlank { stringResource(R.string.farmer_name_placeholder) })
+                PolicyDetailRow(stringResource(R.string.ear_tag), tag.ifBlank { stringResource(R.string.ear_tag_value) })
+                PolicyDetailRow(stringResource(R.string.premium_paid), stringResource(R.string.premium_paid_value))
+                PolicyDetailRow(stringResource(R.string.validity), stringResource(R.string.validity_value))
                 HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
-                PolicyDetailRow(languageState.value.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), "₹ 8,500", true)
+                PolicyDetailRow(stringResource(R.string.sum_insured), stringResource(R.string.sum_insured_value), true)
             }
         }
         
@@ -2680,7 +2706,7 @@ fun EnrollmentPolicyStep(farmer: String, tag: String) {
         ) {
             Icon(Icons.Default.FileDownload, null, tint = PrimaryGreen)
             Spacer(modifier = Modifier.width(8.dp))
-            Text(languageState.value.getT("Download Certificate", "प्रमाण पत्र डाउनलोड करें", "ପ୍ରମାଣପତ୍ର ଡାଉନଲୋଡ୍ କରନ୍ତୁ"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.download_certificate), color = PrimaryGreen, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -2837,7 +2863,6 @@ fun PhotoCaptureBox(label: String, uri: Uri?, modifier: Modifier = Modifier, onC
 
 @Composable
 fun VaccineStatusItem(name: String, isGiven: Boolean, themeColor: Color = PrimaryGreen, onToggle: (Boolean) -> Unit) {
-    val languageState = LocalAppLanguage.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         onClick = { onToggle(!isGiven) },
@@ -2861,8 +2886,8 @@ fun VaccineStatusItem(name: String, isGiven: Boolean, themeColor: Color = Primar
                 shape = RoundedCornerShape(4.dp)
             ) {
                 Text(
-                    text = if (isGiven) languageState.value.getT("Given", "दिया गया", "ଦିଆଯାଇଛି") 
-                           else languageState.value.getT("Pending", "लंबित", "ବାକି ଅଛି"),
+                    text = if (isGiven) stringResource(R.string.given) 
+                           else stringResource(R.string.pending),
                     color = if (isGiven) themeColor else AccentOrange,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
@@ -2901,7 +2926,6 @@ fun PolicyDetailRow(label: String, value: String, isBold: Boolean = false) {
 fun FarmerDashboard(navController: NavHostController, sessionManager: SessionManager) {
     var showNotifications by remember { mutableStateOf(false) }
     if (showNotifications) NotificationSheet(themeColor = PrimaryBlue) { showNotifications = false }
-    val languageState = LocalAppLanguage.current
     val userName by sessionManager.userName.collectAsState(initial = "Ramesh Naik")
 
     ResponsiveLayout(
@@ -2931,7 +2955,7 @@ fun FarmerDashboard(navController: NavHostController, sessionManager: SessionMan
                         selected = true, 
                         onClick = { }, 
                         icon = { Icon(Icons.Default.Home, null) }, 
-                        label = { Text(languageState.value.getT("Home", "होम", "ମୁଖ୍ୟ ପୃଷ୍ଠା")) },
+                        label = { Text(stringResource(R.string.home)) },
                         colors = NavigationRailItemDefaults.colors(
                             selectedIconColor = PrimaryBlue,
                             selectedTextColor = PrimaryBlue,
@@ -2944,7 +2968,7 @@ fun FarmerDashboard(navController: NavHostController, sessionManager: SessionMan
                         selected = false, 
                         onClick = { navController.navigate("goat_list") }, 
                         icon = { Icon(painterResource(R.drawable.ic_ewe_custom), null) }, 
-                        label = { Text(languageState.value.getT("My Goats", "मेरी बकरियां", "ମୋର ଛେଳି")) },
+                        label = { Text(stringResource(R.string.my_goats)) },
                         colors = NavigationRailItemDefaults.colors(
                             selectedIconColor = PrimaryBlue,
                             selectedTextColor = PrimaryBlue,
@@ -2962,7 +2986,6 @@ fun FarmerDashboard(navController: NavHostController, sessionManager: SessionMan
 
 @Composable
 fun FarmerContent(padding: PaddingValues, navController: NavHostController, userName: String, onNotificationClick: () -> Unit) {
-    val languageState = LocalAppLanguage.current
     val context = LocalContext.current
     
     // Blue Theme Palette for Farmer
@@ -2983,7 +3006,7 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
         FarmerHeader(
             navController,
             userName,
-            languageState.value.getT("Farmer", "किसान", "କୃଷକ"),
+            stringResource(R.string.role_farmer),
             onNotificationClick,
             hasNotifications = true,
             onProfileClick = { navController.navigate("profile") }
@@ -3004,7 +3027,7 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                 Column {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        languageState.value.getT("My Insurance Summary", "मेरी बीमा सारांश", "ମୋର ବୀମା ସାରାଂଶ"),
+                        stringResource(R.string.insurance_summary),
                         style = MaterialTheme.typography.titleMedium,
                         color = royalBlue,
                         fontWeight = FontWeight.Bold
@@ -3016,8 +3039,8 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
             val statSpan = if (isCompact) 3 else 6
             items(2, span = { GridItemSpan(statSpan) }) { index ->
                 when(index) {
-                    0 -> StatCard(languageState.value.getT("Active Policies", "सक्रिय नीतियां", "ସକ୍ରିୟ ନୀତି"), "02", Icons.AutoMirrored.Filled.Assignment, royalBlue, skyBlue)
-                    1 -> StatCard(languageState.value.getT("Total Goats", "कुल बकरियां", "ମୋଟ ଛେଳି"), "05", painterResource(R.drawable.ic_ewe_custom), PrimaryGreen, CardLightGreen)
+                    0 -> StatCard(stringResource(R.string.active_policies), "02", Icons.AutoMirrored.Filled.Assignment, royalBlue, skyBlue)
+                    1 -> StatCard(stringResource(R.string.total_goats), "05", painterResource(R.drawable.ic_ewe_custom), PrimaryGreen, CardLightGreen)
                 }
             }
 
@@ -3039,13 +3062,13 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                     ) {
                         Column {
                             Text(
-                                languageState.value.getT("Next Vaccination Due", "अगला टीकाकरण देय", "ପରବର୍ତ୍ତୀ ଟୀକାକରଣ ବାକି"),
+                                stringResource(R.string.next_vaccination_due),
                                 fontSize = 13.sp,
                                 color = deepBlue,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                languageState.value.getT("15 Aug 2024 (Tomorrow)", "15 अगस्त 2024 (कल)", "୧୫ ଅଗଷ୍ଟ ୨୦୨୪ (କାଲି)"),
+                                stringResource(R.string.today_at, "15 Aug 2024"),
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black,
                                 fontSize = 15.sp
@@ -3061,8 +3084,8 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
                         ) {
                             Text(
-                                if (showVaccineSchedule) languageState.value.getT("Hide", "छिपाएं", "ଲୁଚାନ୍ତୁ") 
-                                else languageState.value.getT("View", "देखें", "ଦେଖନ୍ତୁ"),
+                                if (showVaccineSchedule) stringResource(R.string.hide) 
+                                else stringResource(R.string.view),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -3080,18 +3103,18 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            languageState.value.getT("Upcoming Vaccinations", "आगामी टीकाकरण", "ଆଗାମୀ ଟୀକାକରଣ"),
+                            stringResource(R.string.upcoming_vaccinations),
                             style = MaterialTheme.typography.titleSmall,
                             color = royalBlue,
                             fontWeight = FontWeight.Bold
                         )
                         
                         val schedules = listOf(
-                            Triple("PPR Vaccine", "15 Aug 2024", "ET-340801-0001"),
-                            Triple("ET + TT", "20 Aug 2024", "ET-340801-0006"),
-                            Triple("FMD Vaccine", "05 Sep 2024", "ET-240801-0002"),
-                            Triple("Goat Pox", "12 Sep 2024", "ET-340801-0005"),
-                            Triple("PPR Booster", "20 Sep 2024", "ET-240801-0002")
+                            Triple(stringResource(R.string.vaccine_ppr), "15 Aug 2024", "ET-340801-0001"),
+                            Triple(stringResource(R.string.vaccine_ettt), "20 Aug 2024", "ET-340801-0006"),
+                            Triple(stringResource(R.string.vaccine_fmd), "05 Sep 2024", "ET-240801-0002"),
+                            Triple(stringResource(R.string.vaccine_goat_pox), "12 Sep 2024", "ET-340801-0005"),
+                            Triple(stringResource(R.string.vaccine_ppr_booster), "20 Sep 2024", "ET-240801-0002")
                         )
                         
                         Column(
@@ -3136,13 +3159,13 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            languageState.value.getT("My Policies (2)", "मेरी नीतियां (2)", "ମୋର ନୀତିଗୁଡ଼ିକ (୨)"),
+                            stringResource(R.string.my_policies_count, 2),
                             style = MaterialTheme.typography.titleMedium,
                             color = royalBlue,
                             fontWeight = FontWeight.Bold
                         )
                         TextButton(onClick = { navController.navigate("goat_list") }) {
-                            Text(languageState.value.getT("View All", "सभी देखें", "ସବୁ ଦେଖନ୍ତୁ"), color = deepBlue)
+                            Text(stringResource(R.string.view_all), color = deepBlue)
                         }
                     }
                 }
@@ -3169,11 +3192,14 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
+                                val blackBengal = stringResource(R.string.black_bengal)
+                                val female = stringResource(R.string.female)
+                                val age = stringResource(R.string.age_months_suffix, 12)
                                 Text("ET-340801-0001", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black)
-                                Text("Black Bengal • ${languageState.value.getT("Female", "मादा", "ମାଈ")} • 12M", color = Color.Gray, fontSize = 12.sp)
+                                Text(stringResource(R.string.breed_gender_age_format, blackBengal, female, age), color = Color.Gray, fontSize = 12.sp)
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text(languageState.value.getT("Policy Active", "पॉलिसी सक्रिय", "ନୀତି ସକ୍ରିୟ"), color = SuccessGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                Text(languageState.value.getT("Valid till 31 May 2025", "31 मई 2025 तक मान्य", "୩୧ ମଇ ୨୦୨୫ ପର୍ଯ୍ୟନ୍ତ ବୈଧ"), fontSize = 11.sp, color = Color.Gray)
+                                Text(stringResource(R.string.policy_active), color = SuccessGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text(stringResource(R.string.valid_till, "31 May 2025"), fontSize = 11.sp, color = Color.Gray)
                             }
                         }
                         
@@ -3187,7 +3213,7 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                                 shape = RoundedCornerShape(8.dp),
                                 contentPadding = PaddingValues(0.dp)
                             ) {
-                                Text(languageState.value.getT("Report Death", "मृत्यु की सूचना", "ମୃତ୍ୟୁ ରିପୋର୍ଟ"), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                Text(stringResource(R.string.report_death), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
                             Button(
                                 onClick = { navController.navigate("goat_details/ET-340801-0001") },
@@ -3196,7 +3222,7 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                                 shape = RoundedCornerShape(8.dp),
                                 contentPadding = PaddingValues(0.dp)
                             ) {
-                                Text(languageState.value.getT("View Policy", "नीति देखें", "ନୀତି ଦେଖନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                Text(stringResource(R.string.view_policy), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
                         }
                     }
@@ -3250,7 +3276,7 @@ fun FarmerHeader(navController: NavHostController, name: String, role: String, o
             
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = languageState.value.getT("Welcome,", "स्वागत है,", "ସ୍ଵାଗତ,"),
+                    text = stringResource(R.string.welcome_comma),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.8f),
                     fontWeight = FontWeight.Bold
@@ -3298,7 +3324,6 @@ fun FarmerHeader(navController: NavHostController, name: String, role: String, o
 
 @Composable
 fun DashboardHeader(navController: NavHostController, name: String, role: String, onNotificationClick: () -> Unit = {}, hasNotifications: Boolean = false, onProfileClick: () -> Unit = {}) {
-    val languageState = LocalAppLanguage.current
     val profileImageState = LocalProfileImage.current
     Surface(
         color = PrimaryGreen,
@@ -3340,7 +3365,7 @@ fun DashboardHeader(navController: NavHostController, name: String, role: String
             
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = languageState.value.getT("Hello,", "नमस्ते,", "ନମସ୍କାର,"),
+                    text = stringResource(R.string.hello_comma),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.8f),
                     fontWeight = FontWeight.Bold
@@ -3531,7 +3556,6 @@ fun OtpInput(value: String, onValueChange: (String) -> Unit, onDone: () -> Unit 
 
 @Composable
 fun DidiBottomBar(navController: NavHostController) {
-    val languageState = LocalAppLanguage.current
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -3550,7 +3574,7 @@ fun DidiBottomBar(navController: NavHostController) {
                 }
             },
             icon = { Icon(Icons.Default.Home, null) },
-            label = { Text(languageState.value.getT("Home", "होम", "ମୁଖ୍ୟ ପୃଷ୍ଠା"), fontSize = 9.sp) },
+            label = { Text(stringResource(R.string.home), fontSize = 9.sp) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = PrimaryGreen,
                 selectedTextColor = PrimaryGreen,
@@ -3570,7 +3594,7 @@ fun DidiBottomBar(navController: NavHostController) {
                 }
             },
             icon = { Icon(painterResource(R.drawable.ic_ewe_custom), null, modifier = Modifier.size(24.dp)) },
-            label = { Text(languageState.value.getT("Goats", "बकरियां", "ଛେଳି"), fontSize = 9.sp) },
+            label = { Text(stringResource(R.string.goats), fontSize = 9.sp) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = PrimaryGreen,
                 selectedTextColor = PrimaryGreen,
@@ -3590,7 +3614,7 @@ fun DidiBottomBar(navController: NavHostController) {
                 }
             },
             icon = { Icon(Icons.Default.MedicalServices, null) },
-            label = { Text(languageState.value.getT("Vaccines", "टीकाकरण", "ଟୀକା"), fontSize = 9.sp) },
+            label = { Text(stringResource(R.string.vaccines), fontSize = 9.sp) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = PrimaryGreen,
                 selectedTextColor = PrimaryGreen,
@@ -3610,7 +3634,7 @@ fun DidiBottomBar(navController: NavHostController) {
                 }
             },
             icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null) },
-            label = { Text(languageState.value.getT("Claims", "दावे", "ଦାବି"), fontSize = 9.sp) },
+            label = { Text(stringResource(R.string.claims), fontSize = 9.sp) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = PrimaryGreen,
                 selectedTextColor = PrimaryGreen,
@@ -3624,8 +3648,6 @@ fun DidiBottomBar(navController: NavHostController) {
 
 @Composable
 fun FarmerBottomBar(navController: NavHostController) {
-    val languageState = LocalAppLanguage.current
-    val context = LocalContext.current
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -3644,7 +3666,7 @@ fun FarmerBottomBar(navController: NavHostController) {
                 }
             },
             icon = { Icon(Icons.Default.Home, null) },
-            label = { Text(languageState.value.getT("Home", "होम", "ମୁଖ୍ୟ ପୃଷ୍ଠା"), fontSize = 9.sp) },
+            label = { Text(stringResource(R.string.home), fontSize = 9.sp) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = PrimaryBlue,
                 selectedTextColor = PrimaryBlue,
@@ -3664,7 +3686,7 @@ fun FarmerBottomBar(navController: NavHostController) {
                 }
             },
             icon = { Icon(painterResource(R.drawable.ic_ewe_custom), null, modifier = Modifier.size(24.dp)) },
-            label = { Text(languageState.value.getT("My Goats", "मेरी बकरियां", "ମୋର ଛେଳି"), fontSize = 9.sp) },
+            label = { Text(stringResource(R.string.my_goats), fontSize = 9.sp) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = PrimaryBlue,
                 selectedTextColor = PrimaryBlue,
@@ -3684,7 +3706,7 @@ fun FarmerBottomBar(navController: NavHostController) {
                 }
             },
             icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null) },
-            label = { Text(languageState.value.getT("Claims", "दावे", "ଦାବି"), fontSize = 9.sp) },
+            label = { Text(stringResource(R.string.claims), fontSize = 9.sp) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = PrimaryBlue,
                 selectedTextColor = PrimaryBlue,
@@ -3704,7 +3726,7 @@ fun FarmerBottomBar(navController: NavHostController) {
                 }
             },
             icon = { Icon(Icons.Default.SupportAgent, null) },
-            label = { Text(languageState.value.getT("Help", "सहायता", "ସାହାଯ୍ୟ"), fontSize = 9.sp) },
+            label = { Text(stringResource(R.string.help), fontSize = 9.sp) },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = PrimaryBlue,
                 selectedTextColor = PrimaryBlue,
@@ -3733,10 +3755,10 @@ data class AppNotification(val title: String, val message: String, val time: Str
 fun NotificationSheet(themeColor: Color = PrimaryGreen, onDismiss: () -> Unit) {
     val languageState = LocalAppLanguage.current
     val notifications = listOf(
-        AppNotification(languageState.value.getT("New Enrollment", "नया नामांकन", "ନୂତନ ପଞ୍ଜିକରଣ"), languageState.value.getT("Farmer Ram added a new goat.", "किसान राम ने एक नई बकरी जोड़ी।", "କୃଷକ ରାମ ଏକ ନୂତନ ଛେଳି ଯୋଡିଛନ୍ତି।"), languageState.value.getT("2 mins ago", "2 मिनट पहले", "୨ ମିନିଟ୍ ପୂର୍ବରୁ")),
-        AppNotification(languageState.value.getT("Vaccination Due", "टीकाकरण देय", "ଟୀକାକରଣ ବାକି"), languageState.value.getT("PPR Vaccine due for TAG-12345.", "TAG-12345 के लिए PPR वैक्सीन देय है।", "TAG-12345 ପାଇଁ PPR ଟୀକା ବାକି ଅଛି |"), languageState.value.getT("1 hour ago", "1 घंटे पहले", "୧ ଘଣ୍ଟା ପୂର୍ବରୁ")),
-        AppNotification(languageState.value.getT("Claim Approved", "दावा स्वीकृत", "ଦାବି ଅନୁମୋଦିତ"), languageState.value.getT("Claim #CLM7890 has been approved.", "दावा #CLM7890 स्वीकृत हो गया है।", "ଦାବି #CLM7890 ଅନୁମୋଦିତ ହୋଇଛି।"), languageState.value.getT("Yesterday", "कल", "ଗତକାଲି")),
-        AppNotification(languageState.value.getT("Visit Reminder", "मुलाकात अनुस्मारक", "ପରିଦର୍ଶନ ସ୍ମାରକୀ"), languageState.value.getT("Scheduled visit to Village Site B.", "गांव साइट बी की निर्धारित यात्रा।", "ଗ୍ରାମ ସାଇଟ୍ ବି କୁ ନିର୍ଦ୍ଧାରିତ ପରିଦର୍ଶନ |"), languageState.value.getT("Today, 4 PM", "आज, शाम 4 बजे", "ଆଜି, ଅପରାହ୍ନ ୪ ଟା"))
+        AppNotification(stringResource(R.string.new_enrollment), stringResource(R.string.new_enrollment_msg), stringResource(R.string.time_2_mins_ago)),
+        AppNotification(stringResource(R.string.vaccination_due), stringResource(R.string.vaccination_due_msg), stringResource(R.string.time_1_hour_ago)),
+        AppNotification(stringResource(R.string.claim_approved), stringResource(R.string.claim_approved_msg), stringResource(R.string.time_yesterday)),
+        AppNotification(stringResource(R.string.visit_reminder), stringResource(R.string.visit_reminder_msg), stringResource(R.string.time_today_4pm))
     )
     
     ModalBottomSheet(
@@ -3752,7 +3774,7 @@ fun NotificationSheet(themeColor: Color = PrimaryGreen, onDismiss: () -> Unit) {
                 .padding(horizontal = 24.dp, vertical = 8.dp)
         ) {
             Text(
-                languageState.value.getT("Notifications", "सूचनाएं", "ବିଜ୍ଞପ୍ତି"),
+                stringResource(R.string.notifications),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
@@ -3840,15 +3862,15 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
         else -> PrimaryGreen
     }
     val userName = savedName ?: when {
-        isFarmer -> languageState.value.getT("Ramesh Naik", "रमेश नायक", "ରମେଶ ନାୟକ")
-        isCoordinator -> languageState.value.getT("lalu", "लालू", "ଲାଲୁ")
-        else -> languageState.value.getT("Sushma Didi", "सुषमा दीदी", "ସୁସମା ଦିଦି")
+        isFarmer -> stringResource(R.string.ramesh_naik)
+        isCoordinator -> stringResource(R.string.lalu)
+        else -> stringResource(R.string.sushma_didi)
     }
     
     val roleLabel = when(userRole) {
-        UserRole.FARMER -> languageState.value.getT("Farmer", "किसान", "କୃଷକ")
-        UserRole.COORDINATOR -> languageState.value.getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ")
-        else -> languageState.value.getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି")
+        UserRole.FARMER -> stringResource(R.string.role_farmer)
+        UserRole.COORDINATOR -> stringResource(R.string.role_coordinator)
+        else -> stringResource(R.string.role_suraksha_didi)
     }
 
     fun saveImageToInternalStorage(uri: Uri): Uri? {
@@ -3874,7 +3896,7 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
             val internalUri = saveImageToInternalStorage(uri)
             if (internalUri != null) {
                 profileImageState.value = internalUri
-                Toast.makeText(context, languageState.value.getT("Saved", "सहेजा गया", "ସଂରକ୍ଷିତ"), Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.saved), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -3888,7 +3910,7 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
             val internalUri = saveImageToInternalStorage(uri)
             if (internalUri != null) {
                 profileImageState.value = internalUri
-                Toast.makeText(context, languageState.value.getT("Saved", "सहेजा गया", "ସଂରକ୍ଷିତ"), Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.saved), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -3923,14 +3945,14 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
     if (showPhotoOptions) {
         AlertDialog(
             onDismissRequest = { showPhotoOptions = false },
-            title = { Text(languageState.value.getT("Update Profile Photo", "प्रोफ़ाइल फ़ोटो अपडेट करें", "ପ୍ରୋଫାଇଲ୍ ଫଟୋ ଅପଡେଟ୍ କରନ୍ତୁ"), fontWeight = FontWeight.Bold, color = Color.Black) },
-            text = { Text(languageState.value.getT("Choose a source", "एक स्रोत चुनें", "ଏକ ଉତ୍ସ ବାଛନ୍ତୁ"), color = Color.Black) },
+            title = { Text(stringResource(R.string.update_profile_photo), fontWeight = FontWeight.Bold, color = Color.Black) },
+            text = { Text(stringResource(R.string.choose_source), color = Color.Black) },
             confirmButton = {
                 TextButton(onClick = { 
                     showPhotoOptions = false
                     launchCamera()
                 }) {
-                    Text(languageState.value.getT("Camera", "कैमरा", "କ୍ୟାମେରା"), fontWeight = FontWeight.Bold, color = themeColor)
+                    Text(stringResource(R.string.camera), fontWeight = FontWeight.Bold, color = themeColor)
                 }
             },
             dismissButton = {
@@ -3938,7 +3960,7 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
                     showPhotoOptions = false
                     imagePickerLauncher.launch("image/*")
                 }) {
-                    Text(languageState.value.getT("Gallery", "गैलरी", "ଗ୍ୟାଲେରୀ"), fontWeight = FontWeight.Bold, color = themeColor)
+                    Text(stringResource(R.string.gallery), fontWeight = FontWeight.Bold, color = themeColor)
                 }
             },
             containerColor = Color.White,
@@ -3969,7 +3991,7 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                     Text(
-                        languageState.value.getT("Profile Settings", "प्रोफ़ाइल सेटिंग्स", "ପ୍ରୋଫାଇଲ୍ ସେଟିଙ୍ଗ୍ସ"),
+                        stringResource(R.string.profile_settings),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -4042,37 +4064,37 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Info Cards
-            ProfileInfoSection(languageState.value.getT("Account Details", "खाता विवरण", "ଖାତା ବିବରଣୀ"), themeColor) {
+            ProfileInfoSection(stringResource(R.string.account_details), themeColor) {
                 ProfileInfoItem(
-                    languageState.value.getT("Full Name", "पूरा नाम", "ପୁରା ନାମ"),
+                    stringResource(R.string.full_name),
                     userName
                 )
                 ProfileInfoItem(
-                    languageState.value.getT("Role", "भूमिका", "ଭୂମିକା"),
+                    stringResource(R.string.role),
                     roleLabel
                 )
                 ProfileInfoItem(
-                    languageState.value.getT("Location", "स्थान", "ଅବସ୍ଥାନ"),
+                    stringResource(R.string.location),
                     savedVillage ?: when {
-                        isFarmer -> languageState.value.getT("Pipili, Odisha", "पिपिली, ओडिशा", "ପିପିଲି, ଓଡ଼ିଶା")
-                        isCoordinator -> languageState.value.getT("Bhubaneswar, Odisha", "भुवनेश्वर, ओडिशा", "ଭୁବନେଶ୍ୱର, ଓଡ଼ିଶା")
-                        else -> languageState.value.getT("Gopalpur, Odisha", "गोपालपुर, ओडिशा", "ଗୋପାଳପୁର, ଓଡ଼ିଶା")
+                        isFarmer -> stringResource(R.string.pipili_odisha)
+                        isCoordinator -> stringResource(R.string.bhubaneswar_odisha)
+                        else -> stringResource(R.string.gopalpur_odisha)
                     }
                 )
             }
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            ProfileInfoSection(languageState.value.getT("App Settings", "ऐप सेटिंग्स", "ଆପ୍ ସେଟିଙ୍ଗ୍ସ"), themeColor) {
+            ProfileInfoSection(stringResource(R.string.app_settings), themeColor) {
                 val notificationsEnabled = LocalNotificationsEnabled.current
                 SettingsToggleItem(
-                    label = languageState.value.getT("Enable Notifications", "सूचनाएं सक्षम करें", "ବିଜ୍ଞପ୍ତି ସକ୍ଷମ କରନ୍ତୁ"),
+                    label = stringResource(R.string.enable_notifications),
                     checked = notificationsEnabled.value,
                     onCheckedChange = { notificationsEnabled.value = it },
                     themeColor = themeColor
                 )
                 Box {
-                    SettingsClickItem(languageState.value.getT("Language", "भाषा", "ଭାଷା"), getLanguageName(languageState.value)) {
+                    SettingsClickItem(stringResource(R.string.language), getLanguageName(languageState.value)) {
                         showLanguagePicker = true
                     }
                     DropdownMenu(
@@ -4088,14 +4110,14 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            ProfileInfoSection(languageState.value.getT("Support & Legal", "समर्थन और कानूनी", "ସମର୍ଥନ ଏବଂ ଆଇନଗତ"), themeColor) {
-                SettingsClickItem(languageState.value.getT("Help & Support", "सहायता और समर्थन", "ସାହାଯ୍ୟ ଏବଂ ସମର୍ଥନ"), "") {
+            ProfileInfoSection(stringResource(R.string.support_legal), themeColor) {
+                SettingsClickItem(stringResource(R.string.help_support), "") {
                     navController.navigate("help_support")
                 }
-                SettingsClickItem(languageState.value.getT("Privacy Policy", "गोपनीयता नीति", "ଗୋପନୀୟତା ନୀତି"), "") {
+                SettingsClickItem(stringResource(R.string.privacy_policy), "") {
                     navController.navigate("privacy_policy")
                 }
-                SettingsClickItem(languageState.value.getT("Terms of Service", "सेवा की शर्तें", "ସେବା ସର୍ତ୍ତାବଳୀ"), "") {
+                SettingsClickItem(stringResource(R.string.terms_of_service), "") {
                     navController.navigate("terms_of_service")
                 }
             }
@@ -4110,11 +4132,11 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
             ) {
                 Icon(Icons.AutoMirrored.Filled.Logout, null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(languageState.value.getT("Logout", "लॉग आउट", "ଲଗ୍ ଆଉଟ୍"), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(stringResource(R.string.logout), fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             
             Spacer(modifier = Modifier.height(16.dp))
-            Text(languageState.value.getT("Version 1.0.0", "संस्करण 1.0.0", "ସଂସ୍କରଣ ୧.୦.୦"), color = Color.Gray, fontSize = 12.sp)
+            Text(stringResource(R.string.version_label, "1.0.0"), color = Color.Gray, fontSize = 12.sp)
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
@@ -4135,7 +4157,7 @@ fun HelpSupportScreen(navController: NavHostController, userRole: UserRole?, onR
             TopAppBar(
                 title = { 
                     Text(
-                        languageState.value.getT("Help & Support", "सहायता और समर्थन", "ସାହାଯ୍ୟ ଏବଂ ସମର୍ଥନ"), 
+                        stringResource(R.string.help_support), 
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     ) 
@@ -4163,29 +4185,29 @@ fun HelpSupportScreen(navController: NavHostController, userRole: UserRole?, onR
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             HelpItemCard(
-                title = languageState.value.getT("FAQs", "सामान्य प्रश्न", "FAQs"),
-                subtitle = languageState.value.getT("Frequently asked questions", "अक्सर पूछे जाने वाले प्रश्न", "ବାରମ୍ବାର ପଚରାଯାଉଥିବା ପ୍ରଶ୍ନ"),
+                title = stringResource(R.string.faqs),
+                subtitle = stringResource(R.string.faqs_subtitle),
                 icon = Icons.AutoMirrored.Filled.Help,
                 themeColor = themeColor,
                 onClick = onFaqs
             )
             HelpItemCard(
-                title = languageState.value.getT("Contact Support", "सहायता से संपर्क करें", "ସହାୟତା ସହିତ ଯୋଗାଯୋଗ କରନ୍ତୁ"),
-                subtitle = languageState.value.getT("Chat with our team", "हमारी टीम के साथ चैट करें", "ଆମର ଟିମ୍ ସହିତ ଚାଟ୍ କରନ୍ତୁ"),
+                title = stringResource(R.string.contact_support),
+                subtitle = stringResource(R.string.contact_support_subtitle),
                 icon = Icons.AutoMirrored.Filled.Chat,
                 themeColor = themeColor,
                 onClick = onContactSupport
             )
             HelpItemCard(
-                title = languageState.value.getT("Call Support", "कॉल सहायता", "କଲ୍ ସହାୟତା"),
+                title = stringResource(R.string.call_support),
                 subtitle = "0000-000-008",
                 icon = Icons.Default.Phone,
                 themeColor = themeColor,
                 onClick = { navController.navigate("call_support") }
             )
             HelpItemCard(
-                title = languageState.value.getT("Report an Issue", "एक समस्या की रिपोर्ट करें", "ଏକ ସମସ୍ୟା ରିପୋର୍ଟ କରନ୍ତୁ"),
-                subtitle = languageState.value.getT("Let us know your problem", "हमें अपनी समस्या बताएं", "ଆମକୁ ଆପଣଙ୍କର ସମସ୍ୟା ଜଣାନ୍ତୁ"),
+                title = stringResource(R.string.report_issue),
+                subtitle = stringResource(R.string.report_issue_subtitle),
                 icon = Icons.Default.Error,
                 themeColor = themeColor,
                 onClick = onReportIssue
@@ -4260,7 +4282,7 @@ fun ReportIssueScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            languageState.value.getT("Report an Issue", "एक समस्या की रिपोर्ट करें", "ଏକ ସମସ୍ୟା ରିପୋର୍ଟ କରନ୍ତୁ"),
+                            stringResource(R.string.report_issue),
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
@@ -4306,14 +4328,14 @@ fun ReportIssueScreen(
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = languageState.value.getT("Something not working?", "कुछ काम नहीं कर रहा?", "କିଛି କାମ କରୁନାହିଁ କି?"),
+                        text = stringResource(R.string.something_not_working),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = languageState.value.getT("Let us know about the issue you're facing.", "हमें उस समस्या के बारे में बताएं जिसका आप सामना कर रहे हैं।", "ଆପଣ କେଉଁ ସମସ୍ୟାର ସମ୍ମୁଖୀନ ହେଉଛନ୍ତି ଆମକୁ ଜଣାନ୍ତୁ |"),
+                        text = stringResource(R.string.let_us_know_issue),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.Gray,
                         textAlign = TextAlign.Center
@@ -4328,8 +4350,8 @@ fun ReportIssueScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     ReportOptionCard(
-                        title = languageState.value.getT("Report a Bug", "बग की रिपोर्ट करें", "ଏକ ବଗ୍ ରିପୋର୍ଟ କରନ୍ତୁ"),
-                        subtitle = languageState.value.getT("Let us know if something isn't working as expected.", "हमें बताएं कि क्या कुछ उम्मीद के मुताबिक काम नहीं कर रहा है।", "ଯଦି କିଛି ଆଶା ଅନୁଯାୟୀ କାମ କରୁନାହିଁ ତେବେ ଆମକୁ ଜଣାନ୍ତୁ |"),
+                        title = stringResource(R.string.report_bug),
+                        subtitle = stringResource(R.string.report_bug_subtitle),
                         icon = Icons.Default.BugReport,
                         iconColor = Color(0xFFE57373),
                         onClick = { 
@@ -4338,8 +4360,8 @@ fun ReportIssueScreen(
                         }
                     )
                     ReportOptionCard(
-                        title = languageState.value.getT("Feature Request", "सुविधा का अनुरोध", "ଫିଚର୍ ଅନୁରୋଧ"),
-                        subtitle = languageState.value.getT("Suggest a new feature or improvement.", "एक नई सुविधा या सुधार का सुझाव दें।", "ଏକ ନୂତନ ଫିଚର୍ କିମ୍ବା ଉନ୍ନତି ପାଇଁ ପରାମର୍ଶ ଦିଅନ୍ତୁ |"),
+                        title = stringResource(R.string.feature_request),
+                        subtitle = stringResource(R.string.feature_request_subtitle),
                         icon = Icons.Default.Lightbulb,
                         iconColor = Color(0xFF64B5F6),
                         onClick = {
@@ -4348,8 +4370,8 @@ fun ReportIssueScreen(
                         }
                     )
                     ReportOptionCard(
-                        title = languageState.value.getT("General Feedback", "सामान्य प्रतिक्रिया", "ସାଧାରଣ ମତାମତ"),
-                        subtitle = languageState.value.getT("Share your feedback or suggestions.", "अपनी प्रतिक्रिया या सुझाव साझा करें।", "ଆପଣଙ୍କର ମତାମତ କିମ୍ବା ପରାମର୍ଶ ସେୟାର କରନ୍ତୁ |"),
+                        title = stringResource(R.string.general_feedback),
+                        subtitle = stringResource(R.string.general_feedback_subtitle),
                         icon = Icons.Default.Feedback,
                         iconColor = Color(0xFF81C784),
                         onClick = {
@@ -4358,8 +4380,8 @@ fun ReportIssueScreen(
                         }
                     )
                     ReportOptionCard(
-                        title = languageState.value.getT("View My Reports", "मेरी रिपोर्ट देखें", "ମୋର ରିପୋର୍ଟ ଦେଖନ୍ତୁ"),
-                        subtitle = languageState.value.getT("Track the status of your reported issues.", "अपने रिपोर्ट किए गए मुद्दों की स्थिति को ट्रैक करें।", "ଆପଣଙ୍କର ରିପୋର୍ଟ ହୋଇଥିବା ସମସ୍ୟାର ସ୍ଥିତି ଟ୍ରାକ୍ କରନ୍ତୁ |"),
+                        title = stringResource(R.string.view_my_reports),
+                        subtitle = stringResource(R.string.view_my_reports_subtitle),
                         icon = Icons.AutoMirrored.Filled.Assignment,
                         iconColor = Color(0xFFBA68C8),
                         onClick = onViewReports
@@ -4392,7 +4414,7 @@ fun SubmitIssueForm(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(languageState.value.getT("Report an Issue", "एक समस्या की रिपोर्ट करें", "ଏକ ସମସ୍ୟା ରିପୋର୍ଟ କରନ୍ତୁ"), fontWeight = FontWeight.Bold, color = Color.White) },
+                title = { Text(stringResource(R.string.report_issue), fontWeight = FontWeight.Bold, color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -4413,7 +4435,7 @@ fun SubmitIssueForm(
                 colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
                 enabled = category.isNotBlank() && title.isNotBlank() && description.isNotBlank()
             ) {
-                Text(languageState.value.getT("Submit Issue", "समस्या सबमिट करें", "ସମସ୍ୟା ଦାଖଲ କରନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(stringResource(R.string.submit_issue), fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
         },
         containerColor = Color.White
@@ -4428,24 +4450,30 @@ fun SubmitIssueForm(
         ) {
             // Issue Type
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(languageState.value.getT("Issue Type", "समस्या का प्रकार", "ସମସ୍ୟାର ପ୍ରକାର"), fontWeight = FontWeight.Bold, color = Color.Black)
+                Text(stringResource(R.string.issue_type), fontWeight = FontWeight.Bold, color = Color.Black)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    IssueTypeChip("Bug", selectedType == "Bug", Color(0xFFD32F2F), Icons.Default.BugReport, modifier = Modifier.weight(1f)) { selectedType = "Bug" }
-                    IssueTypeChip("Feature", selectedType == "Feature", PrimaryBlue, Icons.Default.Lightbulb, modifier = Modifier.weight(1f)) { selectedType = "Feature" }
-                    IssueTypeChip("Feedback", selectedType == "Feedback", SuccessGreen, Icons.Default.Feedback, modifier = Modifier.weight(1f)) { selectedType = "Feedback" }
+                    IssueTypeChip(stringResource(R.string.report_bug), selectedType == "Bug", Color(0xFFD32F2F), Icons.Default.BugReport, modifier = Modifier.weight(1f)) { selectedType = "Bug" }
+                    IssueTypeChip(stringResource(R.string.feature_request), selectedType == "Feature", PrimaryBlue, Icons.Default.Lightbulb, modifier = Modifier.weight(1f)) { selectedType = "Feature" }
+                    IssueTypeChip(stringResource(R.string.feedback), selectedType == "Feedback", SuccessGreen, Icons.Default.Feedback, modifier = Modifier.weight(1f)) { selectedType = "Feedback" }
                 }
             }
 
             // Category
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(languageState.value.getT("Category", "श्रेणी", "ବର୍ଗ"), fontWeight = FontWeight.Bold, color = Color.Black)
+                Text(stringResource(R.string.category), fontWeight = FontWeight.Bold, color = Color.Black)
                 EnrollmentDropdownField(
                     label = "",
-                    selectedValue = category.ifEmpty { languageState.value.getT("Select category", "श्रेणी चुनें", "ବର୍ଗ ଚୟନ କରନ୍ତୁ") },
-                    options = listOf("App Crash", "Login Issue", "Payment Failed", "Missing Data", "Other"),
+                    selectedValue = category.ifEmpty { stringResource(R.string.select_category) },
+                    options = listOf(
+                        stringResource(R.string.app_crash),
+                        stringResource(R.string.login_issue),
+                        stringResource(R.string.payment_failed),
+                        stringResource(R.string.missing_data),
+                        stringResource(R.string.other_label)
+                    ),
                     onValueChange = { category = it },
                     borderColor = Color.LightGray.copy(alpha = 0.5f)
                 )
@@ -4453,12 +4481,12 @@ fun SubmitIssueForm(
 
             // Issue Title
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(languageState.value.getT("Issue Title *", "समस्या का शीर्षक *", "ସମସ୍ୟାର ଶୀର୍ଷକ *"), fontWeight = FontWeight.Bold, color = Color.Black)
+                Text(stringResource(R.string.issue_title_required), fontWeight = FontWeight.Bold, color = Color.Black)
                 OutlinedTextField(
                     value = title,
                     onValueChange = { if (it.length <= 100) title = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text(languageState.value.getT("Briefly describe the issue", "संक्षेप में समस्या का वर्णन करें", "ସମସ୍ୟାର ସଂକ୍ଷିପ୍ତ ବର୍ଣ୍ଣନା କରନ୍ତୁ"), color = Color.Gray) },
+                    placeholder = { Text(stringResource(R.string.briefly_describe_issue), color = Color.Gray) },
                     shape = RoundedCornerShape(12.dp),
                     supportingText = { Text("${title.length}/100", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End) },
                     colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f))
@@ -4467,12 +4495,12 @@ fun SubmitIssueForm(
 
             // Describe the Issue
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(languageState.value.getT("Describe the Issue *", "समस्या का वर्णन करें *", "ସମସ୍ୟାର ବର୍ଣ୍ଣନା କରନ୍ତୁ *"), fontWeight = FontWeight.Bold, color = Color.Black)
+                Text(stringResource(R.string.describe_issue_required), fontWeight = FontWeight.Bold, color = Color.Black)
                 OutlinedTextField(
                     value = description,
                     onValueChange = { if (it.length <= 1000) description = it },
                     modifier = Modifier.fillMaxWidth().height(150.dp),
-                    placeholder = { Text(languageState.value.getT("Please provide steps, what happened, and what you expected.", "कृपया चरण प्रदान करें, क्या हुआ, और आपने क्या अपेक्षा की थी।", "ଦୟାକରି ପଦକ୍ଷେପଗୁଡିକ ପ୍ରଦାନ କରନ୍ତୁ, କ’ଣ ଘଟିଲା, ଏବଂ ଆପଣ କ’ଣ ଆଶା କରିଥିଲେ |"), color = Color.Gray) },
+                    placeholder = { Text(stringResource(R.string.describe_issue_placeholder), color = Color.Gray) },
                     shape = RoundedCornerShape(12.dp),
                     supportingText = { Text("${description.length}/1000", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End) },
                     colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f))
@@ -4481,7 +4509,7 @@ fun SubmitIssueForm(
 
             // Attachment
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(languageState.value.getT("Attach Screenshot / Video (Optional)", "स्क्रीनशॉट / वीडियो संलग्न करें (वैकल्पिक)", "ସ୍କ୍ରିନସଟ୍ / ଭିଡିଓ ସଂଲଗ୍ନ କରନ୍ତୁ (ବୈକଳ୍ପିକ)"), fontWeight = FontWeight.Bold, color = Color.Black)
+                Text(stringResource(R.string.attach_screenshot_video_optional), fontWeight = FontWeight.Bold, color = Color.Black)
                 AttachmentBox(attachmentUri) { attachmentLauncher.launch("image/*") }
             }
             
@@ -4541,7 +4569,7 @@ fun AttachmentBox(selectedUri: Uri? = null, onAttachClick: () -> Unit) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Default.CloudUpload, null, tint = Color.Gray, modifier = Modifier.size(40.dp))
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(languageState.value.getT("Tap to upload", "अपलोड करने के लिए टैप करें", "ଅପଲୋଡ୍ କରିବାକୁ ଟ୍ୟାପ୍ କରନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Black)
+                Text(stringResource(R.string.tap_to_upload), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Black)
                 Text("PNG, JPG up to 5MB", fontSize = 12.sp, color = Color.Gray)
             }
         }
@@ -4654,10 +4682,10 @@ fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack
     val themeColor = if (isFarmer) PrimaryBlue else PrimaryGreen
 
     val tabs = listOf(
-        languageState.value.getT("All (128)", "सभी (128)", "ସମସ୍ତ (୧୨୮)"),
-        languageState.value.getT("Active (110)", "सक्रिय (110)", "ସକ୍ରିୟ (୧୧୦)"),
-        languageState.value.getT("Expired (10)", "समाप्त (10)", "ସମାପ୍ତ (୧୦)"),
-        languageState.value.getT("Claimed", "दावा किया गया", "ଦାବି ହୋଇଛି")
+        stringResource(R.string.all_count, 128),
+        stringResource(R.string.active_count, 110),
+        stringResource(R.string.expired_count, 10),
+        stringResource(R.string.claimed)
     )
 
     ResponsiveLayout(
@@ -4665,7 +4693,7 @@ fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack
             Scaffold(
                 topBar = {
                     TopAppBar(
-                        title = { Text(languageState.value.getT("Goat List", "बकरियों की सूची", "ଛେଳି ତାଲିକା"), fontWeight = FontWeight.Bold) },
+                        title = { Text(stringResource(R.string.goat_list), fontWeight = FontWeight.Bold) },
                         navigationIcon = {
                             IconButton(onClick = onBack) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -4713,24 +4741,24 @@ fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack
                             if (currentRoute != route) navController.navigate(route) 
                         }, 
                         icon = { Icon(Icons.Default.Home, null) }, 
-                        label = { Text(languageState.value.getT("Home", "होम", "ମୁଖ୍ୟ ପୃଷ୍ଠା")) },
+                        label = { Text(stringResource(R.string.home)) },
                         colors = NavigationRailItemDefaults.colors(selectedIconColor = themeColor, selectedTextColor = themeColor, unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray, indicatorColor = Color.Transparent)
                     )
                     NavigationRailItem(
                         selected = currentRoute == "goat_list", 
                         onClick = { if (currentRoute != "goat_list") navController.navigate("goat_list") }, 
                         icon = { Icon(painterResource(R.drawable.ic_ewe_custom), null) }, 
-                        label = { Text(languageState.value.getT("Goats", "बकरियां", "ଛେଳି")) },
+                        label = { Text(stringResource(R.string.goats)) },
                         colors = NavigationRailItemDefaults.colors(selectedIconColor = themeColor, selectedTextColor = themeColor, unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray, indicatorColor = Color.Transparent)
                     )
                     if (!isFarmer) {
-                        NavigationRailItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Vaccines, null) }, label = { Text(languageState.value.getT("Vaccines", "टीकाकरण", "ଟୀକା")) }, colors = NavigationRailItemDefaults.colors(unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray))
+                        NavigationRailItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Vaccines, null) }, label = { Text(stringResource(R.string.vaccines)) }, colors = NavigationRailItemDefaults.colors(unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray))
                     }
                 }
                 Scaffold(
                     topBar = {
                         TopAppBar(
-                            title = { Text(languageState.value.getT("Goat List", "बकरियों की सूची", "ଛେଳି ତାଲିକା"), fontWeight = FontWeight.Bold) },
+                            title = { Text(stringResource(R.string.goat_list), fontWeight = FontWeight.Bold) },
                             colors = TopAppBarDefaults.topAppBarColors(
                                 containerColor = themeColor,
                                 titleContentColor = Color.White
@@ -4769,7 +4797,6 @@ fun GoatListContent(
     onReportDeath: (String) -> Unit,
     onGoatClick: (String) -> Unit
 ) {
-    val languageState = LocalAppLanguage.current
     val context = LocalContext.current
     Column(modifier = Modifier.padding(padding)) {
         // Search Bar
@@ -4777,7 +4804,7 @@ fun GoatListContent(
             value = searchQuery,
             onValueChange = onSearchChange,
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            placeholder = { Text(languageState.value.getT("Search by ear tag or farmer name", "कान के टैग या किसान के नाम से खोजें", "କାନ ଟ୍ୟାଗ୍ କିମ୍ବା କୃଷକଙ୍କ ନାମ ଅନୁସାରେ ଖୋଜନ୍ତୁ")) },
+            placeholder = { Text(stringResource(R.string.search_goat_placeholder)) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
             shape = RoundedCornerShape(24.dp),
             singleLine = true,
@@ -4852,19 +4879,22 @@ fun GoatListContent(
                                 }
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
+                                    val blackBengal = stringResource(R.string.black_bengal)
+                                    val female = stringResource(R.string.female)
+                                    val age = stringResource(R.string.age_months_suffix, 12)
                                     Text(goat.first, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black)
-                                    Text("Black Bengal • ${languageState.value.getT("Female", "मादा", "ମାଈ")} • 12M", color = Color.Gray, fontSize = 12.sp)
+                                    Text(stringResource(R.string.breed_gender_age_format, blackBengal, female, age), color = Color.Gray, fontSize = 12.sp)
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        if (isExpired) languageState.value.getT("Policy Expired", "पॉलिसी समाप्त", "ନୀତି ସମାପ୍ତ") 
-                                        else languageState.value.getT("Policy Active", "पॉलिसी सक्रिय", "ନୀତି ସକ୍ରିୟ"), 
+                                        if (isExpired) stringResource(R.string.policy_expired) 
+                                        else stringResource(R.string.policy_active), 
                                         color = if (isExpired) Color.Red else SuccessGreen, 
                                         fontWeight = FontWeight.Bold, 
                                         fontSize = 13.sp
                                     )
                                     Text(
-                                        if (isExpired) languageState.value.getT("Expired on: 31 May 2024", "31 मई 2024 को समाप्त", "୩୧ ମଇ ୨୦୨୪ ରେ ସମାପ୍ତ") 
-                                        else languageState.value.getT("Valid till 31 May 2025", "31 मई 2025 तक मान्य", "୩୧ ମଇ ୨୦୨୫ ପର୍ଯ୍ୟନ୍ତ ବୈଧ"), 
+                                        if (isExpired) stringResource(R.string.expired_on, "31 May 2024") 
+                                        else stringResource(R.string.valid_till, "31 May 2025"), 
                                         fontSize = 11.sp, 
                                         color = Color.Gray
                                     )
@@ -4881,7 +4911,7 @@ fun GoatListContent(
                                     shape = RoundedCornerShape(8.dp),
                                     contentPadding = PaddingValues(0.dp)
                                 ) {
-                                    Text(languageState.value.getT("Report Death", "मृत्यु की सूचना", "ମୃତ୍ୟୁ ରିପୋର୍ଟ"), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    Text(stringResource(R.string.report_death), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                 }
                                 Button(
                                     onClick = { onGoatClick(goat.first) },
@@ -4890,7 +4920,7 @@ fun GoatListContent(
                                     shape = RoundedCornerShape(8.dp),
                                     contentPadding = PaddingValues(0.dp)
                                 ) {
-                                    Text(languageState.value.getT("View Policy", "नीति देखें", "ନୀତି ଦେଖନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    Text(stringResource(R.string.view_policy), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                 }
                             }
                         }
@@ -4955,7 +4985,7 @@ fun GoatListContent(
 
                                     // Goats List
                                     Text(
-                                        text = languageState.value.getT("Registered Goats", "पंजीकृत बकरियां", "ପଞ୍ଜିକୃତ ଛେଳି"),
+                                        text = stringResource(R.string.registered_goats),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = themeColor,
                                         fontWeight = FontWeight.Bold
@@ -4987,8 +5017,8 @@ fun GoatListContent(
                                                 Column(modifier = Modifier.weight(1f)) {
                                                     Text(goat.first, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                                     Text(
-                                                        if (isExpired) languageState.value.getT("Policy Expired", "पॉलिसी समाप्त", "ନୀତି ସମାପ୍ତ") 
-                                                        else languageState.value.getT("Policy Active", "पॉलिसी सक्रिय", "ନୀତି ସକ୍ରିୟ"),
+                                                        if (isExpired) stringResource(R.string.policy_expired) 
+                                                        else stringResource(R.string.policy_active),
                                                         color = if (isExpired) Color.Red else SuccessGreen,
                                                         fontWeight = FontWeight.Bold,
                                                         fontSize = 12.sp
@@ -5008,7 +5038,7 @@ fun GoatListContent(
                                     // Show summary when collapsed
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        text = "${goats.size} " + languageState.value.getT("Goats Registered", "बकरियां पंजीकृत", "ଛେଳି ପଞ୍ଜିକୃତ"),
+                                        text = stringResource(R.string.goats_registered_count, goats.size),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = themeColor,
                                         fontWeight = FontWeight.Medium
@@ -5027,7 +5057,6 @@ fun GoatListContent(
 @Composable
 fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: UserRole?, onBack: () -> Unit) {
     val backgroundColor = Color(0xFFF8F9F5)
-    val languageState = LocalAppLanguage.current
     
     val isFarmer = userRole == UserRole.FARMER
     val themeColor = if (isFarmer) PrimaryBlue else PrimaryGreen
@@ -5071,7 +5100,7 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                         }
                         Text(
-                            languageState.value.getT("Goat Details", "बकरी का विवरण", "ଛେଳି ବିବରଣୀ"),
+                            stringResource(R.string.goat_details),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -5105,8 +5134,8 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
                         color = Color.White
                     )
                     Text(
-                        if (isExpired) languageState.value.getT("Policy Expired", "पॉलिसी समाप्त", "ନୀତି ସମାପ୍ତ")
-                        else languageState.value.getT("Policy Active", "पॉलिसी सक्रिय", "ନୀତି ସକ୍ରିୟ"),
+                        if (isExpired) stringResource(R.string.policy_expired)
+                        else stringResource(R.string.policy_active),
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (isExpired) Color(0xFFFFCDD2) else Color.White.copy(alpha = 0.8f)
                     )
@@ -5122,41 +5151,41 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Farmer Information
-                ProfileInfoSection(languageState.value.getT("Farmer Information", "किसान जानकारी", "କୃଷକ ସୂଚନା"), themeColor) {
-                    ProfileInfoItem(languageState.value.getT("Farmer Name", "किसान का नाम", "କୃଷକଙ୍କ ନାମ"), goat.second)
-                    ProfileInfoItem(languageState.value.getT("Village", "गाँव", "ଗ୍ରାମ"), goat.third)
-                    ProfileInfoItem(languageState.value.getT("Aadhaar Number", "आधार नंबर", "ଆଧାର ନମ୍ବର"), "**** **** 1234")
+                ProfileInfoSection(stringResource(R.string.farmer_information), themeColor) {
+                    ProfileInfoItem(stringResource(R.string.farmer_name), goat.second)
+                    ProfileInfoItem(stringResource(R.string.village), goat.third)
+                    ProfileInfoItem(stringResource(R.string.aadhaar_number), "**** **** 1234")
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Goat Details
-                ProfileInfoSection(languageState.value.getT("Goat Details", "बकरी का विवरण", "ଛେଳି ବିବରଣୀ"), themeColor) {
-                    ProfileInfoItem(languageState.value.getT("Breed", "नस्ल", "ପ୍ରଜାତି"), "Black Bengal")
-                    ProfileInfoItem(languageState.value.getT("Gender", "लिंग", "ଲିଙ୍ଗ"), languageState.value.getT("Female", "मादा", "ମାଈ"))
-                    ProfileInfoItem(languageState.value.getT("Age", "आयु", "ବୟସ"), "14 " + languageState.value.getT("Months", "महीने", "ମାସ"))
-                    ProfileInfoItem(languageState.value.getT("Weight", "वजन", "ଓଜନ"), "19 KG")
-                    ProfileInfoItem(languageState.value.getT("Color / Marks", "रंग / निशान", "ରଙ୍ଗ / ଚିହ୍ନ"), "Black with White Spots")
+                ProfileInfoSection(stringResource(R.string.goat_details), themeColor) {
+                    ProfileInfoItem(stringResource(R.string.breed), stringResource(R.string.black_bengal))
+                    ProfileInfoItem(stringResource(R.string.gender), stringResource(R.string.female))
+                    ProfileInfoItem(stringResource(R.string.age), "14 " + stringResource(R.string.months))
+                    ProfileInfoItem(stringResource(R.string.weight), "19 KG")
+                    ProfileInfoItem(stringResource(R.string.color_marks_label), stringResource(R.string.color_marks_value))
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Policy Details
-                ProfileInfoSection(languageState.value.getT("Policy Information", "पॉलिसी जानकारी", "ନୀତି ସୂଚନା"), themeColor) {
-                    ProfileInfoItem(languageState.value.getT("Policy Number", "पॉलिसी नंबर", "ନୀତି ନମ୍ବର"), if (isExpired) "POL-2023-00567" else "POL-2024-00125")
-                    ProfileInfoItem(languageState.value.getT("Issue Date", "जारी करने की तारीख", "ପ୍ରଦାନ ତାରିଖ"), if (isExpired) "01 Jun 2023" else "01 Aug 2024")
-                    ProfileInfoItem(languageState.value.getT("End Date", "समाप्ति तिथि", "ଶେଷ ତାରିଖ"), if (isExpired) "31 May 2024" else "31 Jul 2025")
-                    ProfileInfoItem(languageState.value.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), "₹ 8,500")
+                ProfileInfoSection(stringResource(R.string.policy_information), themeColor) {
+                    ProfileInfoItem(stringResource(R.string.policy_number), if (isExpired) "POL-2023-00567" else "POL-2024-00125")
+                    ProfileInfoItem(stringResource(R.string.issue_date), if (isExpired) "01 Jun 2023" else "01 Aug 2024")
+                    ProfileInfoItem(stringResource(R.string.end_date), if (isExpired) "31 May 2024" else "31 Jul 2025")
+                    ProfileInfoItem(stringResource(R.string.sum_insured), "₹ 8,500")
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Vaccination History
-                ProfileInfoSection(languageState.value.getT("Vaccination History", "टीकाकरण इतिहास", "ଟୀକାକରଣ ଇତିହାସ"), themeColor) {
-                    VaccineStatusItem("PPR Vaccine", true, themeColor) {}
-                    VaccineStatusItem("ET + TT Vaccine", true, themeColor) {}
-                    VaccineStatusItem("FMD Vaccine", false, themeColor) {}
-                    VaccineStatusItem("Goat Pox Vaccine", false, themeColor) {}
+                ProfileInfoSection(stringResource(R.string.vaccination_history), themeColor) {
+                    VaccineStatusItem(stringResource(R.string.vaccine_ppr), true, themeColor) {}
+                    VaccineStatusItem(stringResource(R.string.vaccine_ettt), true, themeColor) {}
+                    VaccineStatusItem(stringResource(R.string.vaccine_fmd), false, themeColor) {}
+                    VaccineStatusItem(stringResource(R.string.vaccine_goat_pox), false, themeColor) {}
                 }
             }
         }
@@ -5166,14 +5195,13 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VaccineListScreen(navController: NavHostController, onBack: () -> Unit, onRecord: (String) -> Unit) {
-    val languageState = LocalAppLanguage.current
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableIntStateOf(0) }
 
     val tabs = listOf(
-        languageState.value.getT("Upcoming (15)", "आगामी (15)", "ଆଗାମୀ (୧୫)"),
-        languageState.value.getT("Completed", "पूरा हुआ", "ସମ୍ପୂର୍ଣ୍ଣ"),
-        languageState.value.getT("All", "सभी", "ସମସ୍ତ")
+        stringResource(R.string.upcoming_count, 15),
+        stringResource(R.string.completed_count),
+        stringResource(R.string.all_label)
     )
 
     ResponsiveLayout(
@@ -5181,7 +5209,7 @@ fun VaccineListScreen(navController: NavHostController, onBack: () -> Unit, onRe
             Scaffold(
                 topBar = {
                     TopAppBar(
-                        title = { Text(languageState.value.getT("Vaccinations", "टीकाकरण", "ଟୀକାକରଣ"), fontWeight = FontWeight.Bold) },
+                        title = { Text(stringResource(R.string.vaccinations), fontWeight = FontWeight.Bold) },
                         navigationIcon = {
                             IconButton(onClick = onBack) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -5210,28 +5238,28 @@ fun VaccineListScreen(navController: NavHostController, onBack: () -> Unit, onRe
                         selected = currentRoute == "didi_dashboard", 
                         onClick = { if (currentRoute != "didi_dashboard") navController.navigate("didi_dashboard") }, 
                         icon = { Icon(Icons.Default.Home, null) }, 
-                        label = { Text(languageState.value.getT("Home", "होम", "ମୁଖ୍ୟ ପୃଷ୍ଠା")) },
+                        label = { Text(stringResource(R.string.home)) },
                         colors = NavigationRailItemDefaults.colors(selectedIconColor = PrimaryGreen, selectedTextColor = PrimaryGreen, unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray, indicatorColor = Color.Transparent)
                     )
                     NavigationRailItem(
                         selected = currentRoute == "goat_list", 
                         onClick = { if (currentRoute != "goat_list") navController.navigate("goat_list") }, 
                         icon = { Icon(painterResource(R.drawable.ic_ewe_custom), null) }, 
-                        label = { Text(languageState.value.getT("Goats", "बकरियां", "ଛେଳି")) },
+                        label = { Text(stringResource(R.string.goats)) },
                         colors = NavigationRailItemDefaults.colors(selectedIconColor = PrimaryGreen, selectedTextColor = PrimaryGreen, unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray, indicatorColor = Color.Transparent)
                     )
                     NavigationRailItem(
                         selected = currentRoute == "vaccine_list", 
                         onClick = { if (currentRoute != "vaccine_list") navController.navigate("vaccine_list") }, 
                         icon = { Icon(Icons.Default.MedicalServices, null) }, 
-                        label = { Text(languageState.value.getT("Vaccines", "टीकाकरण", "ଟୀକା")) },
+                        label = { Text(stringResource(R.string.vaccines)) },
                         colors = NavigationRailItemDefaults.colors(selectedIconColor = PrimaryGreen, selectedTextColor = PrimaryGreen, unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray, indicatorColor = Color.Transparent)
                     )
                 }
                 Scaffold(
                     topBar = {
                         TopAppBar(
-                            title = { Text(languageState.value.getT("Vaccinations", "टीकाकरण", "ଟୀକାକରଣ"), fontWeight = FontWeight.Bold) },
+                            title = { Text(stringResource(R.string.vaccinations), fontWeight = FontWeight.Bold) },
                             colors = TopAppBarDefaults.topAppBarColors(
                                 containerColor = PrimaryGreen,
                                 titleContentColor = Color.White
@@ -5258,14 +5286,13 @@ fun VaccineListContent(
     onTabChange: (Int) -> Unit,
     onRecord: (String) -> Unit
 ) {
-    val languageState = LocalAppLanguage.current
     Column(modifier = Modifier.padding(padding)) {
         // Search Bar
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearchChange,
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            placeholder = { Text(languageState.value.getT("Search by ear tag or vaccine name", "कान के टैग या टीके के नाम से खोजें", "କାନ ଟ୍ୟାଗ୍ କିମ୍ବା ଟୀକା ନାମ ଅନୁସାରେ ଖୋଜନ୍ତୁ")) },
+            placeholder = { Text(stringResource(R.string.search_vaccine_placeholder)) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
             shape = RoundedCornerShape(24.dp),
             singleLine = true,
@@ -5391,7 +5418,7 @@ fun VaccineListContent(
                                             Spacer(modifier = Modifier.width(12.dp))
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(vaccine["tag"] ?: "", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                                                Text("${vaccine["name"]} • ${if (isCompleted) "Done" else "Due"}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = if (isCompleted) SuccessGreen else AccentOrange)
+                                                Text("${vaccine["name"]} • ${if (isCompleted) stringResource(R.string.done) else stringResource(R.string.pending)}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = if (isCompleted) SuccessGreen else AccentOrange)
                                                 Text(vaccine["date"] ?: "", fontSize = 12.sp, color = Color.Black)
                                             }
                                             OutlinedButton(
@@ -5401,7 +5428,7 @@ fun VaccineListContent(
                                                 border = BorderStroke(1.dp, PrimaryGreen),
                                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                                             ) {
-                                                Text(languageState.value.getT("Record", "रिकॉर्ड", "ରେକର୍ଡ"), color = PrimaryGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                Text(stringResource(R.string.record), color = PrimaryGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                             }
                                         }
                                     }
@@ -5412,7 +5439,7 @@ fun VaccineListContent(
                             } else {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "${vaccines.size} " + languageState.value.getT("Vaccinations Pending/Scheduled", "टीकाकरण लंबित/निर्धारित", "ଟୀକାକରଣ ବାକି ଅଛି"),
+                                    text = stringResource(R.string.vaccinations_pending_scheduled, vaccines.size),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = PrimaryGreen,
                                     fontWeight = FontWeight.Medium
@@ -5429,9 +5456,9 @@ fun VaccineListContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
-    val languageState = LocalAppLanguage.current
     val context = LocalContext.current
-    var vaccineType by remember { mutableStateOf("PPR Vaccine") }
+    val pprLabel = stringResource(R.string.vaccine_ppr_label)
+    var vaccineType by remember(pprLabel) { mutableStateOf(pprLabel) }
     var batchNumber by remember { mutableStateOf("PPR-2406-01") }
     var vaccinationDate by remember { mutableStateOf("15 Jun 2024") }
     
@@ -5471,7 +5498,7 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(languageState.value.getT("Record Vaccination", "टीकाकरण रिकॉर्ड करें", "ଟୀକାକରଣ ରେକର୍ଡ କରନ୍ତୁ"), fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.record_vaccination), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -5518,9 +5545,12 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
+                        val blackBengal = stringResource(R.string.black_bengal)
+                        val female = stringResource(R.string.female)
+                        val age = stringResource(R.string.age_months_suffix, 12)
                         Text(tag, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         Text(goat.second, fontSize = 13.sp, color = Color.Gray)
-                        Text("Black Bengal • ${languageState.value.getT("Female", "मादा", "ମାଈ")} • 12M", fontSize = 13.sp, color = Color.Gray)
+                        Text(stringResource(R.string.breed_gender_age_format, blackBengal, female, age), fontSize = 13.sp, color = Color.Gray)
                     }
                 }
             }
@@ -5528,16 +5558,21 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(24.dp))
             
             EnrollmentDropdownField(
-                label = languageState.value.getT("Vaccine Type *", "टीका का प्रकार *", "ଟୀକା ପ୍ରକାର *"),
+                label = stringResource(R.string.vaccine_type),
                 selectedValue = vaccineType,
-                options = listOf("PPR Vaccine", "ET + TT Vaccine", "FMD Vaccine", "Goat Pox Vaccine"),
+                options = listOf(
+                    stringResource(R.string.vaccine_ppr_label),
+                    stringResource(R.string.vaccine_ettt_label),
+                    stringResource(R.string.vaccine_fmd_label),
+                    stringResource(R.string.vaccine_goat_pox_label)
+                ),
                 onValueChange = { vaccineType = it }
             )
             
             Spacer(modifier = Modifier.height(16.dp))
             
             EnrollmentDropdownField(
-                label = languageState.value.getT("Batch Number *", "बैच संख्या *", "ବ୍ୟାଚ୍ ନମ୍ବର *"),
+                label = stringResource(R.string.batch_number),
                 selectedValue = batchNumber,
                 options = listOf("PPR-2406-01", "PPR-2406-02", "ETTT-2405-09"),
                 onValueChange = { batchNumber = it }
@@ -5546,7 +5581,7 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
             
             EnrollmentTextField(
-                label = languageState.value.getT("Vaccination Date *", "टीकाकरण की तारीख *", "ଟୀକାକରଣ ତାରିଖ *"),
+                label = stringResource(R.string.vaccination_date),
                 value = vaccinationDate,
                 onValueChange = { vaccinationDate = it },
                 trailingIcon = Icons.Default.CalendarToday,
@@ -5568,7 +5603,7 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(24.dp))
             
             Text(
-                languageState.value.getT("Photo (Vaccine Label) *", "फोटो (टीका लेबल) *", "ଫଟୋ (ଟୀକା ଲେବଲ୍) *"),
+                stringResource(R.string.photo_vaccine_label),
                 fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black, modifier = Modifier.padding(bottom = 8.dp)
             )
             
@@ -5596,7 +5631,7 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
             ) {
-                Text(languageState.value.getT("Save Record", "रिकॉर्ड सहेजें", "ରେକର୍ଡ ସଂରକ୍ଷଣ କରନ୍ତୁ"), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.save_record), fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
             
             Spacer(modifier = Modifier.height(24.dp))
@@ -5666,7 +5701,7 @@ fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBac
                             selected = true, 
                             onClick = { }, 
                             icon = { Icon(Icons.Default.Home, null) }, 
-                            label = { Text(languageState.value.getT("Dashboard", "डैशबोर्ड", "ଡ୍ୟାସବୋର୍ଡ")) },
+                            label = { Text(stringResource(R.string.dashboard)) },
                             colors = NavigationRailItemDefaults.colors(selectedIconColor = CoordinatorOrange, selectedTextColor = CoordinatorOrange, unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray, indicatorColor = Color.Transparent)
                         )
                     }
@@ -5683,7 +5718,7 @@ fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBac
                             selected = true, 
                             onClick = { }, 
                             icon = { Icon(Icons.Default.Home, null) }, 
-                            label = { Text(languageState.value.getT("Home", "होम", "ମୁଖ୍ୟ ପୃଷ୍ଠା")) },
+                            label = { Text(stringResource(R.string.home)) },
                             colors = NavigationRailItemDefaults.colors(
                                 selectedIconColor = PrimaryBlue,
                                 selectedTextColor = PrimaryBlue,
@@ -5696,7 +5731,7 @@ fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBac
                             selected = false, 
                             onClick = { navController.navigate("goat_list") }, 
                             icon = { Icon(painterResource(R.drawable.ic_ewe_custom), null, modifier = Modifier.size(24.dp)) }, 
-                            label = { Text(languageState.value.getT("My Goats", "मेरी बकरियां", "ମୋର ଛେଳି")) },
+                            label = { Text(stringResource(R.string.my_goats)) },
                             colors = NavigationRailItemDefaults.colors(
                                 selectedIconColor = PrimaryBlue,
                                 selectedTextColor = PrimaryBlue,
@@ -5712,21 +5747,21 @@ fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBac
                             selected = currentRoute == "didi_dashboard", 
                             onClick = { if (currentRoute != "didi_dashboard") navController.navigate("didi_dashboard") }, 
                             icon = { Icon(Icons.Default.Home, null) }, 
-                            label = { Text(languageState.value.getT("Home", "होम", "ମୁଖ୍ୟ ପୃଷ୍ଠା")) },
+                            label = { Text(stringResource(R.string.home)) },
                             colors = NavigationRailItemDefaults.colors(selectedIconColor = PrimaryGreen, selectedTextColor = PrimaryGreen, unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray, indicatorColor = Color.Transparent)
                         )
                         NavigationRailItem(
                             selected = currentRoute == "goat_list", 
                             onClick = { if (currentRoute != "goat_list") navController.navigate("goat_list") }, 
                             icon = { Icon(painterResource(R.drawable.ic_ewe_custom), null) }, 
-                            label = { Text(languageState.value.getT("Goats", "बकरियां", "ଛେଳି")) },
+                            label = { Text(stringResource(R.string.goats)) },
                             colors = NavigationRailItemDefaults.colors(selectedIconColor = PrimaryGreen, selectedTextColor = PrimaryGreen, unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray, indicatorColor = Color.Transparent)
                         )
                         NavigationRailItem(
                             selected = currentRoute == "vaccine_list", 
                             onClick = { if (currentRoute != "vaccine_list") navController.navigate("vaccine_list") }, 
                             icon = { Icon(Icons.Default.MedicalServices, null) }, 
-                            label = { Text(languageState.value.getT("Vaccines", "टीकाकरण", "ଟୀକା")) },
+                            label = { Text(stringResource(R.string.vaccines)) },
                             colors = NavigationRailItemDefaults.colors(selectedIconColor = PrimaryGreen, selectedTextColor = PrimaryGreen, unselectedIconColor = Color.Gray, unselectedTextColor = Color.Gray, indicatorColor = Color.Transparent)
                         )
                     }
@@ -5734,7 +5769,7 @@ fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBac
                 Scaffold(
                     topBar = {
                         TopAppBar(
-                            title = { Text(languageState.value.getT("Claims", "दावे", "ଦାବି"), fontWeight = FontWeight.Bold, color = Color.White) },
+                            title = { Text(stringResource(R.string.claims), fontWeight = FontWeight.Bold, color = Color.White) },
                             navigationIcon = {
                                 IconButton(onClick = onBack) {
                                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -5767,7 +5802,6 @@ fun CoordinatorClaimListContent(
     themeColor: Color,
     onClaimClick: (String) -> Unit
 ) {
-    val languageState = LocalAppLanguage.current
     var selectedTab by remember { mutableIntStateOf(0) }
     
     Column(modifier = Modifier.padding(padding)) {
@@ -5783,14 +5817,14 @@ fun CoordinatorClaimListContent(
             Column(modifier = Modifier.padding(12.dp)) {
                 Row(modifier = Modifier.fillMaxWidth()) {
                     CoordinatorStatCard(
-                        label = languageState.value.getT("Total Claims", "कुल दावे", "ମୋଟ ଦାବି"),
+                        label = stringResource(R.string.total_claims),
                         value = "152",
                         icon = Icons.AutoMirrored.Filled.Assignment,
                         modifier = Modifier.weight(1f)
                     )
                     Box(modifier = Modifier.width(1.dp).height(40.dp).background(Color.White.copy(alpha = 0.2f)).align(Alignment.CenterVertically))
                     CoordinatorStatCard(
-                        label = languageState.value.getT("In Progress", "प्रगति में", "ପ୍ରଗତିରେ ଅଛି"),
+                        label = stringResource(R.string.in_progress),
                         value = "54",
                         icon = Icons.Default.History,
                         modifier = Modifier.weight(1f)
@@ -5799,14 +5833,14 @@ fun CoordinatorClaimListContent(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color.White.copy(alpha = 0.2f))
                 Row(modifier = Modifier.fillMaxWidth()) {
                     CoordinatorStatCard(
-                        label = languageState.value.getT("Completed", "पूरा हुआ", "ସମ୍ପୂର୍ଣ୍ଣ"),
+                        label = stringResource(R.string.status_completed),
                         value = "68",
                         icon = Icons.AutoMirrored.Filled.FactCheck,
                         modifier = Modifier.weight(1f)
                     )
                     Box(modifier = Modifier.width(1.dp).height(40.dp).background(Color.White.copy(alpha = 0.2f)).align(Alignment.CenterVertically))
                     CoordinatorStatCard(
-                        label = languageState.value.getT("Pending Action", "लंबित कार्रवाई", "ବାକି ଥିବା କାର୍ଯ୍ୟ"),
+                        label = stringResource(R.string.pending_action),
                         value = "30",
                         icon = Icons.Default.History, 
                         modifier = Modifier.weight(1f)
@@ -5823,7 +5857,7 @@ fun CoordinatorClaimListContent(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .height(56.dp),
-            placeholder = { Text(languageState.value.getT("Search by Claim ID, Farmer, Tag No.", "दावा आईडी, किसान, टैग नंबर द्वारा खोजें", "ଦାବି ID, କୃଷକ, ଟ୍ୟାଗ୍ ନମ୍ବର ଦ୍ୱାରା ଖୋଜନ୍ତୁ"), fontSize = 12.sp) },
+            placeholder = { Text(stringResource(R.string.search_claim_placeholder), fontSize = 12.sp) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
             shape = RoundedCornerShape(12.dp),
             singleLine = true,
@@ -5836,9 +5870,9 @@ fun CoordinatorClaimListContent(
 
         // Tabs
         val tabs = listOf(
-            languageState.value.getT("All (152)", "सभी (152)", "ସମସ୍ତ (୧୫୨)"),
-            languageState.value.getT("In Progress (54)", "प्रगति में (54)", "ପ୍ରଗତିରେ ଅଛି (୫୪)"),
-            languageState.value.getT("Pending (30)", "लंबित (30)", "ବାକି (୩୦)")
+            stringResource(R.string.all_total_count, 152),
+            stringResource(R.string.in_progress_count, 54),
+            stringResource(R.string.status_pending) + " (30)"
         )
         
         TabRow(
@@ -5915,7 +5949,7 @@ fun CoordinatorClaimListContent(
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(didiName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = Color.Black)
-                                    Text("${claims.size} Claims by Didi", style = MaterialTheme.typography.bodySmall, color = themeColor)
+                                    Text(stringResource(R.string.claims_by_didi, claims.size), style = MaterialTheme.typography.bodySmall, color = themeColor)
                                 }
                                 Icon(
                                     imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
@@ -5976,7 +6010,6 @@ fun DidiClaimListContent(
     isFarmer: Boolean = false,
     onClaimClick: (String) -> Unit
 ) {
-    val languageState = LocalAppLanguage.current
     var selectedTab by remember { mutableIntStateOf(0) }
     
     Column(modifier = Modifier.padding(padding)) {
@@ -5997,7 +6030,7 @@ fun DidiClaimListContent(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = languageState.value.getT("Total Claims", "कुल दावे", "ମୋଟ ଦାବି"),
+                            text = stringResource(R.string.total_claims),
                             color = Color.White.copy(alpha = 0.8f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium
@@ -6010,7 +6043,7 @@ fun DidiClaimListContent(
                             modifier = Modifier.padding(vertical = 2.dp)
                         )
                         Text(
-                            text = languageState.value.getT("This Month", "इस महीने", "ଏହି ମାସ"),
+                            text = stringResource(R.string.this_month),
                             color = Color.White.copy(alpha = 0.8f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium
@@ -6031,12 +6064,14 @@ fun DidiClaimListContent(
                         modifier = Modifier.weight(1.3f),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        ClaimStatRow(languageState.value.getT("In Progress", "प्रगति में", "ପ୍ରଗତିରେ ଅଛି"), "28")
-                        ClaimStatRow(languageState.value.getT("Completed", "पूरा हुआ", "ସମ୍ପୂର୍ଣ୍ଣ"), "15")
-                        ClaimStatRow(languageState.value.getT("Pending", "लंबित", "ବାକି ଅଛି"), "5")
+                        ClaimStatRow(stringResource(R.string.in_progress), "28")
+                        ClaimStatRow(stringResource(R.string.status_completed), "15")
+                        ClaimStatRow(stringResource(R.string.status_pending), "5")
                     }
                 }
             }
+        } else {
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
         // Search Bar
@@ -6047,7 +6082,7 @@ fun DidiClaimListContent(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .height(56.dp),
-            placeholder = { Text(languageState.value.getT("Search by Claim ID, Farmer, Tag No.", "दावा आईडी, किसान, टैग नंबर द्वारा खोजें", "ଦାବି ID, କୃଷକ, ଟ୍ୟାଗ୍ ନମ୍ବର ଦ୍ୱାରା ଖୋଜନ୍ତୁ"), fontSize = 12.sp) },
+            placeholder = { Text(stringResource(R.string.search_claim_placeholder), fontSize = 12.sp) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
             shape = RoundedCornerShape(12.dp),
             singleLine = true,
@@ -6063,15 +6098,15 @@ fun DidiClaimListContent(
         // Tabs
         val tabs = if (isFarmer) {
             listOf(
-                languageState.value.getT("All", "सभी", "ସମସ୍ତ"),
-                languageState.value.getT("In Progress", "प्रगति में", "ପ୍ରଗତିରେ ଅଛି"),
-                languageState.value.getT("Completed", "पूरा हुआ", "ସମ୍ପୂର୍ଣ୍ଣ")
+                stringResource(R.string.all_label),
+                stringResource(R.string.in_progress),
+                stringResource(R.string.status_completed)
             )
         } else {
             listOf(
-                languageState.value.getT("All (48)", "सभी (48)", "ସମସ୍ତ (୪୮)"),
-                languageState.value.getT("My Assigned (18)", "मेरे द्वारा असाइन (18)", "ମୋ ଦ୍ଵାରା ଧାର୍ଯ୍ୟ (୧୮)"),
-                languageState.value.getT("In Progress (28)", "प्रगति में (28)", "ପ୍ରଗତିରେ ଅଛି (୨୮)")
+                stringResource(R.string.all_total_count, 48),
+                stringResource(R.string.my_assigned_count, 18),
+                stringResource(R.string.in_progress_count, 28)
             )
         }
         
@@ -6117,7 +6152,8 @@ fun DidiClaimListContent(
             (it["tag"] ?: "").contains(searchQuery, ignoreCase = true)
         }.filter {
             if (isFarmer) {
-                when (selectedTab) {
+                // Farmer dashboard: only show claims belonging to the logged-in farmer (Mock: Ramesh Kumar)
+                it["farmer"] == "Ramesh Kumar" && when (selectedTab) {
                     1 -> it["status"] == "In Progress" || it["status"] == "Verification" || it["status"] == "Didi Visit"
                     2 -> it["status"] == "Completed"
                     else -> true
@@ -6131,22 +6167,24 @@ fun DidiClaimListContent(
             }
         }
 
-        val groupedClaims = filteredClaims.groupBy { it["farmer"] ?: "Unknown" }
-        val expandedFarmers = remember { mutableStateMapOf<String, Boolean>() }
-
         LazyColumn(
             modifier = Modifier.fillMaxSize(), 
             contentPadding = PaddingValues(16.dp), 
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (isFarmer) {
+                // Farmer view: direct list of claims
                 items(filteredClaims) { claim ->
                     DidiClaimCard(claim, themeColor, isFarmer = true) { onClaimClick(claim["id"] ?: "") }
                 }
             } else {
+                // Didi view: grouped by farmer
+                val groupedClaims = filteredClaims.groupBy { it["farmer"] ?: "Unknown" }
+                val expandedFarmers = mutableStateMapOf<String, Boolean>()
+                
                 groupedClaims.forEach { (farmerName, claims) ->
                     item {
-                        val isExpanded = expandedFarmers[farmerName] ?: false
+                        var isExpanded by remember { mutableStateOf(false) }
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -6159,7 +6197,7 @@ fun DidiClaimListContent(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { expandedFarmers[farmerName] = !isExpanded },
+                                        .clickable { isExpanded = !isExpanded },
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Surface(
@@ -6174,7 +6212,7 @@ fun DidiClaimListContent(
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(farmerName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.Black)
-                                        Text("${claims.size} " + languageState.value.getT("Claims by Farmer", "किसान द्वारा दावे", "କୃଷକଙ୍କ ଦ୍ୱାରା ଦାବି"), style = MaterialTheme.typography.bodySmall, color = themeColor)
+                                        Text(stringResource(R.string.claims_by_farmer, claims.size), style = MaterialTheme.typography.bodySmall, color = themeColor)
                                     }
                                     Icon(
                                         imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
@@ -6251,14 +6289,16 @@ fun DidiClaimCard(claim: Map<String, String>, themeColor: Color, isFarmer: Boole
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(claim["id"] ?: "", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color.Black)
+                // If farmer, Tag No is the main title. If Didi, Claim ID is the title.
+                val cardTitle = if (isFarmer) claim["tag"] ?: "" else claim["id"] ?: ""
+                Text(cardTitle, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color.Black)
                 
                 val status = claim["status"] ?: ""
                 val (statusText, statusBg, statusColor) = when(status) {
-                    "In Progress" -> Triple(languageState.value.getT("In Progress", "प्रगति में", "ପ୍ରଗତିରେ ଅଛି"), Color(0xFFFFF3E0), Color(0xFFE65100))
-                    "Verification" -> Triple(languageState.value.getT("Verification", "सत्यापन", "ଯାଞ୍ଚ"), Color(0xFFE8F5E9), Color(0xFF2E7D32))
-                    "Didi Visit" -> Triple(languageState.value.getT("Didi Visit", "दीदी यात्रा", "ଦିଦି ପରିଦର୍ଶନ"), Color(0xFFE3F2FD), Color(0xFF1565C0))
-                    else -> Triple(languageState.value.getT("Pending", "लंबित", "ବାକି ଅଛି"), Color(0xFFF5F5F5), Color(0xFF616161))
+                    "In Progress" -> Triple(stringResource(R.string.in_progress), Color(0xFFFFF3E0), Color(0xFFE65100))
+                    "Verification" -> Triple(stringResource(R.string.verification), Color(0xFFE8F5E9), Color(0xFF2E7D32))
+                    "Didi Visit" -> Triple(stringResource(R.string.didi_visit), Color(0xFFE3F2FD), Color(0xFF1565C0))
+                    else -> Triple(stringResource(R.string.status_pending), Color(0xFFF5F5F5), Color(0xFF616161))
                 }
                 
                 Surface(
@@ -6276,18 +6316,26 @@ fun DidiClaimCard(claim: Map<String, String>, themeColor: Color, isFarmer: Boole
             }
             
             Spacer(modifier = Modifier.height(8.dp))
-            val displayName = if (isFarmer) {
+            if (isFarmer) {
+                // Farmer dashboard details
+                Text(
+                    text = stringResource(R.string.claim_id_label_colon) + (claim["id"] ?: ""),
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
                 val didi = claim["didi"] ?: ""
-                if (didi.isNotEmpty()) "Approved by: $didi" else "Assigned to: Sushma Didi"
+                val didiInfo = if (didi.isNotEmpty()) stringResource(R.string.approved_by_label_colon, didi) 
+                               else stringResource(R.string.assigned_to_sushma_didi)
+                Text(didiInfo, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.DarkGray)
             } else {
-                claim["farmer"] ?: ""
+                // Didi dashboard details
+                Text(claim["farmer"] ?: "", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.DarkGray)
+                Text(
+                    text = stringResource(R.string.tag_no_label, claim["tag"] ?: ""),
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
             }
-            Text(displayName, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.DarkGray)
-            Text(
-                text = languageState.value.getT("Tag No: ", "टैग नंबर: ", "ଟ୍ୟାଗ୍ ନମ୍ବର: ") + (claim["tag"] ?: ""),
-                fontSize = 13.sp,
-                color = Color.Gray
-            )
             
             Spacer(modifier = Modifier.height(8.dp))
             Row(
@@ -6296,7 +6344,7 @@ fun DidiClaimCard(claim: Map<String, String>, themeColor: Color, isFarmer: Boole
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = languageState.value.getT("Reported On: ", "रिपोर्ट की तारीख: ", "ରିପୋର୍ଟ ତାରିଖ: ") + (claim["date"] ?: ""),
+                    text = stringResource(R.string.reported_on_label, claim["date"] ?: ""),
                     fontSize = 12.sp,
                     color = Color.Gray
                 )
@@ -6323,7 +6371,7 @@ fun ClaimListContent(
             value = searchQuery,
             onValueChange = onSearchChange,
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            placeholder = { Text(languageState.value.getT("Search by claim ID or tag number", "दावा आईडी या टैग नंबर से खोजें", "ଦାବି ID କିମ୍ବା ଟ୍ୟାଗ୍ ନମ୍ବର ଦ୍ୱାରା ଖୋଜନ୍ତୁ")) },
+            placeholder = { Text(stringResource(R.string.search_claim_placeholder)) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
             shape = RoundedCornerShape(24.dp),
             singleLine = true,
@@ -6386,10 +6434,10 @@ fun ClaimListContent(
                                     
                                     val status = claim["status"] ?: ""
                                     val (statusText, statusColor) = when(status) {
-                                        "Pending" -> languageState.value.getT("In Progress", "प्रगति पर है", "ଚାଲୁଅଛି") to AccentOrange
-                                        "Approved" -> languageState.value.getT("Verification", "सत्यापन", "ଯାଞ୍ଚ") to SuccessGreen
-                                        "Rejected" -> languageState.value.getT("Didi Visit", "दीदी का दौरा", "ଦିଦିଙ୍କ ପରିଦର୍ଶନ") to InfoBlue
-                                        else -> languageState.value.getT("Pending", "लंबित", "ବାକି") to Color.Gray
+                                        "Pending" -> stringResource(R.string.in_progress) to AccentOrange
+                                        "Approved" -> stringResource(R.string.verification) to SuccessGreen
+                                        "Rejected" -> stringResource(R.string.didi_visit) to InfoBlue
+                                        else -> stringResource(R.string.status_pending) to Color.Gray
                                     }
 
                                     Surface(
@@ -6410,13 +6458,13 @@ fun ClaimListContent(
                                 Text(claim["farmer"] ?: "", fontSize = 14.sp, color = Color.DarkGray)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = languageState.value.getT("Tag No: ", "टैग नंबर: ", "ଟ୍ୟାଗ୍ ନମ୍ବର: ") + (claim["tag"] ?: ""),
+                                    text = stringResource(R.string.tag_no_label, claim["tag"] ?: ""),
                                     fontSize = 13.sp,
                                     color = Color.Gray
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = languageState.value.getT("Reported On: ", "रिपोर्ट की तारीख: ", "ରିପୋର୍ଟ ତାରିଖ: ") + (claim["date"] ?: ""),
+                                    text = stringResource(R.string.reported_on_label, claim["date"] ?: ""),
                                     fontSize = 13.sp,
                                     color = Color.Gray
                                 )
@@ -6493,9 +6541,9 @@ fun ClaimListContent(
                                                     Text(claim["id"] ?: "", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                                                     Text(
                                                         when(claim["status"]) {
-                                                            "Pending" -> languageState.value.getT("Verification in Progress", "सत्यापन प्रगति पर है", "ଯାଞ୍ଚ ଚାଲୁଛି")
-                                                            "Approved" -> languageState.value.getT("Claim Approved", "दावा स्वीकृत", "ଦାବି ଅନୁମୋଦିତ")
-                                                            else -> languageState.value.getT("Claim Rejected", "दावा अस्वीकृत", "ଦାବି ପ୍ରତ୍ୟାଖ୍ୟାନ")
+                                                            "Pending" -> stringResource(R.string.verification_in_progress)
+                                                            "Approved" -> stringResource(R.string.claim_approved)
+                                                            else -> stringResource(R.string.claim_rejected)
                                                         },
                                                         fontSize = 12.sp,
                                                         color = when(claim["status"]) {
@@ -6516,9 +6564,9 @@ fun ClaimListContent(
                                                 ) {
                                                     Text(
                                                         when(claim["status"]) {
-                                                            "Pending" -> languageState.value.getT("Pending", "लंबित", "ବାକି")
-                                                            "Approved" -> languageState.value.getT("Approved", "स्वीकृत", "ଅନୁମୋଦିତ")
-                                                            else -> languageState.value.getT("Rejected", "अस्वीकृत", "ପ୍ରତ୍ୟାଖ୍ୟାନ")
+                                                            "Pending" -> stringResource(R.string.status_pending)
+                                                            "Approved" -> stringResource(R.string.approved)
+                                                            else -> stringResource(R.string.rejected)
                                                         },
                                                         color = when(claim["status"]) {
                                                             "Approved" -> SuccessGreen
@@ -6550,7 +6598,6 @@ fun ClaimListContent(
 @Composable
 fun ClaimReviewScreen(navController: NavHostController, claimId: String, userRole: UserRole?, onBack: () -> Unit) {
     val context = LocalContext.current
-    val languageState = LocalAppLanguage.current
     var selectedTab by remember { mutableIntStateOf(0) }
 
     val themeColor = when (userRole) {
@@ -6580,7 +6627,7 @@ fun ClaimReviewScreen(navController: NavHostController, claimId: String, userRol
             TopAppBar(
                 title = { 
                     Text(
-                        text = languageState.value.getT("Claim Details", "दावा विवरण", "ଦାବି ବିବରଣୀ"),
+                        text = stringResource(R.string.claim_details),
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     ) 
@@ -6620,7 +6667,6 @@ fun ClaimReviewScreen(navController: NavHostController, claimId: String, userRol
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClaimBankDetailsScreen(navController: NavHostController, claimId: String, userRole: UserRole?, onBack: () -> Unit) {
-    val languageState = LocalAppLanguage.current
     val context = LocalContext.current
     val isDidi = userRole == UserRole.SURAKSHA_DIDI
     
@@ -6633,6 +6679,7 @@ fun ClaimBankDetailsScreen(navController: NavHostController, claimId: String, us
     var accHolder by remember { mutableStateOf("") }
     var bankName by remember { mutableStateOf("") }
     var accNumber by remember { mutableStateOf("") }
+
     var ifscCode by remember { mutableStateOf("") }
     var branch by remember { mutableStateOf("") }
     var passbookPhotoUri by remember { mutableStateOf<Uri?>(null) }
@@ -6647,7 +6694,7 @@ fun ClaimBankDetailsScreen(navController: NavHostController, claimId: String, us
             TopAppBar(
                 title = { 
                     Text(
-                        text = languageState.value.getT("Bank Details", "बैंक विवरण", "ବ୍ୟାଙ୍କ ବିବରଣୀ"), 
+                        text = stringResource(R.string.bank_details), 
                         fontWeight = FontWeight.Bold, 
                         color = Color.White
                     ) 
@@ -6671,26 +6718,26 @@ fun ClaimBankDetailsScreen(navController: NavHostController, claimId: String, us
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
             Text(
-                text = languageState.value.getT("Enter Bank Details for Payout", "भुगतान के लिए बैंक विवरण दर्ज करें", "ଦେୟ ପାଇଁ ବ୍ୟାଙ୍କ ବିବରଣୀ ଦିଅନ୍ତୁ"), 
+                text = stringResource(R.string.enter_bank_details_instruction), 
                 style = MaterialTheme.typography.titleMedium, 
                 fontWeight = FontWeight.Bold,
                 color = if (isDidi) Color.Black else MaterialTheme.colorScheme.onBackground
             )
             Spacer(modifier = Modifier.height(24.dp))
 
-            EnrollmentTextField(label = languageState.value.getT("Account Holder Name *", "खाता धारक का नाम *", "ଖାତାଧାରୀଙ୍କ ନାମ *"), value = accHolder, onValueChange = { accHolder = it }, borderColor = themeColor)
+            EnrollmentTextField(label = stringResource(R.string.acc_holder_name), value = accHolder, onValueChange = { accHolder = it }, borderColor = themeColor)
             Spacer(modifier = Modifier.height(16.dp))
-            EnrollmentTextField(label = languageState.value.getT("Bank Name *", "बैंक का नाम *", "ବ୍ୟାଙ୍କ ନାମ *"), value = bankName, onValueChange = { bankName = it }, borderColor = themeColor)
+            EnrollmentTextField(label = stringResource(R.string.bank_name), value = bankName, onValueChange = { bankName = it }, borderColor = themeColor)
             Spacer(modifier = Modifier.height(16.dp))
-            EnrollmentTextField(label = languageState.value.getT("Account Number *", "खाता संख्या *", "ଖାତା ନମ୍ବର *"), value = accNumber, onValueChange = { accNumber = it }, keyboardType = KeyboardType.Number, borderColor = themeColor)
+            EnrollmentTextField(label = stringResource(R.string.acc_number), value = accNumber, onValueChange = { accNumber = it }, keyboardType = KeyboardType.Number, borderColor = themeColor)
             Spacer(modifier = Modifier.height(16.dp))
-            EnrollmentTextField(label = languageState.value.getT("IFSC Code *", "आईएफएससी कोड *", "IFSC କୋଡ୍ *"), value = ifscCode, onValueChange = { ifscCode = it.uppercase() }, borderColor = themeColor)
+            EnrollmentTextField(label = stringResource(R.string.ifsc_code), value = ifscCode, onValueChange = { ifscCode = it.uppercase() }, borderColor = themeColor)
             Spacer(modifier = Modifier.height(16.dp))
-            EnrollmentTextField(label = languageState.value.getT("Branch *", "शाखा *", "ଶାଖା *"), value = branch, onValueChange = { branch = it }, borderColor = themeColor)
+            EnrollmentTextField(label = stringResource(R.string.branch), value = branch, onValueChange = { branch = it }, borderColor = themeColor)
             
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = languageState.value.getT("Upload Passbook / Cancelled Cheque *", "पासबुक / रद्द चेक अपलोड करें *", "ପାସବୁକ୍ / ବାତିଲ୍ ଚେକ୍ ଅପଲୋଡ୍ କରନ୍ତୁ *"), 
+                text = stringResource(R.string.upload_passbook_instruction), 
                 fontWeight = FontWeight.Bold, 
                 fontSize = 14.sp,
                 color = if (isDidi) Color.Black else MaterialTheme.colorScheme.onBackground
@@ -6713,7 +6760,7 @@ fun ClaimBankDetailsScreen(navController: NavHostController, claimId: String, us
                 colors = ButtonDefaults.buttonColors(containerColor = themeColor),
                 enabled = accHolder.isNotBlank() && bankName.isNotBlank() && accNumber.isNotBlank() && ifscCode.isNotBlank() && passbookPhotoUri != null
             ) {
-                Text(languageState.value.getT("Submit Claim", "दावा सबमिट करें", "ଦାବି ସବମିଟ୍ କରନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(stringResource(R.string.submit_claim), fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
         }
     }
@@ -6730,7 +6777,6 @@ fun DidiClaimDetailsContent(
     onSubmit: () -> Unit
 ) {
     val languageState = LocalAppLanguage.current
-    
     Column(modifier = Modifier.fillMaxSize()) {
         // Header Info Card
         Card(
@@ -6752,7 +6798,7 @@ fun DidiClaimDetailsContent(
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
-                            text = languageState.value.getT("In Progress", "प्रगति में", "ପ୍ରଗତିରେ ଅଛି"),
+                            text = stringResource(R.string.in_progress),
                             color = Color(0xFFE65100),
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             fontSize = 11.sp,
@@ -6763,12 +6809,12 @@ fun DidiClaimDetailsContent(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(claim["farmer"] ?: "", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.DarkGray)
                 Text(
-                    text = languageState.value.getT("Tag No: ", "टैग नंबर: ", "ଟ୍ୟାଗ୍ ନମ୍ବର: ") + (claim["tag"] ?: ""),
+                    text = stringResource(R.string.tag_no_label, claim["tag"] ?: ""),
                     fontSize = 13.sp,
                     color = Color.Gray
                 )
                 Text(
-                    text = languageState.value.getT("Reported On: ", "रिपोर्ट की तारीख: ", "ରିପୋର୍ଟ ତାରିଖ: ") + (claim["date"] ?: "") + ", " + (claim["time"] ?: ""),
+                    text = stringResource(R.string.reported_on_label, (claim["date"] ?: "") + ", " + (claim["time"] ?: "")),
                     fontSize = 13.sp,
                     color = Color.Gray
                 )
@@ -6776,7 +6822,7 @@ fun DidiClaimDetailsContent(
         }
 
         // Tabs
-        val tabs = listOf("Overview", "Documents")
+        val tabs = listOf(stringResource(R.string.overview_label), stringResource(R.string.documents_label))
         TabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color.Transparent,
@@ -6825,15 +6871,15 @@ fun DidiClaimDetailsContent(
                         border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(languageState.value.getT("Claim Progress", "दावा प्रगति", "ଦାବି ପ୍ରଗତି"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            Text(stringResource(R.string.claim_progress), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             Spacer(modifier = Modifier.height(20.dp))
                             
                             val steps = listOf(
-                                Triple("Death Reported", "20 May 2024, 10:30 AM", true),
-                                Triple("Didi Site Visit", "20 May 2024, 02:15 PM", true),
-                                Triple("Verification", "21 May 2024, 11:40 AM", true),
-                                Triple("Coordinator Review", "Pending", false),
-                                Triple("Payment Sent", "Upcoming", false)
+                                Triple(stringResource(R.string.death_reported_label), "20 May 2024, 10:30 AM", true),
+                                Triple(stringResource(R.string.didi_site_visit_label), "20 May 2024, 02:15 PM", true),
+                                Triple(stringResource(R.string.verification_label), "21 May 2024, 11:40 AM", true),
+                                Triple(stringResource(R.string.coordinator_review_label), stringResource(R.string.status_pending), false),
+                                Triple(stringResource(R.string.payment_sent_label), stringResource(R.string.upcoming_label), false)
                             )
                             
                             steps.forEachIndexed { index, step ->
@@ -6857,13 +6903,13 @@ fun DidiClaimDetailsContent(
                         border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(languageState.value.getT("Claim Information", "दावा जानकारी", "ଦାବି ସୂଚନା"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            Text(stringResource(R.string.claim_information), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             Spacer(modifier = Modifier.height(16.dp))
                             
-                            DidiInfoRow(languageState.value.getT("Policy No.", "पॉलिसी नंबर", "ପଲିସି ନମ୍ବର"), claim["policy"] ?: "")
-                            DidiInfoRow(languageState.value.getT("Insured Goat", "बीमित बकरी", "ବୀମାଭୁକ୍ତ ଛେଳି"), claim["tag"] ?: "")
-                            DidiInfoRow(languageState.value.getT("Date of Death", "मृत्यु की तिथि", "ମୃତ୍ୟୁ ତାରିଖ"), "19 May 2024")
-                            DidiInfoRow(languageState.value.getT("Cause of Death", "मृत्यु का कारण", "ମୃତ୍ୟୁର କାରଣ"), claim["cause"] ?: "")
+                            DidiInfoRow(stringResource(R.string.policy_number), claim["policy"] ?: "")
+                            DidiInfoRow(stringResource(R.string.goats_insured), claim["tag"] ?: "")
+                            DidiInfoRow(stringResource(R.string.date_of_death), "19 May 2024")
+                            DidiInfoRow(stringResource(R.string.mortality_report), claim["cause"] ?: "")
                         }
                     }
                 }
@@ -6875,7 +6921,7 @@ fun DidiClaimDetailsContent(
                         border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(languageState.value.getT("Uploaded Documents", "अपलोड किए गए दस्तावेज़", "ଅପଲୋଡ୍ ହୋଇଥିବା ଦଲିଲ"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            Text(stringResource(R.string.uploaded_documents), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             Spacer(modifier = Modifier.height(8.dp))
                             
                             DidiDocItem("Death Report Photo", "20 May 2024, 10:31 AM", themeColor)
@@ -6901,7 +6947,7 @@ fun DidiClaimDetailsContent(
                             Icon(Icons.Default.VerifiedUser, null, tint = SuccessGreen, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                languageState.value.getT("All documents are secured and used only for claim verification.", "सभी दस्तावेज़ सुरक्षित हैं और केवल दावा सत्यापन के लिए उपयोग किए जाते हैं।", "ସମସ୍ତ ଦଲିଲ ସୁରକ୍ଷିତ ଏବଂ କେବଳ ଦାବି ଯାଞ୍ଚ ପାଇଁ ବ୍ୟବହୃତ ହୁଏ |"),
+                                stringResource(R.string.documents_secured_tip),
                                 fontSize = 13.sp,
                                 color = Color.DarkGray,
                                 lineHeight = 18.sp
@@ -6923,9 +6969,9 @@ fun DidiClaimDetailsContent(
             colors = ButtonDefaults.buttonColors(containerColor = themeColor)
         ) {
             val buttonText = if (userRole == UserRole.SURAKSHA_DIDI || userRole == UserRole.COORDINATOR) 
-                languageState.value.getT("Next", "अगला", "ପରବର୍ତ୍ତୀ")
+                stringResource(R.string.next)
             else 
-                languageState.value.getT("Submit", "सबमिट करें", "ସବମିଟ୍")
+                stringResource(R.string.submit)
             Text(buttonText, fontWeight = FontWeight.Bold)
         }
     }
@@ -6940,6 +6986,7 @@ fun DidiClaimProgressItem(
     isLast: Boolean,
     themeColor: Color
 ) {
+    val languageState = LocalAppLanguage.current
     Row(modifier = Modifier.fillMaxWidth()) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
@@ -6996,7 +7043,7 @@ fun ClaimVerifyScreen(navController: NavHostController, claimId: String, userRol
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(languageState.value.getT("Verify Claim", "दावा सत्यापित करें", "ଦାବି ଯାଞ୍ଚ କରନ୍ତୁ"), fontWeight = FontWeight.Bold, color = Color.White) },
+                title = { Text(stringResource(R.string.verify_claim), fontWeight = FontWeight.Bold, color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -7038,7 +7085,7 @@ fun ClaimVerifyScreen(navController: NavHostController, claimId: String, userRol
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = languageState.value.getT("Verification Checklist", "सत्यापन चेकलिस्ट", "ଯାଞ୍ଚ ଚେକଲିଷ୍ଟ"),
+                text = stringResource(R.string.verification_checklist),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
@@ -7047,10 +7094,10 @@ fun ClaimVerifyScreen(navController: NavHostController, claimId: String, userRol
             Spacer(modifier = Modifier.height(24.dp))
 
             val checklistItems = listOf(
-                languageState.value.getT("Ear Tag Verified", "कान का टैग सत्यापित", "କାନ ଟ୍ୟାଗ୍ ଯାଞ୍ଚ ହୋଇଛି"),
-                languageState.value.getT("Photos Verified", "फोटो सत्यापित", "ଫଟୋ ଯାଞ୍ଚ ହୋଇଛି"),
-                languageState.value.getT("Policy Active", "पॉलिसी सक्रिय", "ନୀତି ସକ୍ରିୟ"),
-                languageState.value.getT("Vaccination Valid", "टीकाकरण वैध", "ଟୀକାକରଣ ବୈଧ")
+                stringResource(R.string.ear_tag_verified),
+                stringResource(R.string.photos_verified),
+                stringResource(R.string.policy_active),
+                stringResource(R.string.vaccination_valid)
             )
 
             checklistItems.forEach { item ->
@@ -7070,7 +7117,7 @@ fun ClaimVerifyScreen(navController: NavHostController, claimId: String, userRol
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = languageState.value.getT("Remarks (Optional)", "टिप्पणियां (वैकल्पिक)", "ମନ୍ତବ୍ୟ (ବୈକଳ୍ପିକ)"),
+                text = stringResource(R.string.remarks_optional),
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
                 color = Color.Black
@@ -7104,7 +7151,7 @@ fun ClaimVerifyScreen(navController: NavHostController, claimId: String, userRol
                 colors = ButtonDefaults.buttonColors(containerColor = themeColor)
             ) {
                 Text(
-                    text = languageState.value.getT("Approve Claim", "दावा स्वीकृत करें", "ଦାବି ଅନୁମୋଦନ କରନ୍ତୁ"), 
+                    text = stringResource(R.string.approve_claim_label), 
                     fontWeight = FontWeight.Bold, 
                     fontSize = 16.sp
                 )
@@ -7124,7 +7171,7 @@ fun ClaimVerifyScreen(navController: NavHostController, claimId: String, userRol
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
             ) {
                 Text(
-                    text = languageState.value.getT("Reject Claim", "दावा अस्वीकृत करें", "ଦାବି ପ୍ରତ୍ୟାଖ୍ୟାନ କରନ୍ତୁ"), 
+                    text = stringResource(R.string.reject_claim_label),
                     fontWeight = FontWeight.Bold, 
                     fontSize = 16.sp
                 )
@@ -7161,7 +7208,7 @@ fun ClaimPayoutScreen(navController: NavHostController, claimId: String, userRol
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(languageState.value.getT("Claim Payout", "दावा भुगतान", "ଦାବି ପରିଶୋଧ"), fontWeight = FontWeight.Bold, color = Color.White) },
+                title = { Text(stringResource(R.string.claim_payout), fontWeight = FontWeight.Bold, color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -7191,7 +7238,7 @@ fun ClaimPayoutScreen(navController: NavHostController, claimId: String, userRol
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = languageState.value.getT("Bank Details", "बैंक विवरण", "ବ୍ୟାଙ୍କ ବିବରଣୀ"),
+                text = stringResource(R.string.bank_details),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
@@ -7206,11 +7253,11 @@ fun ClaimPayoutScreen(navController: NavHostController, claimId: String, userRol
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    PayoutDetailRow(languageState.value.getT("A/C Holder", "खाता धारक", "A/C ଧାରକ"), mockClaim["accHolder"] ?: "")
-                    PayoutDetailRow(languageState.value.getT("A/C Number", "खाता संख्या", "A/C ନମ୍ବର"), mockClaim["accNumber"] ?: "")
-                    PayoutDetailRow(languageState.value.getT("IFSC", "आईएफएससी", "IFSC"), mockClaim["ifsc"] ?: "")
+                    PayoutDetailRow(stringResource(R.string.acc_holder_name), mockClaim["accHolder"] ?: "")
+                    PayoutDetailRow(stringResource(R.string.acc_number), mockClaim["accNumber"] ?: "")
+                    PayoutDetailRow(stringResource(R.string.ifsc_code), mockClaim["ifsc"] ?: "")
                     HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f))
-                    PayoutDetailRow(languageState.value.getT("Amount", "राशि", "ପରିମାଣ"), mockClaim["amount"] ?: "", isBold = true)
+                    PayoutDetailRow(stringResource(R.string.approved_amount), mockClaim["amount"] ?: "", isBold = true)
                 }
             }
 
@@ -7222,7 +7269,7 @@ fun ClaimPayoutScreen(navController: NavHostController, claimId: String, userRol
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = themeColor)
             ) {
-                Text(languageState.value.getT("Confirm Payout", "भुगतान की पुष्टि करें", "ପରିଶୋଧ ନିଶ୍ଚିତ କରନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(stringResource(R.string.confirm_payout), fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
 
             if (isPayoutConfirmed) {
@@ -7239,7 +7286,7 @@ fun ClaimPayoutScreen(navController: NavHostController, claimId: String, userRol
                     ) {
                         Icon(Icons.Default.CheckCircle, null, tint = SuccessGreen, modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text(languageState.value.getT("Payout successful", "भुगतान सफल", "ପରିଶୋଧ ସଫଳ"), color = Color.Black, fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.payout_successful), color = Color.Black, fontWeight = FontWeight.Medium)
                     }
                 }
             }
@@ -7284,7 +7331,7 @@ fun ClaimApprovedScreen(navController: NavHostController, claimId: String, userR
             Spacer(modifier = Modifier.height(32.dp))
             
             Text(
-                text = languageState.value.getT("Claim Approved", "दावा स्वीकृत", "ଦାବି ଅନୁମୋଦିତ"),
+                text = stringResource(R.string.claim_approved),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = themeColor
@@ -7307,7 +7354,7 @@ fun ClaimApprovedScreen(navController: NavHostController, claimId: String, userR
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = languageState.value.getT("Approved Amount", "स्वीकृत राशि", "ଅନୁମୋଦିତ ପରିମାଣ"),
+                        text = stringResource(R.string.approved_amount),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.Gray
                     )
@@ -7324,15 +7371,15 @@ fun ClaimApprovedScreen(navController: NavHostController, claimId: String, userR
             Spacer(modifier = Modifier.height(32.dp))
 
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
-                Text(text = languageState.value.getT("Payout Mode", "भुगतान का तरीका", "ପରିଶୋଧ ପଦ୍ଧତି"), style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                Text(text = stringResource(R.string.payout_mode), style = MaterialTheme.typography.labelMedium, color = Color.Gray)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = languageState.value.getT("Bank Transfer", "बैंक ट्रांसफर", "ବ୍ୟାଙ୍କ ଟ୍ରାନ୍ସଫର"), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = Color.Black)
+                Text(text = stringResource(R.string.bank_transfer), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = Color.Black)
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
-                Text(text = languageState.value.getT("Status", "स्थिति", "ସ୍ଥିତି"), style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                Text(text = stringResource(R.string.status), style = MaterialTheme.typography.labelMedium, color = Color.Gray)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = languageState.value.getT("Approved", "स्वीकृत", "ଅନୁମୋଦିତ"), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = SuccessGreen)
+                Text(text = stringResource(R.string.approved), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = SuccessGreen)
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -7347,7 +7394,7 @@ fun ClaimApprovedScreen(navController: NavHostController, claimId: String, userR
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = themeColor)
             ) {
-                Text(languageState.value.getT("Mark as Paid", "भुगतान के रूप में चिह्नित करें", "ପରିଶୋଧିତ ଚିହ୍ନଟ କରନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(stringResource(R.string.mark_as_paid), fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -7365,6 +7412,7 @@ fun PayoutDetailRow(label: String, value: String, isBold: Boolean = false) {
 
 @Composable
 fun DidiDocItem(title: String, time: String, themeColor: Color, icon: ImageVector = Icons.AutoMirrored.Filled.FactCheck) {
+    val languageState = LocalAppLanguage.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -7391,7 +7439,7 @@ fun DidiDocItem(title: String, time: String, themeColor: Color, icon: ImageVecto
         ) {
             Icon(Icons.Default.RemoveRedEye, null, tint = SuccessGreen, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text(LocalAppLanguage.current.value.getT("View", "देखें", "ଦେଖନ୍ତୁ"), color = SuccessGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(stringResource(R.string.view), color = SuccessGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         }
     }
 }
@@ -7465,13 +7513,13 @@ fun FarmerClaimStatusScreen(navController: NavHostController, claim: Map<String,
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
                             Text(
-                                text = languageState.value.getT("Your Claim is in Progress", "आपका दावा प्रगति पर है", "ଆପଣଙ୍କ ଦାବି ପ୍ରଗତିରେ ଅଛି"),
+                                text = stringResource(R.string.your_claim_in_progress),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 18.sp,
                                 color = themeColor
                             )
                             Text(
-                                text = languageState.value.getT("We are reviewing your claim.", "हम आपके दावे की समीक्षा कर रहे हैं।", "ଆମେ ଆପଣଙ୍କ ଦାବିର ସମୀକ୍ଷା କରୁଛୁ |"),
+                                text = stringResource(R.string.we_are_reviewing_claim),
                                 fontSize = 14.sp,
                                 color = Color.Gray
                             )
@@ -7482,7 +7530,7 @@ fun FarmerClaimStatusScreen(navController: NavHostController, claim: Map<String,
                     
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Column {
-                            Text(text = languageState.value.getT("Claim ID", "दावा आईडी", "ଦାବି ID"), fontSize = 12.sp, color = Color.Gray)
+                            Text(text = stringResource(R.string.claim_id_label), fontSize = 12.sp, color = Color.Gray)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     text = claim["id"] ?: "CLM7890", 
@@ -7495,7 +7543,7 @@ fun FarmerClaimStatusScreen(navController: NavHostController, claim: Map<String,
                             }
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text(text = languageState.value.getT("Reported On", "रिपोर्ट किया गया", "ରିପୋର୍ଟ କରାଯାଇଛି"), fontSize = 12.sp, color = Color.Gray)
+                            Text(text = stringResource(R.string.reported_date), fontSize = 12.sp, color = Color.Gray)
                             Text(
                                 text = claim["deathDate"] ?: "20 May 2024, 10:30 AM", 
                                 fontWeight = FontWeight.Bold, 
@@ -7518,7 +7566,7 @@ fun FarmerClaimStatusScreen(navController: NavHostController, claim: Map<String,
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = languageState.value.getT("Claim Progress", "दावा प्रगति", "ଦାବି ପ୍ରଗତି"),
+                        text = stringResource(R.string.claim_progress),
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                         color = themeColor
@@ -7559,7 +7607,7 @@ fun FarmerClaimStatusScreen(navController: NavHostController, claim: Map<String,
                     Icon(Icons.AutoMirrored.Filled.Chat, null, tint = themeColor, modifier = Modifier.size(32.dp))
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = languageState.value.getT("We'll notify you once there is an update on your claim.", "दावे पर अपडेट होने पर हम आपको सूचित करेंगे।", "ଦାବିରେ ଅପଡେଟ୍ ହେଲେ ଆମେ ଆପଣଙ୍କୁ ଜଣାଇବୁ |"),
+                        text = stringResource(R.string.claim_update_notify),
                         fontSize = 14.sp,
                         color = Color.DarkGray,
                         lineHeight = 20.sp
@@ -7576,7 +7624,7 @@ fun FarmerClaimStatusScreen(navController: NavHostController, claim: Map<String,
                 colors = ButtonDefaults.buttonColors(containerColor = themeColor)
             ) {
                 Text(
-                    text = languageState.value.getT("View Claim Details", "दावा विवरण देखें", "ଦାବି ବିବରଣୀ ଦେଖନ୍ତୁ"),
+                    text = stringResource(R.string.view_claim_details),
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = Color.White
@@ -7652,15 +7700,15 @@ fun FarmerClaimDetailsScreen(navController: NavHostController, claim: Map<String
     val languageState = LocalAppLanguage.current
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf(
-        languageState.value.getT("Details", "विवरण", "ବିବରଣୀ"),
-        languageState.value.getT("Documents", "दस्तावेज़", "ଦଲିଲ"),
-        languageState.value.getT("History", "इतिहास", "ଇତିହାସ")
+        stringResource(R.string.details_label),
+        stringResource(R.string.uploaded_documents),
+        stringResource(R.string.history_label)
     )
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(languageState.value.getT("Claim #${claim["id"]}", "दावा #${claim["id"]}", "ଦାବି #${claim["id"]}"), fontWeight = FontWeight.Bold) },
+                title = { Text("Claim #${claim["id"]}", fontWeight = FontWeight.Bold) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = themeColor,
@@ -7693,23 +7741,23 @@ fun FarmerClaimDetailsScreen(navController: NavHostController, claim: Map<String
             Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp)) {
                 when(selectedTab) {
                     0 -> { // Details
-                        FarmerClaimInfoSection(languageState.value.getT("Claim Information", "दावा जानकारी", "ଦାବି ସୂଚନା"), themeColor) {
-                            FarmerClaimInfoItem(languageState.value.getT("Claim ID", "दावा आईडी", "ଦାବି ID"), claim["id"] ?: "")
-                            FarmerClaimInfoItem(languageState.value.getT("Policy Number", "पॉलिसी नंबर", "ନୀତି ନମ୍ବର"), claim["policy"] ?: "")
-                            FarmerClaimInfoItem(languageState.value.getT("Insured Goat", "बीमित बकरी", "ବୀମାଭୁକ୍ତ ଛେଳି"), claim["tag"] ?: "")
-                            FarmerClaimInfoItem(languageState.value.getT("Goat Name", "बकरी का नाम", "ଛେଳିର ନାମ"), "Rani")
-                            FarmerClaimInfoItem(languageState.value.getT("Breed", "नस्ल", "ପ୍ରଜାତି"), claim["breed"] ?: "")
-                            FarmerClaimInfoItem(languageState.value.getT("Date of Death", "मृत्यु की तिथि", "ମୃତ୍ୟୁ ତାରିଖ"), "19 May 2024")
-                            FarmerClaimInfoItem(languageState.value.getT("Reported On", "रिपोर्ट किया गया", "ରିପୋର୍ଟ କରାଯାଇଛି"), claim["deathDate"] ?: "")
-                            FarmerClaimInfoItem(languageState.value.getT("Cause of Death", "मृत्यु का कारण", "ମୃତ୍ୟୁର କାରଣ"), claim["deathCause"] ?: "")
+                        FarmerClaimInfoSection(stringResource(R.string.claim_information), themeColor) {
+                            FarmerClaimInfoItem(stringResource(R.string.claim_id_label), claim["id"] ?: "")
+                            FarmerClaimInfoItem(stringResource(R.string.policy_number), claim["policy"] ?: "")
+                            FarmerClaimInfoItem(stringResource(R.string.goats_insured), claim["tag"] ?: "")
+                            FarmerClaimInfoItem(stringResource(R.string.goat_name_label), "Rani")
+                            FarmerClaimInfoItem(stringResource(R.string.breed), claim["breed"] ?: "")
+                            FarmerClaimInfoItem(stringResource(R.string.date_of_death), "19 May 2024")
+                            FarmerClaimInfoItem(stringResource(R.string.reported_date), claim["deathDate"] ?: "")
+                            FarmerClaimInfoItem(stringResource(R.string.mortality_report), claim["deathCause"] ?: "")
                         }
                         Spacer(modifier = Modifier.height(16.dp))
-                        FarmerClaimInfoSection(languageState.value.getT("Farmer Information", "किसान जानकारी", "କୃଷକ ସୂଚନା"), themeColor) {
-                            FarmerClaimInfoItem(languageState.value.getT("Farmer Name", "किसान का नाम", "କୃଷକଙ୍କ ନାମ"), claim["farmer"] ?: "")
-                            FarmerClaimInfoItem(languageState.value.getT("Phone Number", "फ़ोन नंबर", "ଫୋନ୍ ନମ୍ବର"), claim["phone"] ?: "")
-                            FarmerClaimInfoItem(languageState.value.getT("Village", "गांव", "ଗ୍ରାମ"), "Rampur")
-                            FarmerClaimInfoItem(languageState.value.getT("Block", "ब्लॉक", "ବ୍ଲକ"), "Bhopal")
-                            FarmerClaimInfoItem(languageState.value.getT("District", "जिला", "ଜିଲ୍ଲା"), "Bhopal, MP")
+                        FarmerClaimInfoSection(stringResource(R.string.farmer_information), themeColor) {
+                            FarmerClaimInfoItem(stringResource(R.string.farmer_name), claim["farmer"] ?: "")
+                            FarmerClaimInfoItem(stringResource(R.string.mobile_number), claim["phone"] ?: "")
+                            FarmerClaimInfoItem(stringResource(R.string.village), "Rampur")
+                            FarmerClaimInfoItem(stringResource(R.string.block), "Bhopal")
+                            FarmerClaimInfoItem(stringResource(R.string.district), "Bhopal, MP")
                         }
                         
                         Spacer(modifier = Modifier.height(24.dp))
@@ -7721,11 +7769,11 @@ fun FarmerClaimDetailsScreen(navController: NavHostController, claim: Map<String
                         ) {
                             Icon(Icons.Default.Phone, null, tint = themeColor, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text(languageState.value.getT("Contact Support", "सहायता से संपर्क करें", "ସହାୟତା ସହିତ ଯୋଗାଯୋଗ କରନ୍ତୁ"), color = themeColor, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.contact_support), color = themeColor, fontWeight = FontWeight.Bold)
                         }
                     }
                     1 -> { // Documents
-                        Text(languageState.value.getT("Uploaded Documents", "अपलोड किए गए दस्तावेज़", "ଅପଲୋଡ୍ ହୋଇଥିବା ଦଲିଲ"), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.Black)
+                        Text(stringResource(R.string.uploaded_documents), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.Black)
                         Spacer(modifier = Modifier.height(16.dp))
                         
                         val docs = listOf(
@@ -7748,15 +7796,15 @@ fun FarmerClaimDetailsScreen(navController: NavHostController, claim: Map<String
                         ) {
                             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.VerifiedUser, null, tint = SuccessGreen, modifier = Modifier.size(24.dp))
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Text(languageState.value.getT("All documents are secured and used only for claim verification.", "सभी दस्तावेज़ सुरक्षित हैं और केवल दावा सत्यापन के लिए उपयोग किए जाते हैं।", "ସମସ୍ତ ଦଲିଲ ସୁରକ୍ଷିତ ଏବଂ କେବଳ ଦାବି ଯାଞ୍ଚ ପାଇଁ ବ୍ୟବହୃତ ହୁଏ |"), fontSize = 12.sp, color = Color.Gray)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(stringResource(R.string.documents_secured_tip), fontSize = 12.sp, color = Color.Gray)
                             }
                         }
                     }
                     2 -> { // History
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(top = 40.dp)) {
                             Icon(Icons.Default.History, null, modifier = Modifier.size(48.dp), tint = Color.LightGray)
-                            Text(languageState.value.getT("No history available.", "कोई इतिहास उपलब्ध नहीं है।", "କୌଣସି ଇତିହାସ ଉପଲବ୍ଧ ନାହିଁ |"), color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
+                            Text(stringResource(R.string.no_history_available_msg), color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
                         }
                     }
                 }
@@ -7810,7 +7858,7 @@ fun FarmerDocItem(title: String, time: String, themeColor: Color) {
             TextButton(onClick = { /* View doc */ }) {
                 Icon(Icons.Default.RemoveRedEye, null, tint = themeColor, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(LocalAppLanguage.current.value.getT("View", "देखें", "ଦେଖନ୍ତୁ"), color = themeColor, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(stringResource(R.string.view), color = themeColor, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         }
     }
@@ -8290,7 +8338,7 @@ fun SetupProfileScreen(
     ) { permissions ->
         val allGranted = permissions.values.all { it }
         if (!allGranted) {
-            Toast.makeText(context, languageState.value.getT("Required permissions denied. Closing app.", "आवश्यक अनुमतियां अस्वीकार कर दी गईं। ऐप बंद हो रहा है।", "ଆବଶ୍ୟକ ଅନୁମତି ପ୍ରତ୍ୟାଖ୍ୟାନ କରାଯାଇଛି | ଆପ୍ ବନ୍ଦ ହେଉଛି |"), Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.getString(R.string.permissions_required_denied_msg), Toast.LENGTH_LONG).show()
             (context as? Activity)?.finish()
         }
     }
@@ -8298,13 +8346,9 @@ fun SetupProfileScreen(
     if (showPermissionRationale) {
         AlertDialog(
             onDismissRequest = { (context as? Activity)?.finish() },
-            title = { Text(languageState.value.getT("Permissions Required", "अनुमतियाँ आवश्यक हैं", "ଅନୁମତି ଆବଶ୍ୟକ"), fontWeight = FontWeight.Bold, color = Color.Black) },
+            title = { Text(stringResource(R.string.permissions_required_title), fontWeight = FontWeight.Bold, color = Color.Black) },
             text = { 
-                Text(languageState.value.getT(
-                    "This app needs Camera and Location access to verify livestock and record service areas. If you deny, the app will close.",
-                    "पशुधन को सत्यापित करने और सेवा क्षेत्रों को रिकॉर्ड करने के लिए इस ऐप को कैमरा और स्थान पहुंच की आवश्यकता है। यदि आप अस्वीकार करते हैं, तो ऐप बंद हो जाएगा।",
-                    "ପ୍ରାଣୀସମ୍ପଦ ଯାଞ୍ଚ କରିବା ଏବଂ ସେବା କ୍ଷେତ୍ର ରେକର୍ଡ କରିବାକୁ ଏହି ଆପ୍‌ କ୍ୟାମେରା ଏବଂ ଅବସ୍ଥାନ ଅନୁମତି ଆବଶ୍ୟକ କରେ | ଯଦି ଆପଣ ପ୍ରତ୍ୟାଖ୍ୟାନ କରନ୍ତି, ଆପ୍ ବନ୍ଦ ହୋଇଯିବ |"
-                ), color = Color.Black)
+                Text(stringResource(R.string.permissions_required_message), color = Color.Black)
             },
             confirmButton = {
                 Button(
@@ -8314,12 +8358,12 @@ fun SetupProfileScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
                 ) {
-                    Text(languageState.value.getT("Allow", "अनुमति दें", "ଅନୁମତି ଦିଅନ୍ତୁ"))
+                    Text(stringResource(R.string.allow))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { (context as? Activity)?.finish() }) {
-                    Text(languageState.value.getT("Deny & Close", "अस्वीकार करें और बंद करें", "ପ୍ରତ୍ୟାଖ୍ୟାନ କରନ୍ତୁ ଏବଂ ବନ୍ଦ କରନ୍ତୁ"), color = Color.Red)
+                    Text(stringResource(R.string.deny_close_label), color = Color.Red)
                 }
             },
             containerColor = Color.White,
@@ -8331,7 +8375,8 @@ fun SetupProfileScreen(
     var name by remember { mutableStateOf(initialName) }
     val phone by remember { mutableStateOf(initialPhone) }
     var dob by remember { mutableStateOf("") }
-    var gender by remember { mutableStateOf("Female") }
+    val femaleLabel = stringResource(R.string.female)
+    var gender by remember(femaleLabel) { mutableStateOf(femaleLabel) }
     
     var state by remember { mutableStateOf("") }
     var district by remember { mutableStateOf("") }
@@ -8349,9 +8394,9 @@ fun SetupProfileScreen(
     }
 
     val locationLabel = if (role == UserRole.COORDINATOR) 
-        languageState.value.getT("Location *", "स्थान *", "ଅବସ୍ଥାନ *")
+        stringResource(R.string.location_required_label)
     else 
-        languageState.value.getT("Village *", "गाँव *", "ଗ୍ରାମ *")
+        stringResource(R.string.village_required_label)
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -8406,7 +8451,7 @@ fun SetupProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(languageState.value.getT("Setup Profile", "प्रोफ़ाइल सेटअप", "ପ୍ରୋଫାଇଲ୍ ସେଟଅପ୍"), color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.setup_profile), color = Color.White, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -8426,7 +8471,7 @@ fun SetupProfileScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Section 1: Basic Info
-            ProfileSetupSection(languageState.value.getT("Basic Info", "기본 정보", "ମୌଳିକ ସୂଚନା"), themeColor) {
+            ProfileSetupSection(stringResource(R.string.basic_info), themeColor) {
                 // Profile Photo
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Box {
@@ -8465,7 +8510,7 @@ fun SetupProfileScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 EnrollmentTextField(
-                    label = languageState.value.getT("Full Name *", "पूरा नाम *", "ପୁରା ନାମ *"),
+                    label = stringResource(R.string.full_name_required_label),
                     value = name,
                     onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) name = it },
                     borderColor = themeColor
@@ -8474,7 +8519,7 @@ fun SetupProfileScreen(
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 EnrollmentTextField(
-                    label = languageState.value.getT("Phone Number", "फोन नंबर", "ଫୋନ୍ ନମ୍ବର"),
+                    label = stringResource(R.string.mobile_number),
                     value = phone,
                     onValueChange = {},
                     readOnly = true,
@@ -8484,7 +8529,7 @@ fun SetupProfileScreen(
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 EnrollmentTextField(
-                    label = languageState.value.getT("Date of Birth *", "जन्म तिथि *", "ଜନ୍ମ ତାରିଖ *"),
+                    label = stringResource(R.string.dob_required_label),
                     value = dob,
                     onValueChange = { dob = it },
                     placeholder = "DD/MM/YYYY",
@@ -8507,9 +8552,13 @@ fun SetupProfileScreen(
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 EnrollmentDropdownField(
-                    label = languageState.value.getT("Gender *", "लिंग *", "ଲିଙ୍ଗ *"),
+                    label = stringResource(R.string.gender_required_label),
                     selectedValue = gender,
-                    options = listOf("Female", "Male", "Other"),
+                    options = listOf(
+                        stringResource(R.string.female),
+                        stringResource(R.string.male),
+                        stringResource(R.string.other_label)
+                    ),
                     onValueChange = { gender = it },
                     borderColor = themeColor
                 )
@@ -8518,25 +8567,25 @@ fun SetupProfileScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Section 2: Location
-            ProfileSetupSection(languageState.value.getT("Location", "स्थान", "ଅବସ୍ଥାନ"), themeColor) {
-                EnrollmentTextField(label = languageState.value.getT("State *", "राज्य *", "ରାଜ୍ୟ *"), value = state, onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) state = it }, borderColor = themeColor)
+            ProfileSetupSection(stringResource(R.string.location), themeColor) {
+                EnrollmentTextField(label = stringResource(R.string.state_required_label), value = state, onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) state = it }, borderColor = themeColor)
                 Spacer(modifier = Modifier.height(12.dp))
-                EnrollmentTextField(label = languageState.value.getT("District *", "जिला *", "ଜିଲ୍ଲା *"), value = district, onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) district = it }, borderColor = themeColor)
+                EnrollmentTextField(label = stringResource(R.string.district_required_label), value = district, onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) district = it }, borderColor = themeColor)
                 Spacer(modifier = Modifier.height(12.dp))
-                EnrollmentTextField(label = languageState.value.getT("Block *", "ब्लॉक *", "ବ୍ଲକ *"), value = block, onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) block = it }, borderColor = themeColor)
+                EnrollmentTextField(label = stringResource(R.string.block_required_label), value = block, onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) block = it }, borderColor = themeColor)
                 Spacer(modifier = Modifier.height(12.dp))
                 EnrollmentTextField(label = locationLabel, value = village, onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) village = it }, borderColor = themeColor)
                 Spacer(modifier = Modifier.height(12.dp))
-                EnrollmentTextField(label = languageState.value.getT("Pincode *", "पिनकोड *", "ପିନକୋଡ୍ *"), value = pincode, onValueChange = { if(it.length <= 6) pincode = it }, keyboardType = KeyboardType.Number, borderColor = themeColor)
+                EnrollmentTextField(label = stringResource(R.string.pincode_required_label), value = pincode, onValueChange = { if(it.length <= 6) pincode = it }, keyboardType = KeyboardType.Number, borderColor = themeColor)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             // Section 3: Identity/KYC
-            ProfileSetupSection(languageState.value.getT("Identity / KYC", "पहचान / केवाईसी", "ପରିଚୟ / KYC"), themeColor) {
-                EnrollmentTextField(label = languageState.value.getT("Aadhaar Number *", "आधार नंबर *", "ଆଧାର ନମ୍ବର *"), value = aadhaarNumber, onValueChange = { if(it.length <= 12) aadhaarNumber = it }, keyboardType = KeyboardType.Number, borderColor = themeColor)
+            ProfileSetupSection(stringResource(R.string.identity_kyc), themeColor) {
+                EnrollmentTextField(label = stringResource(R.string.aadhaar_number_required_label), value = aadhaarNumber, onValueChange = { if(it.length <= 12) aadhaarNumber = it }, keyboardType = KeyboardType.Number, borderColor = themeColor)
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(languageState.value.getT("Aadhaar Photo (Optional)", "आधार फोटो (वैकल्पिक)", "ଆଧାର ଫଟୋ (ବୈକଳ୍ପିକ)"), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                Text(stringResource(R.string.aadhaar_photo_optional), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                 Spacer(modifier = Modifier.height(8.dp))
                 Surface(
                     modifier = Modifier.fillMaxWidth().height(120.dp),
@@ -8564,7 +8613,7 @@ fun SetupProfileScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = themeColor),
                 enabled = name.isNotBlank() && dob.isNotBlank() && state.isNotBlank() && district.isNotBlank() && block.isNotBlank() && village.isNotBlank() && pincode.length == 6 && aadhaarNumber.length == 12
             ) {
-                Text(languageState.value.getT("Save & Continue", "सहेजें और जारी रखें", "ସଂରକ୍ଷଣ ଏବଂ ଜାରି ରଖନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(stringResource(R.string.save_continue), fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             
             Spacer(modifier = Modifier.height(40.dp))
@@ -8617,7 +8666,7 @@ fun EarningHistoryScreen(onBack: () -> Unit) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                     Text(
-                        languageState.value.getT("Earning History", "आय का इतिहास", "ଉପାର୍ଜନ ଇତିହାସ"),
+                        stringResource(R.string.earning_history),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -8636,12 +8685,12 @@ fun EarningHistoryScreen(onBack: () -> Unit) {
                         modifier = Modifier.padding(24.dp),
                         horizontalAlignment = Alignment.Start
                     ) {
-                        Text(languageState.value.getT("Total Earnings", "कुल आय", "ମୋଟ ଉପାର୍ଜନ"), color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                        Text(stringResource(R.string.total_earnings), color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
                         Text("₹ 8,450", style = MaterialTheme.typography.headlineLarge, color = Color.White, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(12.dp))
                         Surface(color = Color.White.copy(alpha = 0.2f), shape = RoundedCornerShape(12.dp)) {
                             Text(
-                                text = languageState.value.getT("This Month", "इस महीने", "ଏହି ମାସ"),
+                                text = stringResource(R.string.this_month),
                                 color = Color.White,
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                                 fontSize = 12.sp,
@@ -8659,19 +8708,19 @@ fun EarningHistoryScreen(onBack: () -> Unit) {
                 .fillMaxWidth()
         ) {
             Text(
-                languageState.value.getT("Recent Transactions", "हाल के लेनदेन", "ସାମ୍ପ୍ରତିକ କାରବାର"),
+                stringResource(R.string.recent_transactions),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(16.dp))
 
             val mockEarnings = listOf(
-                EarningData("Goat Enrollment", "TAG-453678 • Ramesh Naik", "+ ₹20", "2 hours ago", painterResource(R.drawable.ic_ewe_custom), PrimaryGreen),
-                EarningData("Vaccination Fee", "PPR Vaccine • 5 Goats", "+ ₹50", "Today, 10:30 AM", Icons.Default.MedicalServices, InfoBlue),
-                EarningData("Goat Enrollment", "TAG-223456 • Suresh Behera", "+ ₹20", "Yesterday", painterResource(R.drawable.ic_ewe_custom), PrimaryGreen),
-                EarningData("Vaccination Fee", "ET + TT Vaccine • 8 Goats", "+ ₹80", "2 days ago", Icons.Default.MedicalServices, InfoBlue),
-                EarningData("Mortality Report", "TAG-112233 • Manoj Sahoo", "+ ₹50", "3 days ago", Icons.Default.LocationOn, Color.Red),
-                EarningData("Goat Enrollment", "TAG-998877 • Alok Dash", "+ ₹20", "4 days ago", painterResource(R.drawable.ic_ewe_custom), PrimaryGreen)
+                EarningData(stringResource(R.string.goat_enrollment), "TAG-453678 • Ramesh Naik", "+ ₹20", stringResource(R.string.two_hours_ago), painterResource(R.drawable.ic_ewe_custom), PrimaryGreen),
+                EarningData(stringResource(R.string.vaccination_fee), stringResource(R.string.vaccine_ppr) + " • 5 Goats", "+ ₹50", stringResource(R.string.today_at, "10:30 AM"), Icons.Default.MedicalServices, InfoBlue),
+                EarningData(stringResource(R.string.goat_enrollment), "TAG-223456 • Suresh Behera", "+ ₹20", stringResource(R.string.yesterday), painterResource(R.drawable.ic_ewe_custom), PrimaryGreen),
+                EarningData(stringResource(R.string.vaccination_fee), stringResource(R.string.vaccine_ettt) + " • 8 Goats", "+ ₹80", stringResource(R.string.n_days_ago, 2), Icons.Default.MedicalServices, InfoBlue),
+                EarningData(stringResource(R.string.mortality_report), "TAG-112233 • Manoj Sahoo", "+ ₹50", stringResource(R.string.n_days_ago, 3), Icons.Default.LocationOn, Color.Red),
+                EarningData(stringResource(R.string.goat_enrollment), "TAG-998877 • Alok Dash", "+ ₹20", stringResource(R.string.n_days_ago, 4), painterResource(R.drawable.ic_ewe_custom), PrimaryGreen)
             )
             
             mockEarnings.forEach { data ->
@@ -8723,7 +8772,7 @@ fun CallSupportScreen(userRole: UserRole?, onBack: () -> Unit, onCallEnded: (Str
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(languageState.value.getT("Call Support", "कॉल सहायता", "କଲ୍ ସହାୟତା"), fontWeight = FontWeight.Bold, color = Color.White) },
+                title = { Text(stringResource(R.string.call_support), fontWeight = FontWeight.Bold, color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -8755,14 +8804,14 @@ fun CallSupportScreen(userRole: UserRole?, onBack: () -> Unit, onCallEnded: (Str
                 }
                 Spacer(modifier = Modifier.height(32.dp))
                 Text(
-                    text = languageState.value.getT("We're just a call away", "हम बस एक कॉल दूर हैं", "ଆମେ ମାତ୍ର ଏକ କଲ୍ ଦୂରରେ"),
+                    text = stringResource(R.string.we_are_here_to_help),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = languageState.value.getT("Speak with our support team for quick assistance and guidance.", "त्वरित सहायता और मार्गदर्शन के लिए हमारी सहायता टीम से बात करें।", "ତ୍ୱରିତ ସହାୟତା ଏବଂ ମାର୍ଗଦର୍ଶନ ପାଇଁ ଆମର ସହାୟତା ଟିମ୍ ସହିତ କଥା ହୁଅନ୍ତୁ |"),
+                    text = stringResource(R.string.chat_quick_solutions),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.Gray,
                     textAlign = TextAlign.Center
@@ -8783,7 +8832,7 @@ fun CallSupportScreen(userRole: UserRole?, onBack: () -> Unit, onCallEnded: (Str
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
                             Text("0000-000-008", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = themeColor)
-                            Text(languageState.value.getT("Tap to Call", "कॉल करने के लिए टैप करें", "କଲ୍ କରିବାକୁ ଟ୍ୟାପ୍ କରନ୍ତୁ"), color = themeColor, fontSize = 14.sp)
+                            Text(stringResource(R.string.tap_to_call), color = themeColor, fontSize = 14.sp)
                         }
                     }
                 }
@@ -8791,12 +8840,12 @@ fun CallSupportScreen(userRole: UserRole?, onBack: () -> Unit, onCallEnded: (Str
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(themeColor))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(languageState.value.getT("Available 24/7", "24/7 उपलब्ध", "ଉପଲବ୍ଧ ୨୪/୭"), color = Color.Gray, fontSize = 14.sp)
+                    Text(stringResource(R.string.available_247_msg), color = Color.Gray, fontSize = 14.sp)
                 }
                 Spacer(modifier = Modifier.height(32.dp))
-                CallSupportFeatureItem(themeColor, Icons.Default.History, languageState.value.getT("Quick Connect", "त्वरित कनेक्ट", "ତ୍ୱରିତ ସଂଯୋଗ"), languageState.value.getT("Get connected to an agent within minutes.", "मिनटों के भीतर एक एजेंट से जुड़ें।", "କିଛି ମିନିଟ୍ ମଧ୍ୟରେ ଜଣେ ଏଜେଣ୍ଟଙ୍କ ସହିତ ସଂଯୋଗ କରନ୍ତୁ |"))
-                CallSupportFeatureItem(themeColor, Icons.Default.VerifiedUser, languageState.value.getT("Secure & Private", "सुरक्षित और निजी", "ସୁରକ୍ଷା ଏବଂ ବ୍ୟକ୍ତିଗତ"), languageState.value.getT("Your call is safe and encrypted.", "आपकी कॉल सुरक्षित और एन्क्रिप्टेड है।", "ଆପଣଙ୍କର କଲ୍ ସୁରକ୍ଷିତ ଏବଂ ଏନକ୍ରିପ୍ଟ ଅଟେ |"))
-                CallSupportFeatureItem(themeColor, Icons.Default.SupportAgent, languageState.value.getT("Trained Experts", "प्रशिक्षित विशेषज्ञ", "ପ୍ରଶିକ୍ଷିତ ବିଶେଷଜ୍ଞ"), languageState.value.getT("Talk to our experienced support specialists.", "हमारे अनुभवी सहायता विशेषज्ञों से बात करें।", "ଆମର ଅଭିଜ୍ଞ ସହାୟତା ବିଶେଷଜ୍ଞଙ୍କ ସହିତ କଥା ହୁଅନ୍ତୁ |"))
+                CallSupportFeatureItem(themeColor, Icons.Default.History, stringResource(R.string.quick_connect_label), stringResource(R.string.quick_connect_msg))
+                CallSupportFeatureItem(themeColor, Icons.Default.VerifiedUser, stringResource(R.string.secure_private_label), stringResource(R.string.secure_private_msg))
+                CallSupportFeatureItem(themeColor, Icons.Default.SupportAgent, stringResource(R.string.trained_experts_label), stringResource(R.string.trained_experts_msg))
                 
                 Spacer(modifier = Modifier.height(32.dp))
                 Card(
@@ -8809,7 +8858,7 @@ fun CallSupportScreen(userRole: UserRole?, onBack: () -> Unit, onCallEnded: (Str
                         Icon(Icons.Default.CalendarToday, null, tint = themeColor, modifier = Modifier.size(32.dp))
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
-                            Text(languageState.value.getT("Support Hours", "सहायता के घंटे", "ସହାୟତା ସମୟ"), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(stringResource(R.string.support_hours), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             Text("Mon - Sat: 9:00 AM - 6:00 PM", fontSize = 12.sp, color = Color.Gray)
                             Text("Sunday: 10:00 AM - 4:00 PM", fontSize = 12.sp, color = Color.Gray)
                         }
@@ -8833,12 +8882,12 @@ fun CallSupportScreen(userRole: UserRole?, onBack: () -> Unit, onCallEnded: (Str
                 }
                 Spacer(modifier = Modifier.height(32.dp))
                 Text(
-                    text = if (callState == "Connecting") languageState.value.getT("Connecting...", "जुड़ रहा है...", "ସଂଯୋଗ ହେଉଛି...") else languageState.value.getT("In Call", "कॉल पर", "କଲ୍ ରେ"),
+                    text = if (callState == "Connecting") stringResource(R.string.connecting_label) else stringResource(R.string.in_progress),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = if (callState == "Connecting") languageState.value.getT("System is connecting the call to an agent", "सिस्टम एक एजेंट को कॉल कनेक्ट कर रहा है", "ସିଷ୍ଟମ ଜଣେ ଏଜେଣ୍ଟଙ୍କୁ କଲ୍ ସଂଯୋଗ କରୁଛି") else languageState.value.getT("User speaks with the support executive", "उपयोगकर्ता सहायता कार्यकारी के साथ बात करता है", "ଉପଭୋକ୍ତା ସହାୟତା କାର୍ଯ୍ୟନିର୍ବାହୀଙ୍କ ସହ କଥା ହୁଅନ୍ତି"),
+                    text = if (callState == "Connecting") stringResource(R.string.system_connecting_msg) else stringResource(R.string.user_speaks_msg),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.Gray,
                     textAlign = TextAlign.Center,
@@ -8883,7 +8932,7 @@ fun CallSupportFeatureItem(themeColor: Color, icon: ImageVector, title: String, 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CallSummaryScreen(number: String, duration: String, time: String, userRole: UserRole?, onBackHome: () -> Unit, onCallAgain: () -> Unit) {
-    val languageState = LocalAppLanguage.current
+    val context = LocalContext.current
     val themeColor = when(userRole) {
         UserRole.FARMER -> PrimaryBlue
         UserRole.COORDINATOR -> CoordinatorOrange
@@ -8895,7 +8944,7 @@ fun CallSummaryScreen(number: String, duration: String, time: String, userRole: 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(languageState.value.getT("Call Summary", "कॉल सारांश", "କଲ୍ ସାରାଂଶ"), fontWeight = FontWeight.Bold, color = Color.White) },
+                title = { Text(stringResource(R.string.call_support), fontWeight = FontWeight.Bold, color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onBackHome) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -8926,12 +8975,12 @@ fun CallSummaryScreen(number: String, duration: String, time: String, userRole: 
             }
             Spacer(modifier = Modifier.height(32.dp))
             Text(
-                text = languageState.value.getT("Thank you!", "धन्यवाद!", "ଧନ୍ୟବାଦ!"),
+                text = stringResource(R.string.thank_you),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = languageState.value.getT("Your call has ended.", "आपकी कॉल समाप्त हो गई है।", "ଆପଣଙ୍କର କଲ୍ ସମାପ୍ତ ହୋଇଛି |"),
+                text = stringResource(R.string.your_call_has_ended),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray
             )
@@ -8945,25 +8994,25 @@ fun CallSummaryScreen(number: String, duration: String, time: String, userRole: 
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = languageState.value.getT("Call Details", "कॉल विवरण", "କଲ୍ ବିବରଣୀ"),
+                        text = stringResource(R.string.call_details),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    CallDetailRow(themeColor, Icons.Default.Phone, languageState.value.getT("Number", "नंबर", "ନମ୍ବର"), number)
-                    CallDetailRow(themeColor, Icons.Default.History, languageState.value.getT("Duration", "अवधि", "ଅବଧି"), duration)
-                    CallDetailRow(themeColor, Icons.Default.CalendarToday, languageState.value.getT("Time", "समय", "ସମୟ"), time)
+                    CallDetailRow(themeColor, Icons.Default.Phone, stringResource(R.string.number), number)
+                    CallDetailRow(themeColor, Icons.Default.History, stringResource(R.string.duration), duration)
+                    CallDetailRow(themeColor, Icons.Default.CalendarToday, stringResource(R.string.time), time)
                 }
             }
             
             Spacer(modifier = Modifier.height(32.dp))
             Text(
-                text = languageState.value.getT("How was your experience?", "आपका अनुभव कैसा रहा?", "ଆପଣଙ୍କ ଅଭିଜ୍ଞତା କିପରି ଥିଲା?"),
+                text = stringResource(R.string.experience_feedback),
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp
             )
             Text(
-                text = languageState.value.getT("Your feedback helps us improve.", "आपकी प्रतिक्रिया हमें बेहतर बनाने में मदद करती है।", "ଆପଣଙ୍କ ମତାମତ ଆମକୁ ଉନ୍ନତି କରିବାରେ ସାହାଯ୍ୟ କରେ |"),
+                text = stringResource(R.string.feedback_helps_us_improve),
                 fontSize = 14.sp,
                 color = Color.Gray
             )
@@ -8989,7 +9038,7 @@ fun CallSummaryScreen(number: String, duration: String, time: String, userRole: 
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = themeColor)
             ) {
-                Text(languageState.value.getT("Back to Home", "होम पर वापस जाएं", "ମୁଖ୍ୟ ପୃଷ୍ଠାକୁ ଫେରନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(stringResource(R.string.back_to_home), fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             Spacer(modifier = Modifier.height(12.dp))
             OutlinedButton(
@@ -8998,7 +9047,7 @@ fun CallSummaryScreen(number: String, duration: String, time: String, userRole: 
                 shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, Color.LightGray)
             ) {
-                Text(languageState.value.getT("Call Again", "फिर से कॉल करें", "ପୁଣି କଲ୍ କରନ୍ତୁ"), color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(stringResource(R.string.call_again), color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -9033,50 +9082,14 @@ fun FaqsScreen(userRole: UserRole?, onBack: () -> Unit, onContactSupport: () -> 
     val categories = listOf("All", "Insurance", "Claims", "Policy", "Account")
 
     val faqs = listOf(
-        FaqData(
-            languageState.value.getT("What is Goat Insurance?", "बकरी बीमा क्या है?", "ଛେଳି ବୀମା କ’ଣ?"),
-            languageState.value.getT(
-                "Goat Insurance is a protection plan that helps you in case of death of your insured goat due to accidents, diseases or natural calamities. You will receive compensation as per the policy terms and conditions.",
-                "बकरी बीमा एक सुरक्षा योजना है जो दुर्घटनाओं, बीमारियों या प्राकृतिक आपदाओं के कारण आपकी बीमित बकरी की मृत्यु के मामले में आपकी सहायता करती है। आपको पॉलिसी के नियमों और शर्तों के अनुसार मुआवजा मिलेगा।",
-                "ଛେଳି ବୀମା ହେଉଛି ଏକ ସୁରକ୍ଷା ଯୋଜନା ଯାହା ଦୁର୍ଘଟଣା, ରୋଗ କିମ୍ବା ପ୍ରାକୃତିକ ବିପର୍ଯ୍ୟୟ ଯୋଗୁଁ ତୁମର ବୀମାଭୁକ୍ତ ଛେଳିର ମୃତ୍ୟୁ ହେଲେ ତୁମକୁ ସାହାଯ୍ୟ କରେ | ପଲିସିର ସର୍ତ୍ତାବଳୀ ଅନୁଯାୟୀ ଆପଣ କ୍ଷତିପୂରଣ ପାଇବେ |"
-            ),
-            "Insurance"
-        ),
-        FaqData(
-            languageState.value.getT("How do I register my goat for insurance?", "मैं बीमा के लिए अपनी बकरी को कैसे पंजीकृत करूं?", "ବୀମା ପାଇଁ ମୋ ଛେଳିକୁ କିପରି ପଞ୍ଜିକରଣ କରିବି?"),
-            languageState.value.getT("You can register via the app by providing farmer and goat details, and uploading photos.", "आप किसान और बकरी का विवरण प्रदान करके और फोटो अपलोड करके ऐप के माध्यम से पंजीकरण कर सकते हैं।", "ଆପଣ କୃଷକ ଏବଂ ଛେଳି ବିବରଣୀ ପ୍ରଦାନ କରି ଏବଂ ଫଟୋ ଅପଲୋଡ୍ କରି ଆପ୍ ମାଧ୍ୟମରେ ପଞ୍ଜିକରଣ କରିପାରିବେ |"),
-            "Insurance"
-        ),
-        FaqData(
-            languageState.value.getT("What documents are required for registration?", "पंजीकरण के लिए कौन से दस्तावेज आवश्यक हैं?", "ପଞ୍ଜିକରଣ ପାଇଁ କେଉଁ ଦଲିଲ ଆବଶ୍ୟକ?"),
-            languageState.value.getT("Aadhaar card, farmer details, and clear photos of the goat from different angles are required.", "आधार कार्ड, किसान का विवरण और विभिन्न कोणों से बकरी की स्पष्ट फोटो आवश्यक है।", "ଆଧାର କାର୍ଡ, କୃଷକଙ୍କ ବିବରଣୀ ଏବଂ ବିଭିନ୍ନ କୋଣରୁ ଛେଳିର ସ୍ପଷ୍ଟ ଫଟୋ ଆବଶ୍ୟକ |"),
-            "Policy"
-        ),
-        FaqData(
-            languageState.value.getT("How can I check my policy status?", "मैं अपनी पॉलिसी की स्थिति कैसे जांच सकता हूं?", "ମୁଁ ମୋର ପଲିସି ସ୍ଥିତି କିପରି ଯାଞ୍ଚ କରିପାରିବି?"),
-            languageState.value.getT("Go to the 'Goat List' or 'Policy' section in your dashboard to view active and expired policies.", "सक्रिय और समाप्त नीतियों को देखने के लिए अपने डैशबोर्ड में 'बकरी सूची' या 'पॉलिसी' अनुभाग पर जाएं।", "ସକ୍ରିୟ ଏବଂ ସମାପ୍ତ ପଲିସିଗୁଡିକ ଦେଖିବା ପାଇଁ ଆପଣଙ୍କର ଡ୍ୟାସବୋର୍ଡର 'ଛେଳି ତାଲିକା' କିମ୍ବା 'ପଲିସି' ବିଭାଗକୁ ଯାଆନ୍ତୁ |"),
-            "Policy"
-        ),
-        FaqData(
-            languageState.value.getT("How do I file a claim?", "मैं दावा कैसे दायर करूं?", "ମୁଁ କିପରି ଦାବି ଦାଖଲ କରିବି?"),
-            languageState.value.getT("Report the goat's death immediately through the app, upload photos, and Didi will visit for verification.", "ऐप के माध्यम से तुरंत बकरी की मृत्यु की सूचना दें, फोटो अपलोड करें, और दीदी सत्यापन के लिए आएंगी।", "ଆପ୍ ମାଧ୍ୟମରେ ଛେଳିର ମୃତ୍ୟୁ ବିଷୟରେ ତୁରନ୍ତ ସୂଚନା ଦିଅନ୍ତୁ, ଫଟୋ ଅପଲୋଡ୍ କରନ୍ତୁ ଏବଂ ଦିଦି ଯାଞ୍ଚ ପାଇଁ ଆସିବେ |"),
-            "Claims"
-        ),
-        FaqData(
-            languageState.value.getT("How long does claim approval take?", "दावा स्वीकृति में कितना समय लगता है?", "ଦାବି ଅନୁମୋଦନ ପାଇଁ କେତେ ସମୟ ଲାଗେ?"),
-            languageState.value.getT("Usually, it takes 7-10 working days after the verification is completed by the coordinator.", "आमतौर पर, समन्वयक द्वारा सत्यापन पूरा होने के बाद 7-10 कार्य दिवस लगते हैं।", "ସାଧାରଣତଃ, ସମନ୍ଵୟକାରୀଙ୍କ ଦ୍ୱାରା ଯାଞ୍ଚ ଶେଷ ହେବାର ୭-୧୦ କାର୍ଯ୍ୟ ଦିବସ ଲାଗିଥାଏ |"),
-            "Claims"
-        ),
-        FaqData(
-            languageState.value.getT("What is the claim settlement ratio?", "दावा निपटान अनुपात क्या है?", "ଦାବି ସମାଧାନ ଅନୁପାତ କ’ଣ?"),
-            languageState.value.getT("We have a high claim settlement ratio as the process is transparent and assisted by Suraksha Didis.", "हमारे पास उच्च दावा निपटान अनुपात है क्योंकि प्रक्रिया पारदर्शी है और सुरक्षा दीदियों द्वारा सहायता प्राप्त है।", "ଆମର ଏକ ଉଚ୍ଚ ଦାବି ସମାଧାନ ଅନୁପାତ ଅଛି କାରଣ ପ୍ରକ୍ରିୟା ସ୍ୱଚ୍ଛ ଏବଂ ସୁରକ୍ଷା ଦିଦିଙ୍କ ଦ୍ୱାରା ସହାୟତା ପ୍ରାପ୍ତ |"),
-            "Claims"
-        ),
-        FaqData(
-            languageState.value.getT("Can I cancel my policy?", "क्या मैं अपनी पॉलिसी रद्द कर सकता हूँ?", "ମୁଁ ମୋର ପଲିସି ବାତିଲ୍ କରିପାରିବି କି?"),
-            languageState.value.getT("Yes, policies can be cancelled within a specific period. Please contact support for assistance.", "हाँ, विशिष्ट अवधि के भीतर नीतियां रद्द की जा सकती हैं। सहायता के लिए कृपया समर्थन से संपर्क करें।", "ହଁ, ଏକ ନିର୍ଦ୍ଦିଷ୍ଟ ସମୟ ମଧ୍ୟରେ ପଲିସି ବାତିଲ କରାଯାଇପାରିବ | ସହାୟତା ପାଇଁ ଦୟାକରି ସମର୍ଥନ ସହିତ ଯୋଗାଯୋଗ କରନ୍ତୁ |"),
-            "Policy"
-        )
+        FaqData(stringResource(R.string.faq_q1), stringResource(R.string.faq_a1), "Insurance"),
+        FaqData(stringResource(R.string.faq_q2), stringResource(R.string.faq_a2), "Insurance"),
+        FaqData(stringResource(R.string.faq_q3), stringResource(R.string.faq_a3), "Policy"),
+        FaqData(stringResource(R.string.faq_q4), stringResource(R.string.faq_a4), "Policy"),
+        FaqData(stringResource(R.string.faq_q5), stringResource(R.string.faq_a5), "Claims"),
+        FaqData(stringResource(R.string.faq_q6), stringResource(R.string.faq_a6), "Claims"),
+        FaqData(stringResource(R.string.faq_q7), stringResource(R.string.faq_a7), "Claims"),
+        FaqData(stringResource(R.string.faq_q8), stringResource(R.string.faq_a8), "Policy")
     )
 
     val filteredFaqs = faqs.filter { 
@@ -9087,7 +9100,7 @@ fun FaqsScreen(userRole: UserRole?, onBack: () -> Unit, onContactSupport: () -> 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(languageState.value.getT("FAQs", "सामान्य प्रश्न", "FAQs"), fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.faqs), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -9104,7 +9117,7 @@ fun FaqsScreen(userRole: UserRole?, onBack: () -> Unit, onContactSupport: () -> 
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
-                placeholder = { Text(languageState.value.getT("Search questions...", "प्रश्न खोजें...", "ପ୍ରଶ୍ନ ଖୋଜନ୍ତୁ...")) },
+                placeholder = { Text(stringResource(R.string.search_questions_placeholder)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
                 trailingIcon = { Icon(Icons.Default.FilterList, contentDescription = null, tint = themeColor) },
                 shape = RoundedCornerShape(12.dp),
@@ -9146,9 +9159,9 @@ fun FaqsScreen(userRole: UserRole?, onBack: () -> Unit, onContactSupport: () -> 
                 ) {
                     Icon(Icons.AutoMirrored.Filled.Help, null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(languageState.value.getT("No FAQs found", "कोई प्रश्न नहीं मिला", "କୌଣସି FAQs ମିଳିଲା ନାହିଁ"), fontWeight = FontWeight.Bold, color = Color.Gray)
+                    Text(stringResource(R.string.no_faqs_found), fontWeight = FontWeight.Bold, color = Color.Gray)
                     TextButton(onClick = { searchQuery = ""; selectedCategory = "All" }) {
-                        Text(languageState.value.getT("Clear Search", "खोज साफ़ करें", "ସନ୍ଧାନ ସଫା କରନ୍ତୁ"), color = themeColor)
+                        Text(stringResource(R.string.clear_search_label), color = themeColor)
                     }
                 }
             } else {
@@ -9186,8 +9199,8 @@ fun FaqsScreen(userRole: UserRole?, onBack: () -> Unit, onContactSupport: () -> 
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(languageState.value.getT("Still need help?", "अभी भी मदद चाहिए?", "ଏବେ ବି ସାହାଯ୍ୟ ଦରକାର କି?"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        Text(languageState.value.getT("Chat with our support team", "हमारी सहायता टीम के साथ चैट करें", "ଆମର ସହାୟତା ଟିମ୍ ସହିତ ଚାଟ୍ କରନ୍ତୁ"), fontSize = 13.sp, color = Color.Gray)
+                        Text(stringResource(R.string.still_need_help_label), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(stringResource(R.string.chat_support_msg), fontSize = 13.sp, color = Color.Gray)
                     }
                     Icon(Icons.Default.ChevronRight, null, tint = Color.LightGray)
                 }
@@ -9246,7 +9259,7 @@ fun FaqItem(index: Int, faq: FaqData, themeColor: Color) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(languageState.value.getT("Was this helpful?", "क्या यह उपयोगी था?", "ଏହା ସାହାଯ୍ୟକାରୀ ଥିଲା କି?"), fontSize = 12.sp, color = Color.Gray)
+                    Text(stringResource(R.string.was_helpful_label), fontSize = 12.sp, color = Color.Gray)
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         Icon(Icons.Default.ThumbUpOffAlt, null, tint = Color.Gray, modifier = Modifier.size(18.dp).clickable { /* Feedback */ })
                         Icon(Icons.Default.ThumbDownOffAlt, null, tint = Color.Gray, modifier = Modifier.size(18.dp).clickable { /* Feedback */ })
@@ -9275,7 +9288,7 @@ fun ContactSupportHomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(languageState.value.getT("Contact Support", "सहायता से संपर्क करें", "ସହାୟତା ସହିତ ଯୋଗାଯୋଗ କରନ୍ତୁ"), fontWeight = FontWeight.Bold, color = Color.White) },
+                title = { Text(stringResource(R.string.contact_support), fontWeight = FontWeight.Bold, color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -9306,13 +9319,13 @@ fun ContactSupportHomeScreen(
             }
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = languageState.value.getT("We're here to help you!", "हम आपकी मदद के लिए यहां हैं!", "ଆମେ ଆପଣଙ୍କୁ ସାହାଯ୍ୟ କରିବାକୁ ଏଠାରେ ଅଛୁ!"),
+                text = stringResource(R.string.we_are_here_to_help),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
             Text(
-                text = languageState.value.getT("Chat with our support team for quick solutions.", "त्वरित समाधान के लिए हमारी सहायता टीम के साथ चैट करें।", "ତ୍ୱରିତ ସମାଧାନ ପାଇଁ ଆମର ସହାୟତା ଟିମ୍ ସହିତ ଚାଟ୍ କରନ୍ତୁ |"),
+                text = stringResource(R.string.chat_quick_solutions),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray,
                 textAlign = TextAlign.Center,
@@ -9320,29 +9333,29 @@ fun ContactSupportHomeScreen(
             )
 
             Spacer(modifier = Modifier.height(32.dp))
-            SupportFeatureItem(themeColor, Icons.Default.History, languageState.value.getT("Quick Response", "त्वरित प्रतिक्रिया", "ତ୍ୱରିତ ପ୍ରତିକ୍ରିୟା"), languageState.value.getT("We typically reply within a few minutes.", "हम आम तौर पर कुछ ही मिनटों में जवाब देते हैं।", "ଆମେ ସାଧାରଣତଃ କିଛି ମିନିଟ୍ ମଧ୍ୟରେ ଉତ୍ତର ଦେଇଥାଉ |"))
-            SupportFeatureItem(themeColor, Icons.Default.Person, languageState.value.getT("Expert Support", "विशेषज्ञ सहायता", "ବିଶେଷଜ୍ଞ ସହାୟତା"), languageState.value.getT("Connect with our trained experts.", "हमारे प्रशिक्षित विशेषज्ञों से जुड़ें।", "ଆମର ପ୍ରଶିକ୍ଷିତ ବିଶେଷଜ୍ଞଙ୍କ ସହିତ ଯୋଗାଯୋଗ କରନ୍ତୁ |"))
-            SupportFeatureItem(themeColor, Icons.Default.VerifiedUser, languageState.value.getT("Safe & Secure", "सुरक्षित और सुरक्षित", "ସୁରକ୍ଷିତ ଏବଂ ନିରାପଦ"), languageState.value.getT("Your conversations are private and secure.", "आपकी बातचीत निजी और सुरक्षित है।", "ଆପଣଙ୍କର କଥାବାର୍ତ୍ତା ବ୍ୟକ୍ତିଗତ ଏବଂ ସୁରକ୍ଷିତ ଅଟେ |"))
+            SupportFeatureItem(themeColor, Icons.Default.History, stringResource(R.string.quick_response), stringResource(R.string.quick_response_msg))
+            SupportFeatureItem(themeColor, Icons.Default.Person, stringResource(R.string.expert_support), stringResource(R.string.expert_support_msg))
+            SupportFeatureItem(themeColor, Icons.Default.VerifiedUser, stringResource(R.string.safe_secure), stringResource(R.string.safe_secure_msg))
 
             Spacer(modifier = Modifier.height(40.dp))
             Text(
-                text = languageState.value.getT("Choose a way to get support", "सहायता प्राप्त करने का तरीका चुनें", "ସହାୟତା ପାଇବା ପାଇଁ ଏକ ଉପାୟ ବାଛନ୍ତୁ"),
+                text = stringResource(R.string.choose_support_way),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.Start)
             )
             Spacer(modifier = Modifier.height(16.dp))
             HelpItemCard(
-                title = languageState.value.getT("Start a Chat", "चैट शुरू करें", "ଚାଟ୍ ଆରମ୍ଭ କରନ୍ତୁ"),
-                subtitle = languageState.value.getT("Chat with our support team", "हमारी सहायता टीम के साथ चैट करें", "ଆମର ସହାୟତା ଟିମ୍ ସହିତ ଚାଟ୍ କରନ୍ତୁ"),
+                title = stringResource(R.string.start_chat_label),
+                subtitle = stringResource(R.string.chat_support_msg),
                 icon = Icons.AutoMirrored.Filled.Chat,
                 themeColor = themeColor,
                 onClick = onStartChat
             )
             Spacer(modifier = Modifier.height(12.dp))
             HelpItemCard(
-                title = languageState.value.getT("View Previous Conversations", "पिछली बातचीत देखें", "ପୂର୍ବ କଥାବାର୍ତ୍ତା ଦେଖନ୍ତୁ"),
-                subtitle = languageState.value.getT("Check your earlier chat history", "अपना पुराना चैट इतिहास देखें", "ଆପଣଙ୍କର ପୂର୍ବ ଚାଟ୍ ଇତିହାସ ଯାଞ୍ଚ କରନ୍ତୁ"),
+                title = stringResource(R.string.view_previous_conversations),
+                subtitle = stringResource(R.string.view_previous_conversations_subtitle),
                 icon = Icons.Default.History,
                 themeColor = themeColor,
                 onClick = onViewPrevious
@@ -9359,7 +9372,7 @@ fun ContactSupportHomeScreen(
                     Icon(Icons.Default.CalendarToday, null, tint = themeColor, modifier = Modifier.size(32.dp))
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
-                        Text(languageState.value.getT("Support Hours", "सहायता के घंटे", "ସହାୟତା ସମୟ"), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(stringResource(R.string.support_hours), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         Text("Mon - Sat: 9:00 AM - 6:00 PM", fontSize = 12.sp, color = Color.Gray)
                         Text("Sunday: 10:00 AM - 4:00 PM", fontSize = 12.sp, color = Color.Gray)
                     }
@@ -9419,7 +9432,7 @@ fun PreChatFormScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(languageState.value.getT("Contact Support", "सहायता से संपर्क करें", "ସହାୟତା ସହିତ ଯୋଗାଯୋଗ କରନ୍ତୁ"), fontWeight = FontWeight.Bold, color = Color.White) },
+                title = { Text(stringResource(R.string.contact_support), fontWeight = FontWeight.Bold, color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -9450,12 +9463,12 @@ fun PreChatFormScreen(
             }
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = languageState.value.getT("Start a Conversation", "बातचीत शुरू करें", "ଏକ କଥାବାର୍ତ୍ତା ଆରମ୍ଭ କରନ୍ତୁ"),
+                text = stringResource(R.string.start_conversation),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = languageState.value.getT("Please provide a few details so we can assist you better", "कृपया कुछ विवरण प्रदान करें ताकि हम आपकी बेहतर सहायता कर सकें", "ଦୟାକରି କିଛି ବିବରଣୀ ପ୍ରଦାନ କରନ୍ତୁ ଯାହା ଦ୍ୱାରା ଆମେ ଆପଣଙ୍କୁ ଭଲ ଭାବରେ ସାହାଯ୍ୟ କରିପାରିବୁ |"),
+                text = stringResource(R.string.start_conversation_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray,
                 textAlign = TextAlign.Center,
@@ -9464,35 +9477,46 @@ fun PreChatFormScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
             EnrollmentDropdownField(
-                label = languageState.value.getT("Subject", "विषय", "ବିଷୟ"),
-                selectedValue = subject.ifEmpty { languageState.value.getT("Select a topic", "एक विषय चुनें", "ଏକ ବିଷୟ ବାଛନ୍ତୁ") },
-                options = listOf("Enrollment Issue", "Claim Process", "Payment Issue", "Policy Status", "Other"),
+                label = stringResource(R.string.subject),
+                selectedValue = subject.ifEmpty { stringResource(R.string.select_topic) },
+                options = listOf(
+                    stringResource(R.string.enrollment_issue),
+                    stringResource(R.string.claim_process),
+                    stringResource(R.string.payment_issue),
+                    stringResource(R.string.policy_status),
+                    stringResource(R.string.other_label)
+                ),
                 onValueChange = { subject = it },
                 borderColor = Color.LightGray.copy(alpha = 0.5f)
             )
             Spacer(modifier = Modifier.height(16.dp))
             EnrollmentDropdownField(
-                label = languageState.value.getT("Category", "श्रेणी", "ବର୍ଗ"),
-                selectedValue = category.ifEmpty { languageState.value.getT("Select a category", "एक श्रेणी चुनें", "ଏକ ବର୍ଗ ବାଛନ୍ତୁ") },
-                options = listOf("Technical Support", "Billing", "Information", "Feedback"),
+                label = stringResource(R.string.category),
+                selectedValue = category.ifEmpty { stringResource(R.string.select_category) },
+                options = listOf(
+                    stringResource(R.string.technical_support),
+                    stringResource(R.string.billing),
+                    stringResource(R.string.information),
+                    stringResource(R.string.feedback)
+                ),
                 onValueChange = { category = it },
                 borderColor = Color.LightGray.copy(alpha = 0.5f)
             )
             Spacer(modifier = Modifier.height(16.dp))
             Column(modifier = Modifier.fillMaxWidth()) {
-                Text(languageState.value.getT("Description", "विवरण", "ବିବରଣୀ"), fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp))
+                Text(stringResource(R.string.description), fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp))
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
                     modifier = Modifier.fillMaxWidth().height(120.dp),
-                    placeholder = { Text(languageState.value.getT("Tell us more about your issue...", "हमें अपनी समस्या के बारे में और बताएं...", "ଆପଣଙ୍କର ସମସ୍ୟା ବିଷୟରେ ଆମକୁ ଅଧିକ କୁହନ୍ତୁ ..."), color = Color.Gray) },
+                    placeholder = { Text(stringResource(R.string.tell_us_more), color = Color.Gray) },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f))
                 )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            Text(languageState.value.getT("Attach Screenshot (Optional)", "स्क्रीनशॉट संलग्न करें (वैकल्पिक)", "ସ୍କ୍ରିନସଟ୍ ସଂଲଗ୍ନ କରନ୍ତୁ (ବୈକଳ୍ପିକ)"), fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.align(Alignment.Start))
+            Text(stringResource(R.string.attach_screenshot), fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.align(Alignment.Start))
             Spacer(modifier = Modifier.height(8.dp))
             AttachmentBox(attachmentUri) { attachmentLauncher.launch("image/*") }
 
@@ -9504,7 +9528,7 @@ fun PreChatFormScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = themeColor),
                 enabled = subject.isNotBlank() && category.isNotBlank() && description.isNotBlank()
             ) {
-                Text(languageState.value.getT("Start Chat", "चैट शुरू करें", "ଚାଟ୍ ଆରମ୍ଭ କରନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(stringResource(R.string.start_chat), fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -9546,11 +9570,11 @@ fun ChatConversationScreen(
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text(languageState.value.getT("Support Team", "सहायता टीम", "ସହାୟତା ଟିମ୍"), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
+                            Text(stringResource(R.string.support_team), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFF4CAF50)))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text(languageState.value.getT("Online", "ऑनलाइन", "ଅନଲାଇନ୍"), fontSize = 11.sp, color = Color.White.copy(alpha = 0.8f))
+                                Text(stringResource(R.string.online), fontSize = 11.sp, color = Color.White.copy(alpha = 0.8f))
                             }
                         }
                     }
@@ -9577,7 +9601,7 @@ fun ChatConversationScreen(
                         value = messageText,
                         onValueChange = { messageText = it },
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text(languageState.value.getT("Type a message...", "एक संदेश लिखें...", "ଗୋଟିଏ ବାର୍ତ୍ତା ଲେଖନ୍ତୁ ..."), color = Color.Gray) },
+                        placeholder = { Text(stringResource(R.string.type_message), color = Color.Gray) },
                         shape = RoundedCornerShape(24.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color.Transparent,
@@ -9618,7 +9642,7 @@ fun ChatConversationScreen(
                 item {
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         Surface(color = Color.LightGray.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp)) {
-                            Text(languageState.value.getT("Today", "आज", "ଆଜି"), modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), fontSize = 12.sp, color = Color.Gray)
+                            Text(stringResource(R.string.date_today), modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), fontSize = 12.sp, color = Color.Gray)
                         }
                     }
                 }
@@ -9723,14 +9747,14 @@ fun IssueSuccessScreen(
             Spacer(modifier = Modifier.height(32.dp))
             
             Text(
-                text = languageState.value.getT("Thank You!", "धन्यवाद!", "ଧନ୍ୟବାଦ!"),
+                text = stringResource(R.string.thank_you),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.ExtraBold,
                 color = Color.Black
             )
             
             Text(
-                text = languageState.value.getT("Your issue has been reported successfully.", "आपकी समस्या सफलतापूर्वक रिपोर्ट कर दी गई है।", "ଆପଣଙ୍କର ସମସ୍ୟା ସଫଳତାର ସହିତ ରିପୋର୍ଟ କରାଯାଇଛି |"),
+                text = stringResource(R.string.issue_reported_successfully),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray,
                 textAlign = TextAlign.Center,
@@ -9748,16 +9772,16 @@ fun IssueSuccessScreen(
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     Text(
-                        text = languageState.value.getT("Ticket Details", "टिकट विवरण", "ଟିକେଟ୍ ବିବରଣୀ"),
+                        text = stringResource(R.string.ticket_details),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black
                     )
                     Spacer(modifier = Modifier.height(20.dp))
-                    TicketDetailRow(languageState.value.getT("Ticket ID", "टिकट आईडी", "ଟିକେଟ୍ ID"), ticketId)
-                    TicketDetailRow(languageState.value.getT("Issue Type", "समस्या का प्रकार", "ସମସ୍ୟାର ପ୍ରକାର"), type)
-                    TicketDetailRow(languageState.value.getT("Reported Date", "रिपोर्ट की तारीख", "ରିପୋର୍ଟ ତାରିଖ"), date)
-                    TicketDetailRow(languageState.value.getT("Status", "स्थिति", "ସ୍ଥିତି"), status, valueColor = InfoBlue)
+                    TicketDetailRow(stringResource(R.string.ticket_id), ticketId)
+                    TicketDetailRow(stringResource(R.string.issue_type), type)
+                    TicketDetailRow(stringResource(R.string.reported_date), date)
+                    TicketDetailRow(stringResource(R.string.status), status, valueColor = InfoBlue)
                 }
             }
 
@@ -9775,7 +9799,7 @@ fun IssueSuccessScreen(
                     Icon(Icons.Default.Info, null, tint = InfoBlue, modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = languageState.value.getT("We will review your issue and get back to you soon.", "हम आपकी समस्या की समीक्षा करेंगे और जल्द ही आपसे संपर्क करेंगे।", "ଆମେ ଆପଣଙ୍କର ସମସ୍ୟାର ସମୀକ୍ଷା କରିବୁ ଏବଂ ଶୀଘ୍ର ଆପଣଙ୍କ ସହିତ ଯୋଗାଯୋଗ କରିବୁ |"),
+                        text = stringResource(R.string.review_soon_message),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.DarkGray
                     )
@@ -9790,7 +9814,7 @@ fun IssueSuccessScreen(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen)
             ) {
-                Text(languageState.value.getT("View My Reports", "मेरी रिपोर्ट देखें", "ମୋର ରିପୋର୍ଟ ଦେଖନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(stringResource(R.string.view_my_reports), fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -9801,7 +9825,7 @@ fun IssueSuccessScreen(
                 shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, Color.LightGray)
             ) {
-                Text(languageState.value.getT("Back to Home", "होम पर वापस जाएं", "ମୁଖ୍ୟ ପୃଷ୍ଠାକୁ ଫେରନ୍ତୁ"), color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(stringResource(R.string.back_to_home), color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             
             Spacer(modifier = Modifier.height(32.dp))
@@ -9821,11 +9845,11 @@ fun MyReportsScreen(navController: NavHostController, userRole: UserRole?, onBac
     
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf(
-        languageState.value.getT("All", "सभी", "ସମସ୍ତ"),
-        languageState.value.getT("Open", "खुला", "ଖୋଲା"),
-        languageState.value.getT("In Progress", "प्रगति पर", "ଚାଲୁଛି"),
-        languageState.value.getT("Resolved", "सुलझाया हुआ", "ସମାଧାନ ହୋଇଛି"),
-        languageState.value.getT("Closed", "बंद", "ବନ୍ଦ")
+        stringResource(R.string.all_label),
+        stringResource(R.string.open_label),
+        stringResource(R.string.in_progress),
+        stringResource(R.string.resolved_label),
+        stringResource(R.string.closed_label)
     )
 
     val mockReports = listOf(
@@ -9838,7 +9862,7 @@ fun MyReportsScreen(navController: NavHostController, userRole: UserRole?, onBac
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(languageState.value.getT("My Reports", "मेरी रिपोर्ट", "ମୋର ରିପୋର୍ଟ"), fontWeight = FontWeight.Bold, color = Color.White) },
+                title = { Text(stringResource(R.string.my_reports), fontWeight = FontWeight.Bold, color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
@@ -9905,14 +9929,14 @@ fun MyReportsScreen(navController: NavHostController, userRole: UserRole?, onBac
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(languageState.value.getT("Can't find your issue?", "अपनी समस्या नहीं मिल रही?", "ଆପଣଙ୍କ ସମସ୍ୟା ପାଇଲେ ନାହିଁ କି?"), fontWeight = FontWeight.Bold)
-                            Text(languageState.value.getT("Contact our support team directly.", "हमारी सहायता टीम से सीधे संपर्क करें।", "ଆମର ସହାୟତା ଟିମ୍ ସହିତ ସିଧାସଳଖ ଯୋଗାଯୋଗ କରନ୍ତୁ |"), fontSize = 12.sp, color = Color.Gray, textAlign = TextAlign.Center)
+                            Text(stringResource(R.string.cant_find_issue), fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.contact_support_direct), fontSize = 12.sp, color = Color.Gray, textAlign = TextAlign.Center)
                             Spacer(modifier = Modifier.height(12.dp))
                             TextButton(onClick = { navController.navigate("contact_support_home") }) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.AutoMirrored.Filled.Chat, null, modifier = Modifier.size(18.dp), tint = SuccessGreen)
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text(languageState.value.getT("Contact Support", "सहायता से संपर्क करें", "ସହାୟତା ସହିତ ଯୋଗାଯୋଗ କରନ୍ତୁ"), color = SuccessGreen, fontWeight = FontWeight.Bold)
+                                    Text(stringResource(R.string.contact_support), color = SuccessGreen, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -10000,7 +10024,7 @@ fun PrivacyPolicyScreen(userRole: UserRole?, onBack: () -> Unit) {
             TopAppBar(
                 title = {
                     Text(
-                        text = languageState.value.getT("Privacy Policy", "गोपनीयता नीति", "ଗୋପନୀୟତା ନୀତି"),
+                        text = stringResource(R.string.privacy_policy),
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -10055,7 +10079,7 @@ fun PrivacyPolicyScreen(userRole: UserRole?, onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = languageState.value.getT("Your Privacy Matters", "आपकी गोपनीयता मायने रखती है", "ଆପଣଙ୍କ ଗୋପନୀୟତା ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ"),
+                text = stringResource(R.string.privacy_matters),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
@@ -10064,11 +10088,7 @@ fun PrivacyPolicyScreen(userRole: UserRole?, onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = languageState.value.getT(
-                    "We are committed to protecting your personal information and being transparent about how we use it.",
-                    "हम आपकी व्यक्तिगत जानकारी की सुरक्षा करने और इसके उपयोग के तरीके के बारे में पारदर्शी होने के लिए प्रतिबद्ध हैं।",
-                    "ଆମେ ଆପଣଙ୍କର ବ୍ୟକ୍ତିଗତ ସୂଚନାକୁ ସୁରକ୍ଷିତ ରଖିବା ଏବଂ ଏହାର ବ୍ୟବହାର ବିଷୟରେ ସ୍ୱଚ୍ଛ ରହିବାକୁ ପ୍ରତିଶ୍ରୁତିବଦ୍ଧ |"
-                ),
+                text = stringResource(R.string.privacy_intro),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray,
                 textAlign = TextAlign.Center,
@@ -10088,7 +10108,7 @@ fun PrivacyPolicyScreen(userRole: UserRole?, onBack: () -> Unit) {
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = languageState.value.getT("In this Policy", "इस नीति में", "ଏହି ନୀତିରେ"),
+                        text = stringResource(R.string.in_this_policy),
                         color = themeColor,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
@@ -10097,75 +10117,43 @@ fun PrivacyPolicyScreen(userRole: UserRole?, onBack: () -> Unit) {
 
                     val sections = listOf(
                         PolicySection(
-                            title = languageState.value.getT("Information We Collect", "जानकारी जो हम एकत्र करते हैं", "ସୂଚନା ଯାହା ଆମେ ସଂଗ୍ରହ କରୁ"),
-                            content = languageState.value.getT(
-                                "We collect personal details like name, phone number, and location. We also collect livestock data including photos, tag numbers, and health records to facilitate insurance.",
-                                "हम नाम, फोन नंबर और स्थान जैसे व्यक्तिगत विवरण एकत्र करते हैं। बीमा की सुविधा के लिए हम फोटो, टैग नंबर और स्वास्थ्य रिकॉर्ड सहित पशुधन डेटा भी एकत्र करते हैं।",
-                                "ଆମେ ନାମ, ଫୋନ୍ ନମ୍ବର ଏବଂ ଅବସ୍ଥାନ ପରି ବ୍ୟକ୍ତିଗତ ବିବରଣୀ ସଂଗ୍ରହ କରୁ | ବୀମା ସୁବିଧା ପାଇଁ ଆମେ ଫଟୋ, ଟ୍ୟାଗ୍ ନମ୍ବର ଏବଂ ସ୍ୱାସ୍ଥ୍ୟ ରେକର୍ଡ ସହିତ ପ୍ରାଣୀସମ୍ପଦ ତଥ୍ୟ ମଧ୍ୟ ସଂଗ୍ରହ କରୁ |"
-                            ),
+                            title = stringResource(R.string.policy_s1_title),
+                            content = stringResource(R.string.policy_s1_desc),
                             icon = Icons.Default.Description
                         ),
                         PolicySection(
-                            title = languageState.value.getT("How We Use Information", "हम जानकारी का उपयोग कैसे करते हैं", "ଆମେ ସୂଚନା କିପରି ବ୍ୟବହାର କରୁ"),
-                            content = languageState.value.getT(
-                                "Your information is used to process insurance applications, verify claims through AI assessment, and coordinate visits between Suraksha Didis and farmers.",
-                                "आपकी जानकारी का उपयोग बीमा आवेदनों को संसाधित करने, एआई मूल्यांकन के माध्यम से दावों को सत्यापित करने और सुरक्षा दीदियों और किसानों के बीच यात्राओं के समन्वय के लिए किया जाता है।",
-                                "ଆପଣଙ୍କର ସୂଚନା ବୀମା ଆବେଦନଗୁଡ଼ିକର ପ୍ରକ୍ରିୟାକରଣ ପାଇଁ, AI ମୂଲ୍ୟାଙ୍କନ ମାଧ୍ୟମରେ ଦାବିଗୁଡିକ ଯାଞ୍ଚ କରିବା ପାଇଁ ଏବଂ ସୁରକ୍ଷା ଦିଦି ଏବଂ କୃଷକମାନଙ୍କ ମଧ୍ୟରେ ପରିଦର୍ଶନ ସମନ୍ୱୟ ପାଇଁ ବ୍ୟବହୃତ ହୁଏ |"
-                            ),
+                            title = stringResource(R.string.policy_s2_title),
+                            content = stringResource(R.string.policy_s2_desc),
                             icon = Icons.Default.Security
                         ),
                         PolicySection(
-                            title = languageState.value.getT("Data Sharing & Disclosure", "डेटा साझाकरण और प्रकटीकरण", "ଡାଟା ସେୟାରିଂ ଏବଂ ପ୍ରକାଶ"),
-                            content = languageState.value.getT(
-                                "We share data only with authorized insurance partners and relevant authorities for claim settlement. We do not sell or trade your personal information with third parties.",
-                                "हम दावा निपटान के लिए केवल अधिकृत बीमा भागीदारों और संबंधित अधिकारियों के साथ डेटा साझा करते हैं। हम तृतीय पक्षों के साथ आपकी व्यक्तिगत जानकारी बेचते या व्यापार नहीं करते हैं।",
-                                "ଆମେ କେବଳ ଦାବି ସମାଧାନ ପାଇଁ ଅଧିକୃତ ବୀମା ଅଂଶୀଦାର ଏବଂ ସମ୍ପୃକ୍ତ କର୍ତ୍ତୃପକ୍ଷଙ୍କ ସହିତ ତଥ୍ୟ ସେୟାର କରୁ | ଆମେ ତୃତୀୟ ପକ୍ଷ ସହିତ ଆପଣଙ୍କର ବ୍ୟକ୍ତିଗତ ସୂଚନା ବିକ୍ରୟ କିମ୍ବା ବ୍ୟବସାୟ କରୁନାହୁଁ |"
-                            ),
+                            title = stringResource(R.string.policy_s3_title),
+                            content = stringResource(R.string.policy_s3_desc),
                             icon = Icons.Default.Share
                         ),
                         PolicySection(
-                            title = languageState.value.getT("Data Security", "डेटा सुरक्षा", "ଡାଟା ସୁରକ୍ଷା"),
-                            content = languageState.value.getT(
-                                "We employ industry-standard encryption and security measures to protect your data from unauthorized access, loss, or misuse.",
-                                "हम आपके डेटा को अनधिकृत पहुंच, हानि या दुरुपयोग से बचाने के लिए उद्योग-मानक एन्क्रिप्शन और सुरक्षा उपायों का उपयोग करते हैं।",
-                                "ଆପଣଙ୍କର ତଥ୍ୟକୁ ଅନଧିକୃତ ପ୍ରବେଶ, କ୍ଷତି କିମ୍ବା ଅପବ୍ୟବହାରରୁ ରକ୍ଷା କରିବା ପାଇଁ ଆମେ ଶିଳ୍ପ-ମାନକ ଏନକ୍ରିପ୍ସନ୍ ଏବଂ ସୁରକ୍ଷା ବ୍ୟବସ୍ଥା ବ୍ୟବହାର କରୁ |"
-                            ),
+                            title = stringResource(R.string.policy_s4_title),
+                            content = stringResource(R.string.policy_s4_desc),
                             icon = Icons.Default.VerifiedUser
                         ),
                         PolicySection(
-                            title = languageState.value.getT("Your Rights", "आपके अधिकार", "ଆପଣଙ୍କର ଅଧିକାର"),
-                            content = languageState.value.getT(
-                                "You have the right to access, update, or request the deletion of your personal data. You can manage your profile settings directly in the app.",
-                                "आपको अपने व्यक्तिगत डेटा तक पहुंचने, अपडेट करने या हटाने का अनुरोध करने का अधिकार है। आप सीधे ऐप में अपनी प्रोफ़ाइल सेटिंग प्रबंधित कर सकते हैं।",
-                                "ଆପଣଙ୍କର ବ୍ୟକ୍ତିଗତ ତଥ୍ୟକୁ ପ୍ରବେଶ କରିବା, ଅପଡେଟ୍ କରିବା କିମ୍ବା ବିଲୋପ କରିବାକୁ ଅନୁରୋଧ କରିବାର ଅଧିକାର ଆପଣଙ୍କର ଅଛି | ଆପଣ ସିଧାସଳଖ ଆପ୍ ରେ ଆପଣଙ୍କର ପ୍ରୋଫାଇଲ୍ ସେଟିଙ୍ଗ୍ ପରିଚାଳନା କରିପାରିବେ |"
-                            ),
+                            title = stringResource(R.string.policy_s5_title),
+                            content = stringResource(R.string.policy_s5_desc),
                             icon = Icons.Default.Person
                         ),
                         PolicySection(
-                            title = languageState.value.getT("Cookies & Tracking", "कुकीज़ और ट्रैकिंग", "କୁକିଜ୍ ଏବଂ ଟ୍ରାକିଂ"),
-                            content = languageState.value.getT(
-                                "We use location services to verify carcass locations during mortality reporting and essential session management tools for app security.",
-                                "हम मृत्यु रिपोर्टिंग के दौरान शव स्थानों को सत्यापित करने के लिए स्थान सेवाओं और ऐप सुरक्षा के लिए आवश्यक सत्र प्रबंधन टूल का उपयोग करते हैं।",
-                                "ଆମେ ମୃତ୍ୟୁ ରିପୋର୍ଟ ସମୟରେ ଶବର ଅବସ୍ଥାନ ଯାଞ୍ଚ କରିବା ପାଇଁ ଅବସ୍ଥାନ ସେବା ଏବଂ ଆପ୍ ସୁରକ୍ଷା ପାଇଁ ଆବଶ୍ୟକୀୟ ସେସନ୍ ପରିଚାଳନା ଉପକରଣ ବ୍ୟବହାର କରୁ |"
-                            ),
+                            title = stringResource(R.string.policy_s6_title),
+                            content = stringResource(R.string.policy_s6_desc),
                             icon = Icons.Default.Cookie
                         ),
                         PolicySection(
-                            title = languageState.value.getT("Children's Privacy", "बच्चों की गोपनीयता", "ପିଲାମାନଙ୍କର ଗୋପନୀୟତା"),
-                            content = languageState.value.getT(
-                                "Our services are not intended for children under 18. we do not knowingly collect personal data from minors.",
-                                "हमारी सेवाएँ 18 वर्ष से कम उम्र के बच्चों के लिए नहीं हैं। हम जानबूझकर नाबालिगों से व्यक्तिगत डेटा एकत्र नहीं करते हैं।",
-                                "ଆମର ସେବାଗୁଡିକ ୧୮ ବର୍ଷରୁ କମ୍ ପିଲାମାନଙ୍କ ପାଇଁ ଉଦ୍ଦିଷ୍ଟ ନୁହେଁ | ଆମେ ଜାଣିଶୁଣି ନାବାଳକମାନଙ୍କଠାରୁ ବ୍ୟକ୍ତିଗତ ତଥ୍ୟ ସଂଗ୍ରହ କରୁନାହୁଁ |"
-                            ),
+                            title = stringResource(R.string.policy_s7_title),
+                            content = stringResource(R.string.policy_s7_desc),
                             icon = Icons.Default.ChildCare
                         ),
                         PolicySection(
-                            title = languageState.value.getT("Changes to this Policy", "इस नीति में बदलाव", "ଏହି ନୀତିରେ ପରିବର୍ତ୍ତନ"),
-                            content = languageState.value.getT(
-                                "We may update this policy from time to time. We will notify you of any significant changes through app notifications.",
-                                "हम समय-समय पर इस नीति को अपडेट कर सकते हैं। हम ऐप सूचनाओं के माध्यम से आपको किसी भी महत्वपूर्ण बदलाव के बारे में सूचित करेंगे।",
-                                "ଆମେ ସମୟ ସମୟରେ ଏହି ନୀତି ଅପଡେଟ୍ କରିପାରିବା | ଆମେ ଆପ୍ ବିଜ୍ଞପ୍ତି ମାଧ୍ୟମରେ ଯେକୌଣସି ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ ପରିବର୍ତ୍ତନ ବିଷୟରେ ଆପଣଙ୍କୁ ଜଣାଇବୁ |"
-                            ),
+                            title = stringResource(R.string.policy_s8_title),
+                            content = stringResource(R.string.policy_s8_desc),
                             icon = Icons.Default.Edit
                         )
                     )
@@ -10206,11 +10194,7 @@ fun PrivacyPolicyScreen(userRole: UserRole?, onBack: () -> Unit) {
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = languageState.value.getT(
-                            "By using our app, you agree to the collection and use of information in accordance with this policy.",
-                            "हमारे ऐप का उपयोग करके, आप इस नीति के अनुसार जानकारी के संग्रह और उपयोग के लिए सहमत होते हैं।",
-                            "ଆମର ଆପ୍ ବ୍ୟବହାର କରି, ଆପଣ ଏହି ନୀତି ଅନୁଯାୟୀ ସୂଚନା ସଂଗ୍ରହ ଏବଂ ବ୍ୟବହାର କରିବାକୁ ସମ୍ମତ ହୁଅନ୍ତି |"
-                        ),
+                        text = stringResource(R.string.privacy_agreement_tip),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.DarkGray,
                         lineHeight = 18.sp
@@ -10294,7 +10278,7 @@ fun TermsOfServiceScreen(userRole: UserRole?, onBack: () -> Unit) {
             TopAppBar(
                 title = {
                     Text(
-                        text = languageState.value.getT("Terms of Service", "सेवा की शर्तें", "ସେବା ସର୍ତ୍ତାବଳୀ"),
+                        text = stringResource(R.string.terms_of_service),
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -10349,7 +10333,7 @@ fun TermsOfServiceScreen(userRole: UserRole?, onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = languageState.value.getT("Our Terms, Your Trust", "हमारी शर्तें, आपका विश्वास", "ଆମର ସର୍ତ୍ତାବଳୀ, ଆପଣଙ୍କ ବିଶ୍ୱାସ"),
+                text = stringResource(R.string.terms_trust),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
@@ -10358,11 +10342,7 @@ fun TermsOfServiceScreen(userRole: UserRole?, onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = languageState.value.getT(
-                    "Welcome! Please read these Terms of Service carefully before using our app. By using the app, you agree to these terms and conditions.",
-                    "स्वागत है! कृपया हमारे ऐप का उपयोग करने से पहले इन सेवा की शर्तों को ध्यान से पढ़ें। ऐप का उपयोग करके, आप इन नियमों और शर्तों से सहमत होते हैं।",
-                    "ସ୍ଵାଗତ! ଦୟାକରି ଆମର ଆପ୍ ବ୍ୟବହାର କରିବା ପୂର୍ବରୁ ଏହି ସେବା ସର୍ତ୍ତାବଳୀକୁ ଧ୍ୟାନର ସହିତ ପଢନ୍ତୁ | ଆପ୍ ବ୍ୟବହାର କରି, ଆପଣ ଏହି ନିୟମ ଏବଂ ସର୍ତ୍ତାବଳୀରେ ସମ୍ମତ ହୁଅନ୍ତି |"
-                ),
+                text = stringResource(R.string.terms_intro),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray,
                 textAlign = TextAlign.Center,
@@ -10382,7 +10362,7 @@ fun TermsOfServiceScreen(userRole: UserRole?, onBack: () -> Unit) {
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = languageState.value.getT("In this Document", "इस दस्तावेज़ में", "ଏହି ଦଲିଲରେ"),
+                        text = stringResource(R.string.in_this_document),
                         color = themeColor,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
@@ -10391,84 +10371,48 @@ fun TermsOfServiceScreen(userRole: UserRole?, onBack: () -> Unit) {
 
                     val sections = listOf(
                         PolicySection(
-                            title = languageState.value.getT("1. Acceptance of Terms", "1. शर्तों की स्वीकृति", "୧. ସର୍ତ୍ତାବଳୀର ଗ୍ରହଣ"),
-                            content = languageState.value.getT(
-                                "By accessing or using this application, you agree to be bound by these terms. If you do not agree, please do not use the services.",
-                                "इस एप्लिकेशन तक पहुँचने या उपयोग करने से, आप इन शर्तों से बंधे होने के लिए सहमत होते हैं। यदि आप सहमत नहीं हैं, तो कृपया सेवाओं का उपयोग न करें।",
-                                "ଏହି ଆପ୍ ବ୍ୟବହାର କରି, ଆପଣ ଏହି ସର୍ତ୍ତାବଳୀ ଦ୍ୱାରା ବାଧ୍ୟ ହେବାକୁ ସମ୍ମତ ହୁଅନ୍ତି | ଯଦି ଆପଣ ସମ୍ମତ ନୁହଁନ୍ତି, ଦୟାକରି ସେବାଗୁଡିକ ବ୍ୟବହାର କରନ୍ତୁ ନାହିଁ |"
-                            ),
+                            title = stringResource(R.string.terms_s1_title),
+                            content = stringResource(R.string.terms_s1_desc),
                             icon = Icons.AutoMirrored.Filled.Assignment
                         ),
                         PolicySection(
-                            title = languageState.value.getT("2. Use of Our Services", "2. हमारी सेवाओं का उपयोग", "୨. ଆମର ସେବା ବ୍ୟବହାର"),
-                            content = languageState.value.getT(
-                                "Our services are designed to facilitate livestock insurance and related assistance. You agree to use the services only for lawful purposes.",
-                                "हमारी सेवाएँ पशुधन बीमा और संबंधित सहायता की सुविधा के लिए डिज़ाइन की गई हैं। आप केवल वैध उद्देश्यों के लिए सेवाओं का उपयोग करने के लिए सहमत हैं।",
-                                "ଆମର ସେବାଗୁଡିକ ପ୍ରାଣୀସମ୍ପଦ ବୀମା ଏବଂ ସମ୍ପୃକ୍ତ ସହାୟତା ପାଇଁ ପ୍ରସ୍ତୁତ କରାଯାଇଛି | ଆପଣ କେବଳ ଆଇନଗତ ଉଦ୍ଦେଶ୍ୟରେ ସେବା ବ୍ୟବହାର କରିବାକୁ ସମ୍ମତ ହୁଅନ୍ତି |"
-                            ),
+                            title = stringResource(R.string.terms_s2_title),
+                            content = stringResource(R.string.terms_s2_desc),
                             icon = Icons.Default.VerifiedUser
                         ),
                         PolicySection(
-                            title = languageState.value.getT("3. User Responsibilities", "3. उपयोगकर्ता की जिम्मेदारियां", "୩. ବ୍ୟବହାରକାରୀଙ୍କ ଦାୟିତ୍ୱ"),
-                            content = languageState.value.getT(
-                                "Users are responsible for providing accurate information about livestock and maintaining the confidentiality of their account details.",
-                                "उपयोगकर्ता पशुधन के बारे में सटीक जानकारी प्रदान करने और अपने खाते के विवरण की गोपनीयता बनाए रखने के लिए जिम्मेदार हैं।",
-                                "ପ୍ରାଣୀସମ୍ପଦ ବିଷୟରେ ସଠିକ୍ ସୂଚନା ପ୍ରଦାନ କରିବା ଏବଂ ସେମାନଙ୍କ ଆକାଉଣ୍ଟ ବିବରଣୀର ଗୋପନୀୟତା ରକ୍ଷା କରିବା ପାଇଁ ବ୍ୟବହାରକାରୀମାନେ ଦାୟୀ |"
-                            ),
+                            title = stringResource(R.string.terms_s3_title),
+                            content = stringResource(R.string.terms_s3_desc),
                             icon = Icons.Default.Person
                         ),
                         PolicySection(
-                            title = languageState.value.getT("4. Payments & Transactions", "4. भुगतान और लेनदेन", "୪. ପରିଶୋଧ ଏବଂ କାରବାର"),
-                            content = languageState.value.getT(
-                                "Insurance premiums and service fees must be paid as per the selected plans. All transactions are processed securely.",
-                                "बीमा प्रीमियम और सेवा शुल्क का भुगतान चयनित योजनाओं के अनुसार किया जाना चाहिए। सभी लेनदेन सुरक्षित रूप से संसाधित किए जाते हैं।",
-                                "ବୀମା ପ୍ରିମିୟମ ଏବଂ ସେବା ଶୁଳ୍କ ଚୟନ କରାଯାଇଥିବା ଯୋଜନା ଅନୁଯାୟୀ ପ୍ରଦାନ କରାଯିବା ଆବଶ୍ୟକ | ସମସ୍ତ କାରବାର ସୁରକ୍ଷିତ ଭାବରେ ପ୍ରକ୍ରିୟାକରଣ କରାଯାଏ |"
-                            ),
+                            title = stringResource(R.string.terms_s4_title),
+                            content = stringResource(R.string.terms_s4_desc),
                             icon = Icons.Default.Payments
                         ),
                         PolicySection(
-                            title = languageState.value.getT("5. Data & Privacy", "5. डेटा और गोपनीयता", "୫. ଡାଟା ଏବଂ ଗୋପନୀୟତା"),
-                            content = languageState.value.getT(
-                                "Your use of the services is also governed by our Privacy Policy. We protect your data as described in the policy document.",
-                                "सेवाओं का आपका उपयोग हमारी गोपनीयता नीति द्वारा भी शासित होता है। हम नीति दस्तावेज़ में वर्णित अनुसार आपके डेटा की सुरक्षा करते हैं।",
-                                "ଆପଣଙ୍କର ସେବା ବ୍ୟବହାର ମଧ୍ୟ ଆମର ଗୋପନୀୟତା ନୀତି ଦ୍ୱାରା ପରିଚାଳିତ | ଆମେ ନୀତି ଦଲିଲରେ ବର୍ଣ୍ଣନା କରାଯାଇଥିବା ଅନୁଯାୟୀ ଆପଣଙ୍କ ତଥ୍ୟକୁ ସୁରକ୍ଷିତ ରଖୁ |"
-                            ),
+                            title = stringResource(R.string.terms_s5_title),
+                            content = stringResource(R.string.terms_s5_desc),
                             icon = Icons.Default.Security
                         ),
                         PolicySection(
-                            title = languageState.value.getT("6. Termination", "6. समाप्ति", "୬. ସମାପ୍ତି"),
-                            content = languageState.value.getT(
-                                "We reserve the right to terminate or suspend access to our services for violations of these terms or fraudulent activities.",
-                                "हम इन शर्तों के उल्लंघन या धोखाधड़ी की गतिविधियों के लिए अपनी सेवाओं तक पहुँच को समाप्त या निलंबित करने का अधिकार सुरक्षित रखते हैं।",
-                                "ଏହି ସର୍ତ୍ତାବଳୀର ଉଲ୍ଲଂଘନ କିମ୍ବା ପ୍ରତାରଣାମୂଳକ କାର୍ଯ୍ୟକଳାପ ପାଇଁ ଆମର ସେବାଗୁଡିକର ଆକ୍ସେସ୍ ସମାପ୍ତ କିମ୍ବା ସ୍ଥଗିତ ରଖିବାର ଅଧିକାର ଆମେ ସଂରକ୍ଷିତ ରଖୁ |"
-                            ),
+                            title = stringResource(R.string.terms_s6_title),
+                            content = stringResource(R.string.terms_s6_desc),
                             icon = Icons.Default.Lock
                         ),
                         PolicySection(
-                            title = languageState.value.getT("7. Limitation of Liability", "7. दायित्व की सीमा", "୭. ଦାୟିତ୍ୱର ସୀମା"),
-                            content = languageState.value.getT(
-                                "The company shall not be liable for any indirect, incidental, or consequential damages resulting from the use of our services.",
-                                "कंपनी हमारी सेवाओं के उपयोग के परिणामस्वरूप होने वाले किसी भी अप्रत्यक्ष, आकस्मिक या परिणामी नुकसान के लिए उत्तरदायी नहीं होगी।",
-                                "ଆମର ସେବାଗୁଡିକର ବ୍ୟବହାର ଦ୍ୱାରା ହେଉଥିବା କୌଣସି ପରୋକ୍ଷ, ଆନୁସଙ୍ଗିକ କିମ୍ବା ପରିଣାମସ୍ୱରୂପ କ୍ଷତି ପାଇଁ କମ୍ପାନୀ ଦାୟୀ ରହିବ ନାହିଁ |"
-                            ),
+                            title = stringResource(R.string.terms_s7_title),
+                            content = stringResource(R.string.terms_s7_desc),
                             icon = Icons.Default.Gavel
                         ),
                         PolicySection(
-                            title = languageState.value.getT("8. Changes to Terms", "8. शर्तों में बदलाव", "୮. ସର୍ତ୍ତାବଳୀରେ ପରିବର୍ତ୍ତନ"),
-                            content = languageState.value.getT(
-                                "We may modify these terms at any time. Significant changes will be communicated through app notifications or email.",
-                                "हम किसी भी समय इन शर्तों को संशोधित कर सकते हैं। महत्वपूर्ण बदलावों की सूचना ऐप नोटिफिकेशन या ईमेल के माध्यम से दी जाएगी।",
-                                "ଆମେ ଯେକୌଣସି ସମୟରେ ଏହି ସର୍ତ୍ତାବଳୀରେ ସଂଶୋଧନ କରିପାରିବା | ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ ପରିବର୍ତ୍ତନଗୁଡିକ ଆପ୍ ବିଜ୍ଞପ୍ତି କିମ୍ବା ଇମେଲ୍ ମାଧ୍ୟମରେ ସୂଚନା ଦିଆଯିବ |"
-                            ),
+                            title = stringResource(R.string.terms_s8_title),
+                            content = stringResource(R.string.terms_s8_desc),
                             icon = Icons.Default.Edit
                         ),
                         PolicySection(
-                            title = languageState.value.getT("9. Contact Us", "9. हमसे संपर्क करें", "୯. ଆମ ସହ ଯୋଗାଯୋଗ କରନ୍ତୁ"),
-                            content = languageState.value.getT(
-                                "If you have any questions about these Terms of Service, please contact our support team through the Help & Support section.",
-                                "यदि आपके पास इन सेवा की शर्तों के बारे में कोई प्रश्न हैं, तो कृपया सहायता और समर्थन अनुभाग के माध्यम से हमारी सहायता टीम से संपर्क करें।",
-                                "ଯଦି ଏହି ସେବା ସର୍ତ୍ତାବଳୀ ବିଷୟରେ ଆପଣଙ୍କର କୌଣସି ପ୍ରଶ୍ନ ଅଛି, ଦୟାକରି ସାହାଯ୍ୟ ଏବଂ ସମର୍ଥନ ବିଭାଗ ମାଧ୍ୟମରେ ଆମର ସହାୟତା ଟିମ୍ ସହିତ ଯୋଗାଯୋଗ କରନ୍ତୁ |"
-                            ),
+                            title = stringResource(R.string.terms_s9_title),
+                            content = stringResource(R.string.terms_s9_desc),
                             icon = Icons.Default.SupportAgent
                         )
                     )
@@ -10509,11 +10453,7 @@ fun TermsOfServiceScreen(userRole: UserRole?, onBack: () -> Unit) {
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = languageState.value.getT(
-                            "These terms are legally binding between you and our company.",
-                            "ये शर्तें आपके और हमारी कंपनी के बीच कानूनी रूप से बाध्यकारी हैं।",
-                            "ଏହି ସର୍ତ୍ତାବଳୀ ଆପଣଙ୍କ ଏବଂ ଆମ କମ୍ପାନୀ ମଧ୍ୟରେ ଆଇନଗତ ଭାବରେ ବାଧ୍ୟତାମୂଳକ |"
-                        ),
+                        text = stringResource(R.string.terms_binding_tip),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.DarkGray,
                         lineHeight = 18.sp
