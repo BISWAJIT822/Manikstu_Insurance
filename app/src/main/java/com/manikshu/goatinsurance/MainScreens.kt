@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -541,20 +542,16 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
     ) { permissions ->
         val allGranted = permissions.values.all { it }
         if (!allGranted) {
-            Toast.makeText(context, languageState.value.getT("Required permissions denied.", "आवश्यक अनुमतियां अस्वीकार कर दी गईं।", "ଆବଶ୍ୟକ ଅନୁମତି ପ୍ରତ୍ୟାଖ୍ୟାନ କରାଯାଇଛି |"), Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.getString(R.string.permissions_required_message), Toast.LENGTH_LONG).show()
         }
     }
     
     if (showPermissionDialog) {
         AlertDialog(
             onDismissRequest = { showPermissionDialog = false },
-            title = { Text(languageState.value.getT("Permissions Required", "अनुमतियाँ आवश्यक हैं", "ଅନୁମତି ଆବଶ୍ୟକ"), fontWeight = FontWeight.Bold) },
+            title = { Text(stringResource(R.string.permissions_required_title), fontWeight = FontWeight.Bold) },
             text = { 
-                Text(languageState.value.getT(
-                    "This app needs Camera and Location access to verify livestock and record service areas.",
-                    "पशुधन को सत्यापित करने और सेवा क्षेत्रों को रिकॉर्ड करने के लिए इस ऐप को कैमरा और स्थान पहुंच की आवश्यकता है।",
-                    "ପ୍ରାଣୀସମ୍ପଦ ଯାଞ୍ଚ କରିବା ଏବଂ ସେବା କ୍ଷେତ୍ର ରେକର୍ଡ କରିବାକୁ ଏହି ଆପ୍‌ କ୍ୟାମେରା ଏବଂ ଅବସ୍ଥାନ ଅନୁମତି ଆବଶ୍ୟକ କରେ |"
-                ))
+                Text(stringResource(R.string.permissions_required_message))
             },
             confirmButton = {
                 TextButton(
@@ -563,12 +560,12 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
                         permissionLauncher.launch(permissionsToRequest)
                     }
                 ) {
-                    Text(languageState.value.getT("Allow", "अनुमति दें", "ଅନୁମତି ଦିଅନ୍ତୁ"))
+                    Text(stringResource(R.string.allow))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showPermissionDialog = false }) {
-                    Text(languageState.value.getT("Deny", "अस्वीकार करें", "ପ୍ରତ୍ୟାଖ୍ୟାନ କରନ୍ତୁ"))
+                    Text(stringResource(R.string.deny))
                 }
             },
             shape = RoundedCornerShape(16.dp)
@@ -610,7 +607,12 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
                 ) {
                     Icon(Icons.Default.Public, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(languageState.value.code, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(
+                        text = languageState.value.code.uppercase(),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
                     Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                 }
 
@@ -649,11 +651,11 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    languageState.value.getT("GOAT INSURANCE", "बकरी बीमा", "ଛେଳି ବୀମା"),
+                    stringResource(R.string.goat_insurance_title),
                     style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.Bold, letterSpacing = 1.sp
                 )
                 Text(
-                    languageState.value.getT("Community Livestock Protection", "सामुदायिक पशुधन संरक्षण", "ଗୋଷ୍ଠୀ ପ୍ରାଣୀସମ୍ପଦ ସୁରକ୍ଷା"),
+                    stringResource(R.string.community_livestock_protection),
                     style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f)
                 )
             }
@@ -671,11 +673,11 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    languageState.value.getT("Create Account", "खाता बनाएं", "ଖାତା ଖୋଲନ୍ତୁ"),
+                    stringResource(R.string.create_account),
                     style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold
                 )
                 Text(
-                    languageState.value.getT("Register to start protecting livestock", "पशुधन की सुरक्षा शुरू करने के लिए पंजीकरण करें", "ପ୍ରାଣୀସମ୍ପଦ ସୁରକ୍ଷା ଆରମ୍ଭ କରିବାକୁ ପଞ୍ଜିକରଣ କରନ୍ତୁ"),
+                    stringResource(R.string.register_subtitle),
                     style = MaterialTheme.typography.bodyMedium, color = Color.Gray, textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(32.dp))
@@ -684,7 +686,7 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
                     OutlinedTextField(
                         value = name,
                         onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) name = it },
-                        placeholder = { Text(languageState.value.getT("Full Name", "पूरा नाम", "ପୁରା ନାମ"), color = Color.Gray) },
+                        placeholder = { Text(stringResource(R.string.full_name), color = Color.Gray) },
                         leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = Color.DarkGray) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
@@ -695,7 +697,7 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
                     OutlinedTextField(
                         value = phone,
                         onValueChange = { if (it.length <= 10) phone = it },
-                        placeholder = { Text(languageState.value.getT("Mobile Number", "मोबाइल नंबर", "ମୋବାଇଲ୍ ନମ୍ବର"), color = Color.Gray) },
+                        placeholder = { Text(stringResource(R.string.mobile_number), color = Color.Gray) },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = Color.DarkGray) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         singleLine = true,
@@ -703,12 +705,12 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f), focusedBorderColor = PrimaryGreen)
                     )
-                    
+
                     Spacer(modifier = Modifier.height(24.dp))
                     Button(
-                        onClick = { 
+                        onClick = {
                             if (selectedRole == null) {
-                                Toast.makeText(context, languageState.value.getT("Scroll down and choose a role", "नीचे स्क्रॉल करें और एक भूमिका चुनें", "ତଳକୁ ସ୍କ୍ରୋଲ୍ କରନ୍ତୁ ଏବଂ ଏକ ଭୂମିକା ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.scroll_choose_role_toast), Toast.LENGTH_SHORT).show()
                             } else {
                                 authViewModel.sendSignupOtp(name, phone, selectedRole!!)
                             }
@@ -718,18 +720,18 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f))
                     ) {
-                        Text(languageState.value.getT("Send OTP", "ओटीपी भेजें", "ଓଟିପି ପଠାନ୍ତୁ"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(stringResource(R.string.send_otp), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(
-                        text = languageState.value.getT("Already have an account? Login", "पहले से खाता है? लॉगिन करें", "ପୂର୍ବରୁ ଖାତା ଅଛି? ଲଗଇନ୍"),
+                        text = stringResource(R.string.already_have_account_login),
                         color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp,
                         modifier = Modifier.clickable { onNavigateToLogin() }
                     )
                 } else {
-                    Text(languageState.value.getT("Enter 6-digit OTP sent to +91 $phone", "+91 $phone पर भेजा गया ओटीपी दर्ज करें", "+91 $phone କୁ ପଠାଯାଇଥିବା ଓଟିପି ଦିଅନ୍ତୁ"), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+                    Text(stringResource(R.string.enter_otp_sent_to, phone), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
                     Spacer(modifier = Modifier.height(24.dp))
-                    OtpInput(otp, { otp = it }, onDone = { 
+                    OtpInput(otp, { otp = it }, onDone = {
                         if (otp.length == 6) {
                             val allGranted = permissionsToRequest.all {
                                 ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
@@ -743,7 +745,7 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
                     })
                     Spacer(modifier = Modifier.height(24.dp))
                     Button(
-                        onClick = { 
+                        onClick = {
                             val allGranted = permissionsToRequest.all {
                                 ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
                             }
@@ -757,9 +759,9 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
-                    ) { Text(languageState.value.getT("Verify & Next", "सत्यापित करें और अगला", "ଯାଞ୍ଚ ଏବଂ ପରବର୍ତ୍ତୀ"), fontSize = 16.sp, fontWeight = FontWeight.Bold) }
-                    
-                    TextButton(onClick = { step = 1 }) { Text(languageState.value.getT("Go Back", "वापस जाएं", "ପଛକୁ ଯାଆନ୍ତୁ"), color = PrimaryGreen) }
+                    ) { Text(stringResource(R.string.verify_next), fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+
+                    TextButton(onClick = { step = 1 }) { Text(stringResource(R.string.go_back), color = PrimaryGreen) }
                 }
             }
         }
@@ -768,7 +770,7 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
             // Divider
             Row(modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 HorizontalDivider(modifier = Modifier.weight(1f), color = Color.LightGray.copy(alpha = 0.5f))
-                Text(languageState.value.getT("choose a role", "एक भूमिका चुनें", "ଗୋଟିଏ ଭୂମିକା ବାଛନ୍ତୁ"), modifier = Modifier.padding(horizontal = 16.dp), color = Color.Gray, fontSize = 14.sp)
+                Text(stringResource(R.string.choose_a_role), modifier = Modifier.padding(horizontal = 16.dp), color = Color.Gray, fontSize = 14.sp)
                 HorizontalDivider(modifier = Modifier.weight(1f), color = Color.LightGray.copy(alpha = 0.5f))
             }
 
@@ -776,9 +778,9 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
 
             // Role Selection
             Row(modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                RoleCard(UserRole.SURAKSHA_DIDI, languageState.value.getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି"), Icons.Default.Person, selectedRole == UserRole.SURAKSHA_DIDI, modifier = Modifier.weight(1f)) { selectedRole = it }
-                RoleCard(UserRole.FARMER, languageState.value.getT("Farmer", "किसान", "କୃଷକ"), Icons.Default.Agriculture, selectedRole == UserRole.FARMER, modifier = Modifier.weight(1f)) { selectedRole = it }
-                RoleCard(UserRole.COORDINATOR, languageState.value.getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ"), Icons.Default.Badge, selectedRole == UserRole.COORDINATOR, modifier = Modifier.weight(1f)) { selectedRole = it }
+                RoleCard(UserRole.SURAKSHA_DIDI, stringResource(R.string.role_suraksha_didi), Icons.Default.Person, selectedRole == UserRole.SURAKSHA_DIDI, modifier = Modifier.weight(1f)) { selectedRole = it }
+                RoleCard(UserRole.FARMER, stringResource(R.string.role_farmer), Icons.Default.Agriculture, selectedRole == UserRole.FARMER, modifier = Modifier.weight(1f)) { selectedRole = it }
+                RoleCard(UserRole.COORDINATOR, stringResource(R.string.role_coordinator), Icons.Default.Badge, selectedRole == UserRole.COORDINATOR, modifier = Modifier.weight(1f)) { selectedRole = it }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -786,12 +788,12 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
 
         // Footer
         Row(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(languageState.value.getT("Version 1.0.0", "संस्करण 1.0.0", "ସଂସ୍କରଣ ୧.୦.୦"), color = Color.Gray, fontSize = 12.sp)
+            Text(stringResource(R.string.version_label, "1.0.0"), color = Color.Gray, fontSize = 12.sp)
             Surface(color = Color(0xFFE8F5E9), shape = RoundedCornerShape(16.dp)) {
                 Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF4CAF50)))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(languageState.value.getT("Online", "ऑनलाइन", "ଅନଲାଇନ୍"), color = Color(0xFF4CAF50), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.online), color = Color(0xFF4CAF50), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

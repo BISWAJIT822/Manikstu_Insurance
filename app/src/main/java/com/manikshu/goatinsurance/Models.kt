@@ -29,16 +29,16 @@ enum class UserRole {
 }
 
 enum class AppLanguage(val code: String, val label: String) {
-    ENGLISH("EN", "English"),
-    HINDI("HI", "हिन्दी"),
-    ODIA("OR", "ଓଡ଼ିଆ");
+    ENGLISH("en", "English"),
+    HINDI("hi", "हिन्दी"),
+    ODIA("or", "ଓଡ଼ିଆ");
+}
 
-    fun getT(en: String, hi: String, or: String): String {
-        return when (this) {
-            HINDI -> hi
-            ODIA -> or
-            ENGLISH -> en
-        }
+fun AppLanguage.getT(en: String, hi: String, or: String): String {
+    return when (this) {
+        AppLanguage.ENGLISH -> en
+        AppLanguage.HINDI -> hi
+        AppLanguage.ODIA -> or
     }
 }
 
