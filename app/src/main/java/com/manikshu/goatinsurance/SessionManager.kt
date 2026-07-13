@@ -44,6 +44,15 @@ class SessionManager(private val context: Context) {
         }
     }
 
+    /** Cache the canonical profile details fetched from the backend. */
+    suspend fun saveProfileDetails(name: String?, village: String?, mobile: String?) {
+        context.dataStore.edit { preferences ->
+            name?.let { preferences[USER_NAME_KEY] = it }
+            village?.let { preferences[VILLAGE_KEY] = it }
+            mobile?.let { preferences[MOBILE_KEY] = it }
+        }
+    }
+
     /** Persist the JWT and populate the in-memory holder the OkHttp interceptor reads. */
     suspend fun saveAuthToken(token: String) {
         AuthTokenHolder.token = token

@@ -3997,6 +3997,12 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
     
     val savedName by sessionManager.userName.collectAsState(initial = null)
     val savedVillage by sessionManager.village.collectAsState(initial = null)
+    val savedMobile by sessionManager.mobileNumber.collectAsState(initial = null)
+
+    // Canonical account details straight from the backend DB; session values
+    // are the fallback while the call is in flight or offline.
+    val profileVm: ProfileViewModel = hiltViewModel()
+    val dbProfile by profileVm.profile.collectAsState()
 
     val isFarmer = userRole == UserRole.FARMER
     val isCoordinator = userRole == UserRole.COORDINATOR
@@ -4005,13 +4011,17 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
         UserRole.COORDINATOR -> CoordinatorOrange
         else -> PrimaryGreen
     }
-    val userName = savedName ?: when {
-        isFarmer -> languageState.value.getT("Ramesh Naik", "रमेश नायक", "ରମେଶ ନାୟକ")
-        isCoordinator -> languageState.value.getT("lalu", "लालू", "ଲାଲୁ")
-        else -> languageState.value.getT("Sushma Didi", "सुषमा दीदी", "ସୁସମା ଦିଦି")
+    val userName = dbProfile?.fullName ?: savedName ?: ""
+    val userMobile = dbProfile?.mobileNumber ?: savedMobile
+    val userVillage = dbProfile?.village ?: savedVillage
+
+    val effectiveRole = when (dbProfile?.role) {
+        "fr" -> UserRole.FARMER
+        "co" -> UserRole.COORDINATOR
+        "sd" -> UserRole.SURAKSHA_DIDI
+        else -> userRole
     }
-    
-    val roleLabel = when(userRole) {
+    val roleLabel = when(effectiveRole) {
         UserRole.FARMER -> languageState.value.getT("Farmer", "किसान", "କୃଷକ")
         UserRole.COORDINATOR -> languageState.value.getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ")
         else -> languageState.value.getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି")
@@ -4194,7 +4204,7 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
                     color = Color.White
                 )
                 Text(
-                    if (isFarmer) "+91 94370 12345" else if (isCoordinator) "+91 99999 88888" else "+91 98765 43210",
+                    userMobile?.let { "+91 $it" } ?: "",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.8f)
                 )
@@ -4207,11 +4217,15 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Info Cards
+            // Info Cards - values come from the backend profile (session cache as fallback)
             ProfileInfoSection(languageState.value.getT("Account Details", "खाता विवरण", "ଖାତା ବିବରଣୀ"), themeColor) {
                 ProfileInfoItem(
                     languageState.value.getT("Full Name", "पूरा नाम", "ପୁରା ନାମ"),
                     userName
+                )
+                ProfileInfoItem(
+                    languageState.value.getT("Mobile Number", "मोबाइल नंबर", "ମୋବାଇଲ୍ ନମ୍ବର"),
+                    userMobile ?: "-"
                 )
                 ProfileInfoItem(
                     languageState.value.getT("Role", "भूमिका", "ଭୂମିକା"),
@@ -4219,11 +4233,7 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
                 )
                 ProfileInfoItem(
                     languageState.value.getT("Location", "स्थान", "ଅବସ୍ଥାନ"),
-                    savedVillage ?: when {
-                        isFarmer -> languageState.value.getT("Pipili, Odisha", "पिपिली, ओडिशा", "ପିପିଲି, ଓଡ଼ିଶା")
-                        isCoordinator -> languageState.value.getT("Bhubaneswar, Odisha", "भुवनेश्वर, ओडिशा", "ଭୁବନେଶ୍ୱର, ଓଡ଼ିଶା")
-                        else -> languageState.value.getT("Gopalpur, Odisha", "गोपालपुर, ओडिशा", "ଗୋପାଳପୁର, ଓଡ଼ିଶା")
-                    }
+                    userVillage ?: "-"
                 )
             }
             

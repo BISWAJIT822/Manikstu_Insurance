@@ -23,6 +23,30 @@ sealed interface SubmitState {
     data class Error(val message: String) : SubmitState
 }
 
+/** Profile Settings: canonical account details fetched from the backend DB. */
+@HiltViewModel
+class ProfileViewModel @Inject constructor(
+    private val repo: Repository,
+    private val session: SessionManager,
+) : ViewModel() {
+
+    private val _profile = MutableStateFlow<ProfileResponse?>(null)
+    val profile = _profile.asStateFlow()
+
+    init { refresh() }
+
+    fun refresh() {
+        viewModelScope.launch {
+            repo.safeCall { profile() }.onSuccess { p ->
+                _profile.value = p
+                // Sync the local cache so every screen shows the DB values.
+                session.saveProfileDetails(name = p.fullName, village = p.village, mobile = p.mobileNumber)
+            }
+            // On failure the screen falls back to cached session values.
+        }
+    }
+}
+
 /** Backs the cascading State -> District -> Block -> Village dropdowns on profile setup. */
 @HiltViewModel
 class LocationViewModel @Inject constructor(
