@@ -520,6 +520,10 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
 
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.authState.collectAsState()
+    val loginMethod by authViewModel.loginMethod.collectAsState()
+    // Password mode: no OTP round-trip at signup - the button becomes "Create Account"
+    // and leads straight to the profile form (which collects the password).
+    val isPasswordMode = loginMethod == "password"
     val isAuthLoading = authState is AuthState.Loading
     LaunchedEffect(authState) {
         when (val s = authState) {
@@ -713,6 +717,10 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
                         onClick = {
                             if (selectedRole == null) {
                                 Toast.makeText(context, context.getString(R.string.scroll_choose_role_toast), Toast.LENGTH_SHORT).show()
+                            } else if (isPasswordMode) {
+                                // No OTP step: continue to the profile form, which collects
+                                // the password and submits the registration for approval.
+                                onVerifyOtp(selectedRole!!, name, phone, "NA")
                             } else {
                                 authViewModel.sendSignupOtp(name, phone, selectedRole!!)
                             }
@@ -722,7 +730,11 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f))
                     ) {
-                        Text(stringResource(R.string.send_otp), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(
+                            if (isPasswordMode) stringResource(R.string.create_account)
+                            else stringResource(R.string.send_otp),
+                            fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White
+                        )
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(
