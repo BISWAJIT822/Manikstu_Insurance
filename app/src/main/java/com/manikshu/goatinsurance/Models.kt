@@ -47,7 +47,19 @@ fun AppLanguage.getT(en: String, hi: String, or: String): String {
 // =====================================================================================
 
 @Serializable
-data class OtpResponse(val response: String)   // "<6-digit otp>" or "duplicate"
+data class OtpResponse(val response: String)   // "sent" or "duplicate"
+
+@Serializable
+data class AuthConfigResponse(
+    @SerialName("login_method") val loginMethod: String,   // "otp" or "password"
+)
+
+@Serializable
+data class LoginPasswordRequest(
+    @SerialName("mobile_number") val mobileNumber: String,
+    val password: String,
+    val role: String? = null,
+)
 
 @Serializable
 data class LoginResponse(
@@ -74,6 +86,7 @@ data class VerifySignupRequest(
     val village: String? = null,
     @SerialName("aadhaar_id") val aadhaarId: String? = null,
     val photo: String? = null,
+    val password: String? = null,   // login credential, usable once admin approves
 )
 
 @Serializable

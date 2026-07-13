@@ -123,6 +123,8 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -806,6 +808,7 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
 fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Unit) {
     var phone by remember { mutableStateOf("") }
     var otp by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     var step by remember { mutableIntStateOf(1) }
     var selectedRole by remember { mutableStateOf<UserRole?>(null) }
 
@@ -814,6 +817,8 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
 
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.authState.collectAsState()
+    val loginMethod by authViewModel.loginMethod.collectAsState()
+    val isPasswordMode = loginMethod == "password"
     val isAuthLoading = authState is AuthState.Loading
     LaunchedEffect(authState) {
         when (val s = authState) {
@@ -1022,16 +1027,38 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                             focusedBorderColor = PrimaryGreen
                         )
                     )
+                    if (isPasswordMode) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = { password = it },
+                            placeholder = { Text(languageState.value.getT("Password", "पासवर्ड", "ପାସୱାର୍ଡ"), color = Color.Gray) },
+                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Color.DarkGray) },
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.Black,
+                                unfocusedTextColor = Color.Black,
+                                unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),
+                                focusedBorderColor = PrimaryGreen
+                            )
+                        )
+                    }
                     Spacer(modifier = Modifier.height(24.dp))
                     Button(
-                        onClick = { 
+                        onClick = {
                             if (selectedRole == null) {
                                 Toast.makeText(context, languageState.value.getT("Scroll down and choose a role", "नीचे स्क्रॉल करें और एक भूमिका चुनें", "ତଳକୁ ସ୍କ୍ରୋଲ୍ କରନ୍ତୁ ଏବଂ ଏକ ଭୂମିକା ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show()
+                            } else if (isPasswordMode) {
+                                authViewModel.passwordLogin(phone, password, selectedRole!!)
                             } else {
                                 authViewModel.sendOtp(phone, selectedRole!!)
                             }
                         },
-                        enabled = phone.length == 10 && !isAuthLoading,
+                        enabled = phone.length == 10 && (!isPasswordMode || password.isNotBlank()) && !isAuthLoading,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
@@ -1041,7 +1068,11 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                             disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f)
                         )
                     ) {
-                        Text(languageState.value.getT("Send OTP", "ओटीपी भेजें", "ଓଟିପି ପଠାନ୍ତୁ"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(
+                            if (isPasswordMode) languageState.value.getT("Login", "लॉगिन करें", "ଲଗଇନ୍")
+                            else languageState.value.getT("Send OTP", "ओटीपी भेजें", "ଓଟିପି ପଠାନ୍ତୁ"),
+                            fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White
+                        )
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(
@@ -2804,7 +2835,7 @@ fun EnrollmentPolicyStep(farmer: String, tag: String, result: EnrollGoatResponse
 // --- ENROLLMENT HELPERS ---
 
 @Composable
-fun EnrollmentTextField(label: String, value: String, onValueChange: (String) -> Unit, placeholder: String = "", keyboardType: KeyboardType = KeyboardType.Text, prefix: String? = null, suffix: String? = null, leadingIcon: ImageVector? = null, trailingIcon: ImageVector? = null, onTrailingIconClick: (() -> Unit)? = null, readOnly: Boolean = false, borderColor: Color = PrimaryGreen) {
+fun EnrollmentTextField(label: String, value: String, onValueChange: (String) -> Unit, placeholder: String = "", keyboardType: KeyboardType = KeyboardType.Text, prefix: String? = null, suffix: String? = null, leadingIcon: ImageVector? = null, trailingIcon: ImageVector? = null, onTrailingIconClick: (() -> Unit)? = null, readOnly: Boolean = false, borderColor: Color = PrimaryGreen, isPassword: Boolean = false) {
     val styledLabel = buildAnnotatedString {
         label.forEach { char ->
             if (char == '*') {
@@ -2828,6 +2859,7 @@ fun EnrollmentTextField(label: String, value: String, onValueChange: (String) ->
                 keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
                 singleLine = true,
                 readOnly = readOnly,
+                visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
                 leadingIcon = leadingIcon?.let { { Icon(it, null, tint = Color.DarkGray) } },
                 trailingIcon = trailingIcon?.let { 
                     { 
@@ -8573,6 +8605,9 @@ fun SetupProfileScreen(
     var aadhaarNumber by remember { mutableStateOf("") }
     var aadhaarPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
+    var signupPassword by remember { mutableStateOf("") }
+    var signupPasswordConfirm by remember { mutableStateOf("") }
+
     // Cascading location dropdowns served by the backend.
     val locationVm: LocationViewModel = hiltViewModel()
     val stateOptions by locationVm.states.collectAsState()
@@ -8820,6 +8855,45 @@ fun SetupProfileScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Section 4: Login credentials (used once the admin approves the registration)
+            ProfileSetupSection(languageState.value.getT("Login Password", "लॉगिन पासवर्ड", "ଲଗଇନ୍ ପାସୱାର୍ଡ"), themeColor) {
+                Text(
+                    languageState.value.getT(
+                        "You will use this password to log in after your registration is approved.",
+                        "अनुमोदन के बाद लॉगिन करने के लिए आप इस पासवर्ड का उपयोग करेंगे।",
+                        "ଅନୁମୋଦନ ପରେ ଲଗଇନ୍ କରିବାକୁ ଆପଣ ଏହି ପାସୱାର୍ଡ ବ୍ୟବହାର କରିବେ |"
+                    ),
+                    fontSize = 12.sp, color = Color.Gray
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                EnrollmentTextField(
+                    label = languageState.value.getT("Password (min 6 characters) *", "पासवर्ड (न्यूनतम 6 अक्षर) *", "ପାସୱାର୍ଡ (ସର୍ବନିମ୍ନ 6 ଅକ୍ଷର) *"),
+                    value = signupPassword,
+                    onValueChange = { signupPassword = it },
+                    keyboardType = KeyboardType.Password,
+                    borderColor = themeColor,
+                    isPassword = true
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                EnrollmentTextField(
+                    label = languageState.value.getT("Confirm Password *", "पासवर्ड की पुष्टि करें *", "ପାସୱାର୍ଡ ନିଶ୍ଚିତ କରନ୍ତୁ *"),
+                    value = signupPasswordConfirm,
+                    onValueChange = { signupPasswordConfirm = it },
+                    keyboardType = KeyboardType.Password,
+                    borderColor = themeColor,
+                    isPassword = true
+                )
+                if (signupPasswordConfirm.isNotEmpty() && signupPassword != signupPasswordConfirm) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        languageState.value.getT("Passwords do not match", "पासवर्ड मेल नहीं खाते", "ପାସୱାର୍ଡ ମେଳ ଖାଉନାହିଁ"),
+                        fontSize = 12.sp, color = Color.Red
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(40.dp))
 
             Button(
@@ -8827,12 +8901,13 @@ fun SetupProfileScreen(
                     authViewModel.completeSignup(
                         fullName = name, phone = phone, role = role, otp = otp,
                         village = village, aadhaarId = aadhaarNumber,
+                        password = signupPassword,
                     )
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = themeColor),
-                enabled = !isSubmitting && name.isNotBlank() && dob.isNotBlank() && state.isNotBlank() && district.isNotBlank() && block.isNotBlank() && village.isNotBlank() && pincode.length == 6 && aadhaarNumber.length == 12
+                enabled = !isSubmitting && name.isNotBlank() && dob.isNotBlank() && state.isNotBlank() && district.isNotBlank() && block.isNotBlank() && village.isNotBlank() && pincode.length == 6 && aadhaarNumber.length == 12 && signupPassword.length >= 6 && signupPassword == signupPasswordConfirm
             ) {
                 Text(languageState.value.getT("Save & Continue", "सहेजें और जारी रखें", "ସଂରକ୍ଷଣ ଏବଂ ଜାରି ରଖନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }

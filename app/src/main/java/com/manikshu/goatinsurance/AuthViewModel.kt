@@ -17,6 +17,22 @@ class AuthViewModel @Inject constructor(
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState = _authState.asStateFlow()
 
+    // "otp" or "password" - admin-controlled; decides which login UI is rendered.
+    private val _loginMethod = MutableStateFlow("otp")
+    val loginMethod = _loginMethod.asStateFlow()
+
+    init {
+        loadAuthConfig()
+    }
+
+    fun loadAuthConfig() {
+        viewModelScope.launch {
+            repository.safeCall { authConfig() }
+                .onSuccess { _loginMethod.value = if (it.loginMethod == "password") "password" else "otp" }
+            // On failure keep the current value; OTP is the safe default.
+        }
+    }
+
     fun reset() { _authState.value = AuthState.Idle }
 
     // ------------------------------------------------------------------ login
@@ -26,6 +42,30 @@ class AuthViewModel @Inject constructor(
             repository.safeCall { requestOtp(phone, role.apiCode) }
                 .onSuccess { _authState.value = AuthState.OtpSent }
                 .onFailure { _authState.value = AuthState.Error(it.message ?: "Failed to send OTP") }
+        }
+    }
+
+    fun passwordLogin(phone: String, password: String, role: UserRole) {
+        viewModelScope.launch {
+            _authState.value = AuthState.Loading
+            repository.safeCall { loginPassword(LoginPasswordRequest(phone, password, role.apiCode)) }
+                .onSuccess { resp ->
+                    if (resp.status == "success" && !resp.accessToken.isNullOrBlank()) {
+                        session.saveAuthToken(resp.accessToken)
+                        val profile = repository.safeCall { profile() }.getOrNull()
+                        session.saveSession(
+                            role = role,
+                            name = profile?.fullName,
+                            village = profile?.village,
+                            mobile = phone,
+                            token = resp.accessToken,
+                        )
+                        _authState.value = AuthState.Authenticated(role)
+                    } else {
+                        _authState.value = AuthState.Error(resp.reason ?: "Invalid mobile number or password")
+                    }
+                }
+                .onFailure { _authState.value = AuthState.Error(it.message ?: "Login failed") }
         }
     }
 
@@ -82,6 +122,7 @@ class AuthViewModel @Inject constructor(
         otp: String,
         village: String?,
         aadhaarId: String?,
+        password: String? = null,
     ) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
@@ -89,6 +130,7 @@ class AuthViewModel @Inject constructor(
                 fullName = fullName, mobileNumber = phone, role = role.apiCode, otp = otp,
                 village = village?.takeIf { it.isNotBlank() },
                 aadhaarId = aadhaarId?.takeIf { it.isNotBlank() },
+                password = password?.takeIf { it.isNotBlank() },
             )
             repository.safeCall { verifySignup(body) }
                 .onSuccess { resp ->

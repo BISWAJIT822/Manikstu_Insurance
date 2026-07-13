@@ -6,6 +6,12 @@ import retrofit2.http.*
 interface ApiService {
 
     // ----------------- AUTH -----------------
+    @GET("auth/config")
+    suspend fun authConfig(): AuthConfigResponse
+
+    @POST("auth/login_password")
+    suspend fun loginPassword(@Body body: LoginPasswordRequest): LoginResponse
+
     @GET("auth/request_otp")
     suspend fun requestOtp(
         @Query("mobile_number") mobile: String,
