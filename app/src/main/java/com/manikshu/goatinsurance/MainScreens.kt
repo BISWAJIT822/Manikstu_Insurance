@@ -2689,7 +2689,6 @@ fun EnrollmentTaggingStep(earTag: String, onTagChange: (String) -> Unit) {
 
 @Composable
 fun EnrollmentVaccinationStep() {
-    val languageState = LocalAppLanguage.current
     var pprGiven by remember { mutableStateOf(true) }
     var etttGiven by remember { mutableStateOf(true) }
     var fmdGiven by remember { mutableStateOf(false) }
@@ -2700,23 +2699,6 @@ fun EnrollmentVaccinationStep() {
         VaccineStatusItem("ET + TT Vaccine", etttGiven) { etttGiven = it }
         VaccineStatusItem("FMD Vaccine", fmdGiven) { fmdGiven = it }
         VaccineStatusItem("Goat Pox Vaccine", poxGiven) { poxGiven = it }
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F7F8)),
-            border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
-        ) {
-            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.CalendarToday, null, tint = Color.DarkGray, modifier = Modifier.size(24.dp))
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(languageState.value.getT("Next Vaccination Due", "अगला टीकाकरण देय", "ପରବର୍ତ୍ତୀ ଟୀକାକରଣ ବାକି"), fontSize = 12.sp, color = Color.Gray)
-                    Text("15 Aug 2024", fontWeight = FontWeight.Bold, color = Color.Black)
-                }
-            }
-        }
     }
 }
 
