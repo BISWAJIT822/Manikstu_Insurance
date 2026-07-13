@@ -316,11 +316,36 @@ class EnrollmentViewModel @Inject constructor(
     private val _progress = MutableStateFlow<String?>(null)
     val progress = _progress.asStateFlow()
 
+    // Consolidated policy-certificate download (Idle -> Submitting -> Success(path)/Error).
+    private val _certificate = MutableStateFlow<SubmitState>(SubmitState.Idle)
+    val certificate = _certificate.asStateFlow()
+
     fun reset() {
         _submit.value = SubmitState.Idle
         _results.value = emptyList()
         _progress.value = null
     }
+
+    /** Downloads the consolidated certificate for [earTags] and saves it under [targetDir]. */
+    fun downloadBatchCertificate(earTags: List<String>, targetDir: java.io.File) {
+        viewModelScope.launch {
+            _certificate.value = SubmitState.Submitting
+            repo.safeCall { policyCertificateBatch(earTags.joinToString(",")) }
+                .onSuccess { body ->
+                    runCatching {
+                        val file = java.io.File(targetDir, "policy_${System.currentTimeMillis()}.pdf")
+                        body.byteStream().use { input ->
+                            file.outputStream().use { output -> input.copyTo(output) }
+                        }
+                        file.absolutePath
+                    }.onSuccess { path -> _certificate.value = SubmitState.Success(path) }
+                        .onFailure { _certificate.value = SubmitState.Error("Could not save the certificate") }
+                }
+                .onFailure { _certificate.value = SubmitState.Error(it.message ?: "Download failed") }
+        }
+    }
+
+    fun resetCertificate() { _certificate.value = SubmitState.Idle }
 
     /**
      * Enrolls every goat in [goats] under one farmer, sharing the vaccination + payment

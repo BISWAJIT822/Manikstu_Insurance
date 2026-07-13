@@ -42,6 +42,10 @@ interface ApiService {
     @GET("farmer/policy_certificate/{tag}")
     suspend fun policyCertificate(@Path("tag") tag: String): okhttp3.ResponseBody
 
+    @Streaming
+    @GET("farmer/policy_certificate_batch")
+    suspend fun policyCertificateBatch(@Query("tags") tags: String): okhttp3.ResponseBody
+
     @GET("auth/logout")
     suspend fun logout(): StatusResponse
 

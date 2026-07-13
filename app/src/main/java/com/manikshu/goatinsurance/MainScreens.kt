@@ -2408,7 +2408,7 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                         fmdGiven, { fmdGiven = it }, poxGiven, { poxGiven = it }
                     )
                     6 -> EnrollmentPaymentStep(goats.size)
-                    7 -> EnrollmentPoliciesStep(farmerName, enrollResults, goats)
+                    7 -> EnrollmentPoliciesStep(farmerName, enrollResults, goats, onFinish = onComplete)
                 }
             }
 
@@ -2421,8 +2421,8 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                 else -> true
             }
 
-            // Step 4 (Goats Added) has its own action buttons inside the step content.
-            if (currentStep != 4) {
+            // Steps 4 (Goats Added) and 7 (Policy Generated) carry their own buttons.
+            if (currentStep != 4 && currentStep != 7) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -3028,44 +3028,110 @@ fun EnrollmentGoatsAddedStep(
     }
 }
 
-/** Step 7: policies generated for every goat in the batch. */
+/** Step 7: single consolidated policy summary for the whole batch (matches the mockup). */
 @Composable
-fun EnrollmentPoliciesStep(farmer: String, results: List<EnrollGoatResponse>, goats: List<GoatDraft>) {
+fun EnrollmentPoliciesStep(farmer: String, results: List<EnrollGoatResponse>, goats: List<GoatDraft>, onFinish: () -> Unit) {
     val languageState = LocalAppLanguage.current
+    val context = LocalContext.current
+    val enrollVm: EnrollmentViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+    val certState by enrollVm.certificate.collectAsState()
+
+    val policyNumber = results.firstOrNull()?.policyNumber ?: "—"
+    val receiptNumber = results.firstOrNull()?.policyNumber?.replaceFirst(Regex("^[A-Za-z]+"), "RCP") ?: "—"
+    val totalPremium = 350 * results.size.coerceAtLeast(1)
+
+    LaunchedEffect(certState) {
+        when (val s = certState) {
+            is SubmitState.Success -> {
+                s.message?.let { path ->
+                    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", File(path))
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, "application/pdf")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    try { context.startActivity(intent) }
+                    catch (e: Exception) {
+                        Toast.makeText(context, languageState.value.getT("No PDF viewer installed", "कोई पीडीएफ व्यूअर नहीं मिला", "କୌଣସି PDF ଭ୍ୟୁଅର୍ ନାହିଁ"), Toast.LENGTH_LONG).show()
+                    }
+                }
+                enrollVm.resetCertificate()
+            }
+            is SubmitState.Error -> {
+                Toast.makeText(context, s.message, Toast.LENGTH_LONG).show()
+                enrollVm.resetCertificate()
+            }
+            else -> {}
+        }
+    }
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
-            modifier = Modifier.size(64.dp).clip(CircleShape).background(Color(0xFFE8F5E9)),
+            modifier = Modifier.size(72.dp).clip(CircleShape).background(SuccessGreen),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.VerifiedUser, null, tint = SuccessGreen, modifier = Modifier.size(32.dp))
+            Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(40.dp))
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            languageState.value.getT("${results.size} Policy(ies) Generated!", "${results.size} पॉलिसी जेनरेट हुईं!", "${results.size} ନୀତି ପ୍ରସ୍ତୁତ ହୋଇଛି!"),
-            fontWeight = FontWeight.Bold, fontSize = 18.sp
+            languageState.value.getT("Policy Generated Successfully!", "पॉलिसी सफलतापूर्वक जेनरेट हुई!", "ନୀତି ସଫଳତାର ସହିତ ପ୍ରସ୍ତୁତ ହୋଇଛି!"),
+            fontWeight = FontWeight.Bold, fontSize = 18.sp, color = PrimaryGreen, textAlign = TextAlign.Center
         )
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
-            languageState.value.getT("Farmer: $farmer", "किसान: $farmer", "କୃଷକ: $farmer"),
-            fontSize = 13.sp, color = Color.Gray
+            languageState.value.getT(
+                "One policy has been created for ${results.size} goats.",
+                "${results.size} बकरियों के लिए एक पॉलिसी बनाई गई है।",
+                "${results.size} ଛେଳି ପାଇଁ ଗୋଟିଏ ନୀତି ପ୍ରସ୍ତୁତ ହୋଇଛି।"
+            ),
+            fontSize = 13.sp, color = Color.Gray, textAlign = TextAlign.Center
         )
+
         Spacer(modifier = Modifier.height(24.dp))
 
-        results.forEachIndexed { index, res ->
-            val tag = goats.getOrNull(index)?.earTag ?: "—"
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    PolicyDetailRow(languageState.value.getT("Policy Number", "पॉलिसी नंबर", "ନୀତି ନମ୍ବର"), res.policyNumber ?: "—")
-                    PolicyDetailRow(languageState.value.getT("Ear Tag", "कान का टैग", "କାନ ଟ୍ୟାଗ୍"), tag)
-                    PolicyDetailRow(languageState.value.getT("Validity", "वैधता", "ବୈଧତା"), "${res.validFrom ?: "—"} - ${res.validTo ?: "—"}")
-                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
-                    PolicyDetailRow(languageState.value.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), res.sumInsured?.let { "₹ ${it.toInt()}" } ?: "—", true)
-                }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                PolicyDetailRow(languageState.value.getT("Policy Number", "पॉलिसी नंबर", "ନୀତି ନମ୍ବର"), policyNumber)
+                PolicyDetailRow(languageState.value.getT("Receipt Number", "रसीद संख्या", "ରସିଦ ନମ୍ବର"), receiptNumber)
+                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
+                PolicyDetailRow(languageState.value.getT("Total Premium", "कुल प्रीमियम", "ମୋଟ ପ୍ରିମିୟମ"), "₹$totalPremium.00", true)
             }
         }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        OutlinedButton(
+            onClick = { enrollVm.downloadBatchCertificate(goats.map { it.earTag }, context.cacheDir) },
+            enabled = certState !is SubmitState.Submitting && goats.isNotEmpty(),
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, PrimaryGreen)
+        ) {
+            if (certState is SubmitState.Submitting) {
+                Text(languageState.value.getT("Preparing…", "तैयार हो रहा है…", "ପ୍ରସ୍ତୁତ ହେଉଛି…"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+            } else {
+                Icon(Icons.Default.FileDownload, null, tint = PrimaryGreen)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(languageState.value.getT("View Policy", "पॉलिसी देखें", "ନୀତି ଦେଖନ୍ତୁ"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Button(
+            onClick = onFinish,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+        ) {
+            Text(languageState.value.getT("Finish Enrollment", "नामांकन पूरा करें", "ପଞ୍ଜିକରଣ ଶେଷ କରନ୍ତୁ"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
