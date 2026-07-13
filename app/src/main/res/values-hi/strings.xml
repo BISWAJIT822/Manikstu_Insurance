@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">माणिकस्तु बीमा</string>
+    <string name="app_name">AjahFi</string>
     <string name="community_livestock_protection">सामुदायिक पशुधन संरक्षण</string>
     <string name="goat_insurance_title">बकरी बीमा</string>
 
@@ -177,6 +177,8 @@
     <string name="validity">वैधता</string>
     <string name="sum_insured">बीमा राशि</string>
     <string name="download_certificate">प्रमाण पत्र डाउनलोड करें</string>
+    <string name="download_policy">पॉलिसी डाउनलोड करें</string>
+    <string name="scan_to_pay">स्कैन करें और भुगतान करें</string>
 
     <!-- Profile & Settings -->
     <string name="profile_settings">प्रोफ़ाइल सेटिंग्स</string>
@@ -477,6 +479,7 @@
     <string name="beetal">बीटल</string>
     <string name="ganjam">गंजम</string>
     <string name="osmanabadi">उस्मानाबादी</string>
+    <string name="anjori">अंजोरी</string>
     <string name="mon">सोम</string>
     <string name="tue">मंगल</string>
     <string name="wed">बुध</string>

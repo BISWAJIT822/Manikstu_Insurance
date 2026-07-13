@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">ମାଣିକଷ୍ଟୁ ବୀମା</string>
+    <string name="app_name">AjahFi</string>
     <string name="community_livestock_protection">ଗୋଷ୍ଠୀ ପ୍ରାଣୀସମ୍ପଦ ସୁରକ୍ଷା</string>
     <string name="goat_insurance_title">ଛେଳି ବୀମା</string>
 
@@ -177,6 +177,8 @@
     <string name="validity">ବୈଧତା</string>
     <string name="sum_insured">ବୀମା ରାଶି</string>
     <string name="download_certificate">ପ୍ରମାଣପତ୍ର ଡାଉନଲୋଡ୍ କରନ୍ତୁ</string>
+    <string name="download_policy">ପଲିସି ଡାଉନଲୋଡ୍ କରନ୍ତୁ</string>
+    <string name="scan_to_pay">ପେମେଣ୍ଟ ପାଇଁ ସ୍କାନ କରନ୍ତୁ</string>
 
     <!-- Profile & Settings -->
     <string name="profile_settings">ପ୍ରୋଫାଇଲ୍ ସେଟିଙ୍ଗ୍ସ</string>
@@ -477,6 +479,7 @@
     <string name="beetal">ବିଟଲ୍</string>
     <string name="ganjam">ଗଞ୍ଜାମ</string>
     <string name="osmanabadi">ଓସମାନାବାଦୀ</string>
+    <string name="anjori">ଅଞ୍ଜୋରି</string>
     <string name="mon">ସୋମ</string>
     <string name="tue">ମଙ୍ଗଳ</string>
     <string name="wed">ବୁଧ</string>

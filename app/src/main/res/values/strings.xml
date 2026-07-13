@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Manikstu Insurance</string>
+    <string name="app_name">AjahFi</string>
     <string name="community_livestock_protection">Community Livestock Protection</string>
     <string name="goat_insurance_title">GOAT INSURANCE</string>
 
@@ -180,6 +180,8 @@
     <string name="validity">Validity</string>
     <string name="sum_insured">Sum Insured</string>
     <string name="download_certificate">Download Certificate</string>
+    <string name="download_policy">Download Policy</string>
+    <string name="scan_to_pay">Scan to Pay</string>
 
     <!-- Placeholders -->
     <string name="full_name_placeholder">Full Name</string>
@@ -625,6 +627,7 @@
     <string name="beetal">Beetal</string>
     <string name="ganjam">Ganjam</string>
     <string name="osmanabadi">Osmanabadi</string>
+    <string name="anjori">Anjori</string>
     <string name="mon">Mon</string>
     <string name="tue">Tue</string>
     <string name="wed">Wed</string>
