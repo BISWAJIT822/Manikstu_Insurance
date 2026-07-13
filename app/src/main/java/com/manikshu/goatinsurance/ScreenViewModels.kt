@@ -231,6 +231,19 @@ class VaccinationViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Silently re-fetches without flipping to the Loading state, so the current list stays
+     * visible (no spinner flash) while it updates. Used to keep the list live when the screen
+     * comes back to the foreground after a vaccination is recorded elsewhere.
+     */
+    fun refresh() {
+        viewModelScope.launch {
+            repo.safeCall { sdVaccinations(filter) }
+                .onSuccess { _state.value = UiState.Success(it) }
+            // keep existing data on failure — this is a background refresh
+        }
+    }
+
     fun record(req: RecordVaccinationRequest) {
         viewModelScope.launch {
             _submit.value = SubmitState.Submitting
@@ -295,39 +308,91 @@ class EnrollmentViewModel @Inject constructor(
     private val _submit = MutableStateFlow<SubmitState>(SubmitState.Idle)
     val submit = _submit.asStateFlow()
 
-    private val _result = MutableStateFlow<EnrollGoatResponse?>(null)
-    val result = _result.asStateFlow()
+    // Results for every goat enrolled in the batch (used by the Policy Generated step).
+    private val _results = MutableStateFlow<List<EnrollGoatResponse>>(emptyList())
+    val results = _results.asStateFlow()
 
-    fun reset() { _submit.value = SubmitState.Idle; _result.value = null }
+    // Human-readable progress while the batch is uploading/enrolling, e.g. "Enrolling goat 2 of 3…".
+    private val _progress = MutableStateFlow<String?>(null)
+    val progress = _progress.asStateFlow()
 
-    /** [photoUris] are the local content URIs for the 4 goat photos (left/right/face/ear_tag order). */
-    fun enroll(request: EnrollGoatRequest, photoUris: List<android.net.Uri>) {
+    fun reset() {
+        _submit.value = SubmitState.Idle
+        _results.value = emptyList()
+        _progress.value = null
+    }
+
+    /**
+     * Enrolls every goat in [goats] under one farmer, sharing the vaccination + payment
+     * details, via the existing single-goat endpoint (one call per goat). Stops on the
+     * first failure and reports which goat failed.
+     */
+    fun enrollBatch(
+        farmerName: String,
+        farmerMobile: String,
+        village: String?,
+        gpsLocation: String?,
+        aadhaarId: String?,
+        goats: List<GoatDraft>,
+        vaccines: List<VaccineIn>,
+        paymentMode: String,
+        amount: Double,
+    ) {
         viewModelScope.launch {
             _submit.value = SubmitState.Submitting
+            val done = mutableListOf<EnrollGoatResponse>()
             try {
                 val types = listOf("left", "right", "face", "ear_tag")
-                val photos = photoUris.mapIndexedNotNull { i, uri ->
-                    val bytes = uploader.readBytes(uri) ?: return@mapIndexedNotNull null
-                    val url = repo.uploadPhoto(bytes, "goat_${System.currentTimeMillis()}_$i.jpg")
-                    GoatPhotoIn(photoType = types.getOrElse(i) { "face" }, url = url)
+                goats.forEachIndexed { index, goat ->
+                    _progress.value = "Enrolling goat ${index + 1} of ${goats.size}…"
+                    val photos = goat.photos.mapIndexedNotNull { i, uri ->
+                        val bytes = uploader.readBytes(uri) ?: return@mapIndexedNotNull null
+                        val url = repo.uploadPhoto(bytes, "goat_${System.currentTimeMillis()}_${index}_$i.jpg")
+                        GoatPhotoIn(photoType = types.getOrElse(i) { "face" }, url = url)
+                    }
+                    if (photos.size < 4) {
+                        _submit.value = SubmitState.Error("Goat ${goat.earTag}: please capture all 4 photos.")
+                        return@launch
+                    }
+                    val request = EnrollGoatRequest(
+                        farmerName = farmerName, farmerMobile = farmerMobile,
+                        village = village, gpsLocation = gpsLocation, aadhaarId = aadhaarId,
+                        earTagNumber = goat.earTag, breed = goat.breed, gender = goat.genderRaw,
+                        ageMonths = goat.ageMonths, weightKg = goat.weightKg, color = goat.color.ifBlank { null },
+                        photos = photos, vaccines = vaccines,
+                        paymentMode = paymentMode, amount = amount,
+                        receiptNumber = "RCP-${System.currentTimeMillis()}-$index",
+                    )
+                    val res = repo.enrollGoat(request)
+                    if (res.status != "success") {
+                        _submit.value = SubmitState.Error("Goat ${goat.earTag}: ${res.reason ?: "enrollment failed"}")
+                        return@launch
+                    }
+                    done.add(res)
                 }
-                if (photos.size < 4) {
-                    _submit.value = SubmitState.Error("Please capture all 4 goat photos before submitting.")
-                    return@launch
-                }
-                val res = repo.enrollGoat(request.copy(photos = photos))
-                if (res.status == "success") {
-                    _result.value = res
-                    _submit.value = SubmitState.Success("Enrolled. Policy ${res.policyNumber}")
-                } else {
-                    _submit.value = SubmitState.Error(res.reason ?: "Enrollment failed")
-                }
+                _results.value = done
+                _progress.value = null
+                _submit.value = SubmitState.Success("Enrolled ${done.size} goat(s)")
             } catch (e: Exception) {
                 _submit.value = SubmitState.Error(e.message ?: "Enrollment failed")
             }
         }
     }
 }
+
+/** One goat collected during multi-goat enrollment, before the batch is submitted. */
+data class GoatDraft(
+    val breed: String,
+    val genderRaw: String,      // "male" | "female" (backend value)
+    val genderLabel: String,    // localized label for the summary card
+    val ageMonths: Int,
+    val ageLabel: String,       // e.g. "12M" / "2Y" for the summary card
+    val weightKg: Double,
+    val weightLabel: String,    // e.g. "25 Kg"
+    val color: String,
+    val earTag: String,
+    val photos: List<android.net.Uri>,
+)
 
 /** Backs the mortality reporting flow (report + upload carcass photos). */
 @HiltViewModel

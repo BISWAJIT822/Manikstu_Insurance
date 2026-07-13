@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.History
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.MoreVert
@@ -82,6 +84,9 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import android.widget.Toast
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -2252,7 +2257,8 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
 
     val enrollVm: EnrollmentViewModel = hiltViewModel()
     val submitState by enrollVm.submit.collectAsState()
-    val enrollResult by enrollVm.result.collectAsState()
+    val enrollResults by enrollVm.results.collectAsState()
+    val enrollProgress by enrollVm.progress.collectAsState()
     val isSubmitting = submitState is SubmitState.Submitting
     LaunchedEffect(submitState) {
         when (val s = submitState) {
@@ -2269,26 +2275,69 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
     var location by rememberSaveable { mutableStateOf("") }
     var aadhaar by rememberSaveable { mutableStateOf("") }
     
+    // Current goat form (one goat being added/edited).
     var breed by rememberSaveable { mutableStateOf("Black Bengal") }
     var gender by rememberSaveable { mutableStateOf(languageState.value.getT("Female", "मादा", "ମାଈ")) }
     var age by rememberSaveable { mutableStateOf("") }
     var ageUnit by rememberSaveable { mutableStateOf(languageState.value.getT("Months", "महीने", "ମାସ")) }
     var weight by rememberSaveable { mutableStateOf("") }
     var colorMarks by rememberSaveable { mutableStateOf("") }
-    
     var earTagNumber by rememberSaveable { mutableStateOf("") }
-    
-    // Photo State
+
+    // Photo State (current goat)
     var leftPhotoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     var rightPhotoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     var frontPhotoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     var tagPhotoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
-    
+
+    // Goats collected so far in this enrollment, and which one is being edited (null = new).
+    val goats = remember { mutableStateListOf<GoatDraft>() }
+    var editingIndex by remember { mutableStateOf<Int?>(null) }
+
+    // Vaccination step State — which vaccines were given during enrollment (shared by all goats).
+    var pprGiven by rememberSaveable { mutableStateOf(true) }
+    var etttGiven by rememberSaveable { mutableStateOf(true) }
+    var fmdGiven by rememberSaveable { mutableStateOf(false) }
+    var poxGiven by rememberSaveable { mutableStateOf(false) }
+
+    val monthsLabel = languageState.value.getT("Months", "महीने", "ମାସ")
+    val femaleLabel = languageState.value.getT("Female", "मादा", "ମାଈ")
+
+    fun resetGoatForm() {
+        breed = "Black Bengal"; gender = femaleLabel; age = ""; ageUnit = monthsLabel
+        weight = ""; colorMarks = ""; earTagNumber = ""
+        leftPhotoUri = null; rightPhotoUri = null; frontPhotoUri = null; tagPhotoUri = null
+    }
+
+    fun currentGoatDraft(): GoatDraft {
+        val isMale = gender == languageState.value.getT("Male", "नर", "ଅଣ୍ଡିରା")
+        val isYears = ageUnit == languageState.value.getT("Years", "साल", "ବର୍ଷ")
+        val ageMonths = (age.toIntOrNull() ?: 0) * (if (isYears) 12 else 1)
+        return GoatDraft(
+            breed = breed, genderRaw = if (isMale) "male" else "female", genderLabel = gender,
+            ageMonths = ageMonths, ageLabel = "$age${if (isYears) "Y" else "M"}",
+            weightKg = weight.toDoubleOrNull() ?: 0.0, weightLabel = "$weight Kg",
+            color = colorMarks, earTag = earTagNumber,
+            photos = listOfNotNull(leftPhotoUri, rightPhotoUri, frontPhotoUri, tagPhotoUri),
+        )
+    }
+
+    fun loadGoatIntoForm(g: GoatDraft) {
+        breed = g.breed
+        gender = g.genderLabel
+        ageUnit = if (g.ageLabel.endsWith("Y")) languageState.value.getT("Years", "साल", "ବର୍ଷ") else monthsLabel
+        age = g.ageLabel.dropLast(1)
+        weight = g.weightLabel.removeSuffix(" Kg")
+        colorMarks = g.color; earTagNumber = g.earTag
+        leftPhotoUri = g.photos.getOrNull(0); rightPhotoUri = g.photos.getOrNull(1)
+        frontPhotoUri = g.photos.getOrNull(2); tagPhotoUri = g.photos.getOrNull(3)
+    }
+
     val steps = listOf(
         languageState.value.getT("Farmer Information", "किसान जानकारी", "କୃଷକ ସୂଚନା"),
         languageState.value.getT("Goat Details", "बकरी का विवरण", "ଛେଳି ବିବରଣୀ"),
-        languageState.value.getT("Photo Capture", "फोटो कैप्चर", "ଫଟୋ କ୍ୟାପଚର"),
-        languageState.value.getT("Ear Tagging", "कान की टैगिंग", "କାନ ଟ୍ୟାଗିଂ"),
+        languageState.value.getT("Goat Photos", "बकरी की तस्वीरें", "ଛେଳି ଫଟୋ"),
+        languageState.value.getT("Goats Added", "जोड़ी गई बकरियां", "ଯୋଡ଼ାଯାଇଥିବା ଛେଳି"),
         languageState.value.getT("Vaccination History", "टीकाकरण इतिहास", "ଟୀକାକରଣ ଇତିହାସ"),
         languageState.value.getT("Premium Payment", "प्रीमियम भुगतान", "ପ୍ରିମିୟମ ଦେୟ"),
         languageState.value.getT("Policy Generated", "पॉलिसी जेनरेट हुई", "ନୀତି ପ୍ରସ୍ତୁତ ହୋଇଛି")
@@ -2340,85 +2389,123 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                 
                 when(currentStep) {
                     1 -> EnrollmentFarmerStep(farmerName, { if (it.all { char -> char.isLetter() || char.isWhitespace() }) farmerName = it }, mobileNumber, { if (it.length <= 10) mobileNumber = it }, village, { if (it.all { char -> char.isLetter() || char.isWhitespace() }) village = it }, location, { location = it }, aadhaar, { if (it.length <= 12) aadhaar = it })
-                    2 -> EnrollmentGoatStep(breed, { breed = it }, gender, { gender = it }, age, { age = it }, ageUnit, { ageUnit = it }, weight, { weight = it }, colorMarks, { colorMarks = it })
+                    2 -> EnrollmentGoatStep(breed, { breed = it }, gender, { gender = it }, age, { age = it }, ageUnit, { ageUnit = it }, weight, { weight = it }, colorMarks, { colorMarks = it }, earTagNumber, { earTagNumber = it })
                     3 -> EnrollmentPhotoStep(
                         leftUri = leftPhotoUri, onLeftCapture = { leftPhotoUri = it },
                         rightUri = rightPhotoUri, onRightCapture = { rightPhotoUri = it },
                         frontUri = frontPhotoUri, onFrontCapture = { frontPhotoUri = it },
                         tagUri = tagPhotoUri, onTagCapture = { tagPhotoUri = it }
                     )
-                    4 -> EnrollmentTaggingStep(earTagNumber) { earTagNumber = it }
-                    5 -> EnrollmentVaccinationStep()
-                    6 -> EnrollmentPaymentStep()
-                    7 -> EnrollmentPolicyStep(farmerName, earTagNumber, enrollResult)
+                    4 -> EnrollmentGoatsAddedStep(
+                        goats = goats,
+                        onAddAnother = { resetGoatForm(); editingIndex = null; currentStep = 2 },
+                        onEdit = { i -> loadGoatIntoForm(goats[i]); editingIndex = i; currentStep = 2 },
+                        onDelete = { i -> goats.removeAt(i) },
+                        onContinue = { currentStep = 5 }
+                    )
+                    5 -> EnrollmentVaccinationStep(
+                        pprGiven, { pprGiven = it }, etttGiven, { etttGiven = it },
+                        fmdGiven, { fmdGiven = it }, poxGiven, { poxGiven = it }
+                    )
+                    6 -> EnrollmentPaymentStep(goats.size)
+                    7 -> EnrollmentPoliciesStep(farmerName, enrollResults, goats)
                 }
             }
 
+            val tagIsUnique = goats.filterIndexed { i, _ -> i != editingIndex }
+                .none { it.earTag.equals(earTagNumber.trim(), ignoreCase = true) }
             val isStepValid = when(currentStep) {
                 1 -> farmerName.isNotBlank() && mobileNumber.length == 10 && village.isNotBlank() && location.isNotBlank() && aadhaar.length == 12
-                2 -> breed.isNotBlank() && gender.isNotBlank() && age.isNotBlank() && weight.isNotBlank() && colorMarks.isNotBlank()
+                2 -> breed.isNotBlank() && gender.isNotBlank() && age.isNotBlank() && weight.isNotBlank() && colorMarks.isNotBlank() && earTagNumber.isNotBlank() && tagIsUnique
                 3 -> leftPhotoUri != null && rightPhotoUri != null && frontPhotoUri != null && tagPhotoUri != null
-                4 -> earTagNumber.isNotBlank()
                 else -> true
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                if (currentStep in 2..6) {
-                    OutlinedButton(
-                        onClick = { currentStep-- },
+            // Step 4 (Goats Added) has its own action buttons inside the step content.
+            if (currentStep != 4) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    if (currentStep == 2 || currentStep == 3 || currentStep == 5 || currentStep == 6) {
+                        OutlinedButton(
+                            onClick = {
+                                when (currentStep) {
+                                    2 -> { editingIndex = null; currentStep = if (goats.isNotEmpty()) 4 else 1 }
+                                    5 -> currentStep = 4
+                                    else -> currentStep--   // 3 -> 2, 6 -> 5
+                                }
+                            },
+                            modifier = Modifier.weight(1f).height(56.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, PrimaryGreen)
+                        ) {
+                            Text(languageState.value.getT("Back", "पीछे", "ପଛକୁ"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            when (currentStep) {
+                                3 -> {
+                                    // Commit the current goat into the list, then show Goats Added.
+                                    val draft = currentGoatDraft()
+                                    val idx = editingIndex
+                                    if (idx != null && idx in goats.indices) goats[idx] = draft else goats.add(draft)
+                                    editingIndex = null
+                                    currentStep = 4
+                                }
+                                6 -> {
+                                    // Submit the whole batch: shared vaccines + payment for every goat.
+                                    val cal = java.util.Calendar.getInstance()
+                                    fun isoOf(c: java.util.Calendar) = String.format(
+                                        "%04d-%02d-%02d", c.get(java.util.Calendar.YEAR),
+                                        c.get(java.util.Calendar.MONTH) + 1, c.get(java.util.Calendar.DAY_OF_MONTH)
+                                    )
+                                    val todayIso = isoOf(cal)
+                                    cal.add(java.util.Calendar.MONTH, 6)
+                                    val boosterIso = isoOf(cal)
+                                    val vaccineList = listOf(
+                                        "ppr" to pprGiven, "et_tt" to etttGiven,
+                                        "fmd" to fmdGiven, "goat_pox" to poxGiven
+                                    ).map { (type, given) ->
+                                        if (given) VaccineIn(
+                                            vaccineType = type, status = "done",
+                                            vaccinationDate = todayIso, nextVaccinationDate = boosterIso
+                                        ) else VaccineIn(
+                                            vaccineType = type, status = "pending",
+                                            nextVaccinationDate = todayIso
+                                        )
+                                    }
+                                    enrollVm.enrollBatch(
+                                        farmerName = farmerName, farmerMobile = mobileNumber,
+                                        village = village.ifBlank { null }, gpsLocation = location.ifBlank { null },
+                                        aadhaarId = aadhaar.ifBlank { null },
+                                        goats = goats.toList(), vaccines = vaccineList,
+                                        paymentMode = "cash", amount = 350.0,
+                                    )
+                                }
+                                7 -> onComplete()
+                                else -> currentStep++   // 1 -> 2, 2 -> 3, 5 -> 6
+                            }
+                        },
+                        enabled = isStepValid && !isSubmitting,
                         modifier = Modifier.weight(1f).height(56.dp),
                         shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, PrimaryGreen)
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f))
                     ) {
-                        Text(languageState.value.getT("Back", "पीछे", "ପଛକୁ"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = when {
+                                isSubmitting -> enrollProgress ?: languageState.value.getT("Submitting…", "प्रस्तुत हो रहा है…", "ଦାଖଲ ହେଉଛି…")
+                                currentStep == 7 -> languageState.value.getT("Finish Enrollment", "नामांकन पूरा करें", "ପଞ୍ଜିକରଣ ଶେଷ କରନ୍ତୁ")
+                                currentStep == 6 -> languageState.value.getT("Submit & Generate Policy", "जमा करें और पॉलिसी बनाएं", "ଦାଖଲ କରି ପଲିସି ପ୍ରସ୍ତୁତ କରନ୍ତୁ")
+                                currentStep == 3 -> languageState.value.getT("Save Photos", "तस्वीरें सहेजें", "ଫଟୋ ସେଭ୍ କରନ୍ତୁ")
+                                else -> languageState.value.getT("Next", "अगला", "ପରବର୍ତ୍ତୀ")
+                            },
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-                }
-                
-                Button(
-                    onClick = {
-                        when {
-                            currentStep < 6 -> currentStep++
-                            currentStep == 6 -> {
-                                // Submit enrollment: upload photos + POST /sd/enroll_goat.
-                                val isMale = gender == languageState.value.getT("Male", "नर", "ଅଣ୍ଡିରା")
-                                val isYears = ageUnit == languageState.value.getT("Years", "साल", "ବର୍ଷ")
-                                val ageMonths = (age.toIntOrNull() ?: 0) * (if (isYears) 12 else 1)
-                                val request = EnrollGoatRequest(
-                                    farmerName = farmerName, farmerMobile = mobileNumber,
-                                    village = village.ifBlank { null }, gpsLocation = location.ifBlank { null },
-                                    aadhaarId = aadhaar.ifBlank { null },
-                                    earTagNumber = earTagNumber, breed = breed,
-                                    gender = if (isMale) "male" else "female",
-                                    ageMonths = ageMonths, weightKg = weight.toDoubleOrNull() ?: 0.0,
-                                    color = colorMarks.ifBlank { null },
-                                    photos = emptyList(),  // filled by the view-model after upload
-                                    vaccines = emptyList(),
-                                    paymentMode = "cash", amount = 350.0,
-                                    receiptNumber = "RCP-${System.currentTimeMillis()}",
-                                )
-                                enrollVm.enroll(request, listOf(leftPhotoUri, rightPhotoUri, frontPhotoUri, tagPhotoUri).filterNotNull())
-                            }
-                            else -> onComplete()
-                        }
-                    },
-                    enabled = isStepValid && !isSubmitting,
-                    modifier = Modifier.weight(1f).height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f))
-                ) {
-                    Text(
-                        text = when {
-                            isSubmitting -> languageState.value.getT("Submitting…", "प्रस्तुत हो रहा है…", "ଦାଖଲ ହେଉଛି…")
-                            currentStep == 7 -> languageState.value.getT("Finish Enrollment", "नामांकन पूरा करें", "ପଞ୍ଜିକରଣ ଶେଷ କରନ୍ତୁ")
-                            currentStep == 6 -> languageState.value.getT("Submit & Generate Policy", "जमा करें और पॉलिसी बनाएं", "ଦାଖଲ କରି ପଲିସି ପ୍ରସ୍ତୁତ କରନ୍ତୁ")
-                            else -> languageState.value.getT("Next", "अगला", "ପରବର୍ତ୍ତୀ")
-                        },
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
                 }
             }
         }
@@ -2428,18 +2515,29 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
 @Composable
 fun EnrollmentFarmerStep(name: String, onNameChange: (String) -> Unit, phone: String, onPhoneChange: (String) -> Unit, village: String, onVillageChange: (String) -> Unit, location: String, onLocationChange: (String) -> Unit, aadhaar: String, onAadhaarChange: (String) -> Unit) {
     val languageState = LocalAppLanguage.current
+    val fetchGps = rememberGpsFetcher(onResult = { onLocationChange(it) })
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         EnrollmentTextField(label = languageState.value.getT("Farmer Name *", "किसान का नाम *", "କୃଷକଙ୍କ ନାମ *"), value = name, onValueChange = onNameChange, placeholder = "Full Name")
         EnrollmentTextField(label = languageState.value.getT("Mobile Number *", "मोबाइल नंबर *", "ମୋବାଇଲ୍ ନମ୍ବର *"), value = phone, onValueChange = onPhoneChange, placeholder = "10-digit number", keyboardType = KeyboardType.Phone, prefix = "+91 ")
         EnrollmentTextField(label = languageState.value.getT("Village *", "गाँव *", "ଗ୍ରାମ *"), value = village, onValueChange = onVillageChange, placeholder = "Village Name")
-        EnrollmentTextField(label = languageState.value.getT("GPS Location *", "जीपीएस स्थान *", "GPS ଅବସ୍ଥାନ *"), value = location, onValueChange = onLocationChange, placeholder = "Auto-fetch coordinates", trailingIcon = Icons.Default.LocationOn)
+        EnrollmentTextField(
+            label = languageState.value.getT("GPS Location *", "जीपीएस स्थान *", "GPS ଅବସ୍ଥାନ *"),
+            value = location, onValueChange = onLocationChange,
+            placeholder = languageState.value.getT("Tap the icon to fetch GPS", "जीपीएस लाने के लिए आइकन दबाएं", "GPS ଆଣିବାକୁ ଆଇକନ୍ ଦବାନ୍ତୁ"),
+            trailingIcon = Icons.Default.MyLocation,
+            onTrailingIconClick = { fetchGps() }
+        )
         EnrollmentTextField(label = languageState.value.getT("Aadhaar / Gov ID *", "आधार / सरकारी आईडी *", "ଆଧାର / ସରକାରୀ ID *"), value = aadhaar, onValueChange = onAadhaarChange, placeholder = "12-digit number", keyboardType = KeyboardType.Number)
     }
 }
 
 @Composable
-fun EnrollmentGoatStep(breed: String, onBreedChange: (String) -> Unit, gender: String, onGenderChange: (String) -> Unit, age: String, onAgeChange: (String) -> Unit, ageUnit: String, onAgeUnitChange: (String) -> Unit, weight: String, onWeightChange: (String) -> Unit, color: String, onColorChange: (String) -> Unit) {
+fun EnrollmentGoatStep(breed: String, onBreedChange: (String) -> Unit, gender: String, onGenderChange: (String) -> Unit, age: String, onAgeChange: (String) -> Unit, ageUnit: String, onAgeUnitChange: (String) -> Unit, weight: String, onWeightChange: (String) -> Unit, color: String, onColorChange: (String) -> Unit, earTag: String, onTagChange: (String) -> Unit) {
     val languageState = LocalAppLanguage.current
+    val scanLauncher = rememberLauncherForActivityResult(
+        contract = com.journeyapps.barcodescanner.ScanContract()
+    ) { result -> if (result.contents != null) onTagChange(result.contents) }
+
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         EnrollmentDropdownField(
             label = languageState.value.getT("Breed *", "नस्ल *", "ପ୍ରଜାତି *"),
@@ -2456,7 +2554,7 @@ fun EnrollmentGoatStep(breed: String, onBreedChange: (String) -> Unit, gender: S
             ),
             onValueChange = onGenderChange
         )
-        
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -2480,6 +2578,24 @@ fun EnrollmentGoatStep(breed: String, onBreedChange: (String) -> Unit, gender: S
 
         EnrollmentTextField(label = languageState.value.getT("Weight (Approx) *", "वजन (लगभग) *", "ଓଜନ (ପ୍ରୟ) *"), value = weight, onValueChange = onWeightChange, placeholder = "18", keyboardType = KeyboardType.Number, suffix = "KG")
         EnrollmentTextField(label = languageState.value.getT("Color / Marks *", "रंग / निशान *", "ରଙ୍ଗ / ଚିହ୍ନ *"), value = color, onValueChange = onColorChange, placeholder = "Black with White Spots")
+
+        EnrollmentTextField(
+            label = languageState.value.getT("Ear Tag Number *", "कान का टैग नंबर *", "କାନ ଟ୍ୟାଗ୍ ନମ୍ବର *"),
+            value = earTag, onValueChange = onTagChange, placeholder = "e.g. ET-240801",
+            trailingIcon = Icons.Default.QrCodeScanner,
+            onTrailingIconClick = {
+                val options = com.journeyapps.barcodescanner.ScanOptions()
+                options.setDesiredBarcodeFormats(com.journeyapps.barcodescanner.ScanOptions.QR_CODE)
+                options.setPrompt(languageState.value.getT("Scan Ear Tag QR Code", "कान के टैग का क्यूआर कोड स्कैन करें", "କାନ ଟ୍ୟାଗ୍ QR କୋଡ୍ ସ୍କାନ୍ କରନ୍ତୁ"))
+                options.setBeepEnabled(true)
+                options.setOrientationLocked(false)
+                scanLauncher.launch(options)
+            }
+        )
+        Text(
+            languageState.value.getT("Ear tag must be unique", "कान का टैग अद्वितीय होना चाहिए", "କାନ ଟ୍ୟାଗ୍ ଅନନ୍ୟ ହେବା ଆବଶ୍ୟକ"),
+            fontSize = 12.sp, color = Color.Gray
+        )
     }
 }
 
@@ -2688,25 +2804,26 @@ fun EnrollmentTaggingStep(earTag: String, onTagChange: (String) -> Unit) {
 }
 
 @Composable
-fun EnrollmentVaccinationStep() {
-    var pprGiven by remember { mutableStateOf(true) }
-    var etttGiven by remember { mutableStateOf(true) }
-    var fmdGiven by remember { mutableStateOf(false) }
-    var poxGiven by remember { mutableStateOf(false) }
-    
+fun EnrollmentVaccinationStep(
+    pprGiven: Boolean, onPpr: (Boolean) -> Unit,
+    etttGiven: Boolean, onEtt: (Boolean) -> Unit,
+    fmdGiven: Boolean, onFmd: (Boolean) -> Unit,
+    poxGiven: Boolean, onPox: (Boolean) -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        VaccineStatusItem("PPR Vaccine", pprGiven) { pprGiven = it }
-        VaccineStatusItem("ET + TT Vaccine", etttGiven) { etttGiven = it }
-        VaccineStatusItem("FMD Vaccine", fmdGiven) { fmdGiven = it }
-        VaccineStatusItem("Goat Pox Vaccine", poxGiven) { poxGiven = it }
+        VaccineStatusItem("PPR Vaccine", pprGiven) { onPpr(it) }
+        VaccineStatusItem("ET + TT Vaccine", etttGiven) { onEtt(it) }
+        VaccineStatusItem("FMD Vaccine", fmdGiven) { onFmd(it) }
+        VaccineStatusItem("Goat Pox Vaccine", poxGiven) { onPox(it) }
     }
 }
 
 @Composable
-fun EnrollmentPaymentStep() {
+fun EnrollmentPaymentStep(goatCount: Int = 1) {
     val languageState = LocalAppLanguage.current
     var selectedMethod by remember { mutableStateOf("Cash") }
-    
+    val total = 350 * goatCount.coerceAtLeast(1)
+
     Column {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -2718,7 +2835,10 @@ fun EnrollmentPaymentStep() {
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(languageState.value.getT("Total Premium Amount", "कुल प्रीमियम राशि", "ମୋଟ ପ୍ରିମିୟମ ପରିମାଣ"), fontSize = 14.sp, color = Color.Gray)
-                Text("₹ 350", style = MaterialTheme.typography.headlineLarge, color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                Text("₹ $total", style = MaterialTheme.typography.headlineLarge, color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                if (goatCount > 1) {
+                    Text("$goatCount × ₹350", fontSize = 12.sp, color = Color.Gray)
+                }
             }
         }
         
@@ -2811,6 +2931,140 @@ fun EnrollmentPolicyStep(farmer: String, tag: String, result: EnrollGoatResponse
             Icon(Icons.Default.FileDownload, null, tint = PrimaryGreen)
             Spacer(modifier = Modifier.width(8.dp))
             Text(languageState.value.getT("Download Certificate", "प्रमाण पत्र डाउनलोड करें", "ପ୍ରମାଣପତ୍ର ଡାଉନଲୋଡ୍ କରନ୍ତୁ"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+/** Step 4: the running list of goats added during this enrollment. */
+@Composable
+fun EnrollmentGoatsAddedStep(
+    goats: List<GoatDraft>,
+    onAddAnother: () -> Unit,
+    onEdit: (Int) -> Unit,
+    onDelete: (Int) -> Unit,
+    onContinue: () -> Unit,
+) {
+    val languageState = LocalAppLanguage.current
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // Total counter
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(languageState.value.getT("Total Goats Added", "जोड़ी गई कुल बकरियां", "ମୋଟ ଯୋଡ଼ାଯାଇଥିବା ଛେଳି"), fontSize = 13.sp, color = Color.Gray)
+                    Text("${goats.size}", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen)
+                }
+                Icon(painterResource(R.drawable.ic_ewe_custom), null, tint = PrimaryGreen, modifier = Modifier.size(40.dp))
+            }
+        }
+
+        goats.forEachIndexed { index, goat ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.4f))
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val photo = goat.photos.getOrNull(2) ?: goat.photos.firstOrNull()
+                    Box(
+                        modifier = Modifier.size(56.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFF0F0F0)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (photo != null) {
+                            AsyncImage(model = photo, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                        } else {
+                            Icon(painterResource(R.drawable.ic_ewe_custom), null, tint = Color.Gray, modifier = Modifier.size(28.dp))
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(goat.earTag, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Black)
+                        Text("${goat.breed} • ${goat.genderLabel} • ${goat.ageLabel}", fontSize = 12.sp, color = Color.Gray)
+                        Text("${goat.weightLabel} • ${goat.color}", fontSize = 12.sp, color = Color.Gray)
+                    }
+                    IconButton(onClick = { onEdit(index) }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = PrimaryGreen, modifier = Modifier.size(20.dp))
+                    }
+                    IconButton(onClick = { onDelete(index) }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red, modifier = Modifier.size(20.dp))
+                    }
+                }
+            }
+        }
+
+        OutlinedButton(
+            onClick = onAddAnother,
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, PrimaryGreen)
+        ) {
+            Icon(Icons.Default.Add, null, tint = PrimaryGreen)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(languageState.value.getT("Add Another Goat", "एक और बकरी जोड़ें", "ଆଉ ଏକ ଛେଳି ଯୋଡ଼ନ୍ତୁ"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+        }
+
+        Button(
+            onClick = onContinue,
+            enabled = goats.isNotEmpty(),
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f))
+        ) {
+            Text(languageState.value.getT("Continue to Vaccination", "टीकाकरण के लिए जारी रखें", "ଟୀକାକରଣକୁ ଜାରି ରଖନ୍ତୁ"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+/** Step 7: policies generated for every goat in the batch. */
+@Composable
+fun EnrollmentPoliciesStep(farmer: String, results: List<EnrollGoatResponse>, goats: List<GoatDraft>) {
+    val languageState = LocalAppLanguage.current
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier.size(64.dp).clip(CircleShape).background(Color(0xFFE8F5E9)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.VerifiedUser, null, tint = SuccessGreen, modifier = Modifier.size(32.dp))
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            languageState.value.getT("${results.size} Policy(ies) Generated!", "${results.size} पॉलिसी जेनरेट हुईं!", "${results.size} ନୀତି ପ୍ରସ୍ତୁତ ହୋଇଛି!"),
+            fontWeight = FontWeight.Bold, fontSize = 18.sp
+        )
+        Text(
+            languageState.value.getT("Farmer: $farmer", "किसान: $farmer", "କୃଷକ: $farmer"),
+            fontSize = 13.sp, color = Color.Gray
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+
+        results.forEachIndexed { index, res ->
+            val tag = goats.getOrNull(index)?.earTag ?: "—"
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    PolicyDetailRow(languageState.value.getT("Policy Number", "पॉलिसी नंबर", "ନୀତି ନମ୍ବର"), res.policyNumber ?: "—")
+                    PolicyDetailRow(languageState.value.getT("Ear Tag", "कान का टैग", "କାନ ଟ୍ୟାଗ୍"), tag)
+                    PolicyDetailRow(languageState.value.getT("Validity", "वैधता", "ବୈଧତା"), "${res.validFrom ?: "—"} - ${res.validTo ?: "—"}")
+                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
+                    PolicyDetailRow(languageState.value.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), res.sumInsured?.let { "₹ ${it.toInt()}" } ?: "—", true)
+                }
+            }
         }
     }
 }
@@ -3109,7 +3363,6 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
     val skyBlue = Color(0xFFB3E5FC)
     val royalBlue = Color(0xFF0D47A1)
 
-    var showVaccineSchedule by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -3155,107 +3408,6 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                 when(index) {
                     0 -> StatCard(languageState.value.getT("Active Policies", "सक्रिय नीतियां", "ସକ୍ରିୟ ନୀତି"), "%02d".format(activeCount), Icons.AutoMirrored.Filled.Assignment, royalBlue, skyBlue)
                     1 -> StatCard(languageState.value.getT("Total Goats", "कुल बकरियां", "ମୋଟ ଛେଳି"), "%02d".format(policies.size), painterResource(R.drawable.ic_ewe_custom), PrimaryGreen, CardLightGreen)
-                }
-            }
-
-            // Next Vaccination Due Banner
-            item(span = { GridItemSpan(gridColumns) }) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, medBlue.copy(alpha = 0.3f)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text(
-                                languageState.value.getT("Next Vaccination Due", "अगला टीकाकरण देय", "ପରବର୍ତ୍ତୀ ଟୀକାକରଣ ବାକି"),
-                                fontSize = 13.sp,
-                                color = deepBlue,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                schedule.firstOrNull()?.nextVaccinationDate ?: languageState.value.getT("No upcoming dose", "कोई आगामी खुराक नहीं", "କୌଣସି ଆଗାମୀ ଡୋଜ୍ ନାହିଁ"),
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black,
-                                fontSize = 15.sp
-                            )
-                        }
-                        OutlinedButton(
-                            onClick = { 
-                                showVaccineSchedule = !showVaccineSchedule
-                            },
-                            border = BorderStroke(1.dp, deepBlue),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = deepBlue),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
-                        ) {
-                            Text(
-                                if (showVaccineSchedule) languageState.value.getT("Hide", "छिपाएं", "ଲୁଚାନ୍ତୁ") 
-                                else languageState.value.getT("View", "देखें", "ଦେଖନ୍ତୁ"),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (showVaccineSchedule) {
-                item(span = { GridItemSpan(gridColumns) }) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            languageState.value.getT("Upcoming Vaccinations", "आगामी टीकाकरण", "ଆଗାମୀ ଟୀକାକରଣ"),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = royalBlue,
-                            fontWeight = FontWeight.Bold
-                        )
-                        
-                        val vaccineDisplay = mapOf("ppr" to "PPR Vaccine", "et_tt" to "ET + TT", "fmd" to "FMD Vaccine", "goat_pox" to "Goat Pox")
-                        val schedules = schedule.map { Triple(vaccineDisplay[it.vaccineType] ?: it.vaccineType, it.nextVaccinationDate ?: "—", it.earTagNumber) }
-                        
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 200.dp)
-                                .verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            schedules.forEach { (name, date, tag) ->
-                                Card(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                                    shape = RoundedCornerShape(12.dp),
-                                    border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(16.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column {
-                                            Text(name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Black)
-                                            Text(tag, fontSize = 12.sp, color = Color.Gray)
-                                        }
-                                        Text(date, fontWeight = FontWeight.SemiBold, color = deepBlue, fontSize = 13.sp)
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
             }
 
@@ -4271,6 +4423,7 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
 @Composable
 fun HelpSupportScreen(navController: NavHostController, userRole: UserRole?, onReportIssue: () -> Unit, onFaqs: () -> Unit, onContactSupport: () -> Unit, onBack: () -> Unit) {
     val languageState = LocalAppLanguage.current
+    val context = LocalContext.current
     val themeColor = when(userRole) {
         UserRole.FARMER -> PrimaryBlue
         UserRole.COORDINATOR -> CoordinatorOrange
@@ -4318,17 +4471,17 @@ fun HelpSupportScreen(navController: NavHostController, userRole: UserRole?, onR
             )
             HelpItemCard(
                 title = languageState.value.getT("Contact Support", "सहायता से संपर्क करें", "ସହାୟତା ସହିତ ଯୋଗାଯୋଗ କରନ୍ତୁ"),
-                subtitle = languageState.value.getT("Chat with our team", "हमारी टीम के साथ चैट करें", "ଆମର ଟିମ୍ ସହିତ ଚାଟ୍ କରନ୍ତୁ"),
+                subtitle = languageState.value.getT("Chat with us on WhatsApp", "व्हाट्सएप पर हमसे चैट करें", "ହ୍ୱାଟସ୍ଆପରେ ଆମ ସହ ଚାଟ୍ କରନ୍ତୁ"),
                 icon = Icons.AutoMirrored.Filled.Chat,
                 themeColor = themeColor,
-                onClick = onContactSupport
+                onClick = { context.contactSupport() }
             )
             HelpItemCard(
                 title = languageState.value.getT("Call Support", "कॉल सहायता", "କଲ୍ ସହାୟତା"),
-                subtitle = "0000-000-008",
+                subtitle = SupportContact.DISPLAY,
                 icon = Icons.Default.Phone,
                 themeColor = themeColor,
-                onClick = { navController.navigate("call_support") }
+                onClick = { context.contactSupport() }
             )
             HelpItemCard(
                 title = languageState.value.getT("Report an Issue", "एक समस्या की रिपोर्ट करें", "ଏକ ସମସ୍ୟା ରିପୋର୍ଟ କରନ୍ତୁ"),
@@ -5441,6 +5594,19 @@ fun VaccineListScreen(navController: NavHostController, onBack: () -> Unit, onRe
     var selectedTab by remember { mutableIntStateOf(0) }
 
     val vaccVm: VaccinationViewModel = hiltViewModel()
+
+    // Keep the list live: re-fetch whenever this screen returns to the foreground (e.g. after
+    // recording a vaccination or enrolling a goat on another screen). Without this the list VM
+    // only loads once and the Completed tab stays stale. refresh() reloads without a spinner flash.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) vaccVm.refresh()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     val vaccState by vaccVm.state.collectAsState()
     val isLoading = vaccState is UiState.Loading
     val errorMsg = (vaccState as? UiState.Error)?.message
@@ -5951,7 +6117,8 @@ fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBac
                         "id" to it.claimNumber, "farmer" to (it.farmer ?: "—"),
                         "tag" to it.earTagNumber, "status" to it.status,
                         "date" to (it.dateOfDeath?.take(10) ?: ""),
-                        "amount" to it.sumInsured.toInt().toString(),
+                        "amount" to ((it.claimAmount ?: it.sumInsured).toInt().toString()),
+                        "vaccines" to (it.vaccinationsDone?.toString() ?: ""),
                     )
                 }
                 coCounts = mapOf(
@@ -5977,6 +6144,9 @@ fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBac
                         "farmer" to (it.farmer ?: "—"), "tag" to it.earTagNumber,
                         "status" to (it.claimStatus ?: "pending"),
                         "date" to (it.dateOfDeath?.take(10) ?: ""),
+                        "amount" to (it.claimAmount?.toInt()?.toString() ?: ""),
+                        "vaccines" to (it.vaccinationsDone?.toString() ?: ""),
+                        "cause" to (it.causeOfDeath ?: ""),
                     )
                 }
             }
@@ -5992,6 +6162,9 @@ fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBac
                         "farmer" to (it.earTagNumber), "tag" to it.earTagNumber,
                         "status" to (it.claimStatus ?: "pending"),
                         "date" to (it.dateOfDeath?.take(10) ?: ""),
+                        "amount" to (it.claimAmount?.toInt()?.toString() ?: ""),
+                        "vaccines" to (it.vaccinationsDone?.toString() ?: ""),
+                        "cause" to (it.causeOfDeath ?: ""),
                     )
                 }
             }
@@ -6327,7 +6500,12 @@ fun DidiClaimListContent(
 ) {
     val languageState = LocalAppLanguage.current
     var selectedTab by remember { mutableIntStateOf(0) }
-    
+
+    // Real, data-driven counts (was hardcoded mock values before).
+    val inProgressCount = claims.count { (it["status"] ?: "") in listOf("pending", "hold") }
+    val completedCount = claims.count { (it["status"] ?: "") in listOf("approved", "rejected", "claimed") }
+    val pendingCount = claims.count { (it["status"] ?: "") == "pending" }
+
     Column(modifier = Modifier.padding(padding)) {
         // redesigned Header with stats (Reduced Height and Justified)
         if (!isFarmer) {
@@ -6380,9 +6558,9 @@ fun DidiClaimListContent(
                         modifier = Modifier.weight(1.3f),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        ClaimStatRow(languageState.value.getT("In Progress", "प्रगति में", "ପ୍ରଗତିରେ ଅଛି"), "28")
-                        ClaimStatRow(languageState.value.getT("Completed", "पूरा हुआ", "ସମ୍ପୂର୍ଣ୍ଣ"), "15")
-                        ClaimStatRow(languageState.value.getT("Pending", "लंबित", "ବାକି ଅଛି"), "5")
+                        ClaimStatRow(languageState.value.getT("In Progress", "प्रगति में", "ପ୍ରଗତିରେ ଅଛି"), "$inProgressCount")
+                        ClaimStatRow(languageState.value.getT("Completed", "पूरा हुआ", "ସମ୍ପୂର୍ଣ୍ଣ"), "$completedCount")
+                        ClaimStatRow(languageState.value.getT("Pending", "लंबित", "ବାକି ଅଛି"), "$pendingCount")
                     }
                 }
             }
@@ -6409,9 +6587,9 @@ fun DidiClaimListContent(
 
         // Tabs
         val tabs = listOf(
-            languageState.value.getT("All (48)", "सभी (48)", "ସମସ୍ତ (୪୮)"),
-            languageState.value.getT("My Assigned (18)", "मेरे द्वारा असाइन (18)", "ମୋ ଦ୍ଵାରା ଧାର୍ଯ୍ୟ (୧୮)"),
-            languageState.value.getT("In Progress (28)", "प्रगति में (28)", "ପ୍ରଗତିରେ ଅଛି (୨୮)")
+            languageState.value.getT("All (${claims.size})", "सभी (${claims.size})", "ସମସ୍ତ (${claims.size})"),
+            languageState.value.getT("In Progress ($inProgressCount)", "प्रगति में ($inProgressCount)", "ପ୍ରଗତିରେ ($inProgressCount)"),
+            languageState.value.getT("Completed ($completedCount)", "पूरा ($completedCount)", "ସମ୍ପୂର୍ଣ୍ଣ ($completedCount)")
         )
         
         TabRow(
@@ -6445,6 +6623,12 @@ fun DidiClaimListContent(
 
         val filtered = claims.filter {
             (it["id"] ?: "").contains(searchQuery, true) || (it["farmer"] ?: "").contains(searchQuery, true) || (it["tag"] ?: "").contains(searchQuery, true)
+        }.filter {
+            when (selectedTab) {
+                1 -> (it["status"] ?: "") in listOf("pending", "hold")
+                2 -> (it["status"] ?: "") in listOf("approved", "rejected", "claimed")
+                else -> true
+            }
         }
 
         LazyColumn(
@@ -6547,7 +6731,26 @@ fun DidiClaimCard(claim: Map<String, String>, themeColor: Color, onClick: () -> 
                 fontSize = 13.sp,
                 color = Color.Gray
             )
-            
+
+            // Tiered payout entitlement (playbook: by completed vaccinations).
+            val amount = claim["amount"] ?: ""
+            val vaccines = claim["vaccines"] ?: ""
+            if (amount.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = languageState.value.getT("Entitled: ", "पात्र: ", "ହକଦାର: ") + "₹$amount",
+                        fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen
+                    )
+                    if (vaccines.isNotBlank()) {
+                        Text(
+                            text = "  •  " + languageState.value.getT("$vaccines/4 vaccines", "$vaccines/4 टीके", "$vaccines/4 ଟୀକା"),
+                            fontSize = 12.sp, color = Color.Gray
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -6832,7 +7035,8 @@ fun ClaimReviewScreen(navController: NavHostController, claimId: String, userRol
         "time" to "",
         "policy" to (review?.claimNumber ?: "—"),
         "cause" to (review?.causeOfDeath ?: "—"),
-        "amount" to (review?.sumInsured?.toInt()?.toString() ?: "—"),
+        "amount" to ((review?.claimAmount ?: review?.sumInsured)?.toInt()?.toString() ?: "—"),
+        "vaccines" to (review?.vaccinationsDone?.toString() ?: ""),
     )
 
     if (userRole == UserRole.FARMER) {
@@ -7127,8 +7331,16 @@ fun DidiClaimDetailsContent(
                             
                             DidiInfoRow(languageState.value.getT("Policy No.", "पॉलिसी नंबर", "ପଲିସି ନମ୍ବର"), claim["policy"] ?: "")
                             DidiInfoRow(languageState.value.getT("Insured Goat", "बीमित बकरी", "ବୀମାଭୁକ୍ତ ଛେଳି"), claim["tag"] ?: "")
-                            DidiInfoRow(languageState.value.getT("Date of Death", "मृत्यु की तिथि", "ମୃତ୍ୟୁ ତାରିଖ"), "19 May 2024")
+                            DidiInfoRow(languageState.value.getT("Date of Death", "मृत्यु की तिथि", "ମୃତ୍ୟୁ ତାରିଖ"), claim["date"] ?: "—")
                             DidiInfoRow(languageState.value.getT("Cause of Death", "मृत्यु का कारण", "ମୃତ୍ୟୁର କାରଣ"), claim["cause"] ?: "")
+                            val vaccines = claim["vaccines"] ?: ""
+                            if (vaccines.isNotBlank()) {
+                                DidiInfoRow(languageState.value.getT("Vaccinations Completed", "पूर्ण टीकाकरण", "ସମ୍ପୂର୍ଣ୍ଣ ଟୀକାକରଣ"), "$vaccines / 4")
+                            }
+                            val amount = claim["amount"] ?: ""
+                            if (amount.isNotBlank() && amount != "—") {
+                                DidiInfoRow(languageState.value.getT("Entitled Amount", "पात्र राशि", "ହକଦାର ରାଶି"), "₹$amount")
+                            }
                         }
                     }
                 }
@@ -7351,7 +7563,42 @@ fun ClaimVerifyScreen(navController: NavHostController, claimId: String, userRol
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Tiered payout summary (playbook: entitlement by completed vaccinations).
+            val vaccDone = review?.vaccinationsDone
+            val entitled = (review?.claimAmount ?: review?.sumInsured)?.toInt()
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        languageState.value.getT("Payout Entitlement", "भुगतान पात्रता", "ଦେୟ ହକଦାରୀ"),
+                        fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFFE65100)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(languageState.value.getT("Vaccinations completed", "पूर्ण टीकाकरण", "ସମ୍ପୂର୍ଣ୍ଣ ଟୀକାକରଣ"), fontSize = 13.sp, color = Color.DarkGray)
+                        Text("${vaccDone ?: "—"} / 4", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(languageState.value.getT("Entitled amount", "पात्र राशि", "ହକଦାର ରାଶି"), fontSize = 13.sp, color = Color.DarkGray)
+                        Text(if (entitled != null) "₹$entitled" else "—", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = PrimaryGreen)
+                    }
+                    if (vaccDone == 0) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            languageState.value.getT("No vaccination record — claim must be rejected.", "कोई टीकाकरण रिकॉर्ड नहीं — दावा अस्वीकार करें।", "କୌଣସି ଟୀକାକରଣ ରେକର୍ଡ ନାହିଁ — ଦାବି ପ୍ରତ୍ୟାଖ୍ୟାନ କରନ୍ତୁ।"),
+                            fontSize = 12.sp, color = Color(0xFFC62828), fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             Text(
                 text = languageState.value.getT("Remarks (Optional)", "टिप्पणियां (वैकल्पिक)", "ମନ୍ତବ୍ୟ (ବୈକଳ୍ପିକ)"),
@@ -7381,7 +7628,8 @@ fun ClaimVerifyScreen(navController: NavHostController, claimId: String, userRol
             Button(
                 onClick = {
                     pendingAction = "approve"
-                    claimsVm.review(claimId, "approve", review?.sumInsured)
+                    // Pay the playbook-tiered entitlement, not the full sum insured.
+                    claimsVm.review(claimId, "approve", review?.claimAmount ?: review?.sumInsured)
                 },
                 enabled = !isSubmitting,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -7934,6 +8182,7 @@ fun ClaimProgressItem(
 @Composable
 fun FarmerClaimDetailsScreen(navController: NavHostController, claim: Map<String, String>, themeColor: Color, onBack: () -> Unit) {
     val languageState = LocalAppLanguage.current
+    val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf(
         languageState.value.getT("Details", "विवरण", "ବିବରଣୀ"),
@@ -7998,7 +8247,7 @@ fun FarmerClaimDetailsScreen(navController: NavHostController, claim: Map<String
                         
                         Spacer(modifier = Modifier.height(24.dp))
                         OutlinedButton(
-                            onClick = { navController.navigate("help_support") },
+                            onClick = { context.contactSupport() },
                             modifier = Modifier.fillMaxWidth().height(50.dp),
                             shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, themeColor)
@@ -9147,12 +9396,11 @@ fun CallSupportScreen(userRole: UserRole?, onBack: () -> Unit, onCallEnded: (Str
     LaunchedEffect(callState) {
         if (callState == "Connecting") {
             kotlinx.coroutines.delay(1000)
-            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:0000000008"))
-            context.startActivity(intent)
+            context.contactSupport()
             callState = "InCall"
         } else if (callState == "InCall") {
             kotlinx.coroutines.delay(2000)
-            onCallEnded("0000-000-008", "00:07:24", "20 May 2024, 10:30 AM")
+            onCallEnded(SupportContact.DISPLAY, "00:07:24", "20 May 2024, 10:30 AM")
         }
     }
 
@@ -9205,7 +9453,7 @@ fun CallSupportScreen(userRole: UserRole?, onBack: () -> Unit, onCallEnded: (Str
                 )
                 Spacer(modifier = Modifier.height(40.dp))
                 Card(
-                    onClick = { callState = "Connecting" },
+                    onClick = { context.contactSupport() },
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                     border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f)),
@@ -9218,8 +9466,8 @@ fun CallSupportScreen(userRole: UserRole?, onBack: () -> Unit, onCallEnded: (Str
                         Icon(Icons.Default.Phone, null, tint = themeColor, modifier = Modifier.size(32.dp))
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
-                            Text("0000-000-008", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = themeColor)
-                            Text(languageState.value.getT("Tap to Call", "कॉल करने के लिए टैप करें", "କଲ୍ କରିବାକୁ ଟ୍ୟାପ୍ କରନ୍ତୁ"), color = themeColor, fontSize = 14.sp)
+                            Text(SupportContact.DISPLAY, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = themeColor)
+                            Text(languageState.value.getT("Tap to Chat or Call", "चैट या कॉल करने के लिए टैप करें", "ଚାଟ୍ କିମ୍ବା କଲ୍ କରିବାକୁ ଟ୍ୟାପ୍ କରନ୍ତୁ"), color = themeColor, fontSize = 14.sp)
                         }
                     }
                 }
@@ -9702,6 +9950,7 @@ fun ContactSupportHomeScreen(
     onBack: () -> Unit
 ) {
     val languageState = LocalAppLanguage.current
+    val context = LocalContext.current
     val themeColor = when (userRole) {
         UserRole.FARMER -> PrimaryBlue
         UserRole.COORDINATOR -> CoordinatorOrange
@@ -9769,19 +10018,19 @@ fun ContactSupportHomeScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
             HelpItemCard(
-                title = languageState.value.getT("Start a Chat", "चैट शुरू करें", "ଚାଟ୍ ଆରମ୍ଭ କରନ୍ତୁ"),
-                subtitle = languageState.value.getT("Chat with our support team", "हमारी सहायता टीम के साथ चैट करें", "ଆମର ସହାୟତା ଟିମ୍ ସହିତ ଚାଟ୍ କରନ୍ତୁ"),
+                title = languageState.value.getT("Chat on WhatsApp", "व्हाट्सएप पर चैट करें", "ହ୍ୱାଟସ୍ଆପରେ ଚାଟ୍ କରନ୍ତୁ"),
+                subtitle = SupportContact.DISPLAY,
                 icon = Icons.AutoMirrored.Filled.Chat,
                 themeColor = themeColor,
-                onClick = onStartChat
+                onClick = { context.contactSupport() }
             )
             Spacer(modifier = Modifier.height(12.dp))
             HelpItemCard(
-                title = languageState.value.getT("View Previous Conversations", "पिछली बातचीत देखें", "ପୂର୍ବ କଥାବାର୍ତ୍ତା ଦେଖନ୍ତୁ"),
-                subtitle = languageState.value.getT("Check your earlier chat history", "अपना पुराना चैट इतिहास देखें", "ଆପଣଙ୍କର ପୂର୍ବ ଚାଟ୍ ଇତିହାସ ଯାଞ୍ଚ କରନ୍ତୁ"),
-                icon = Icons.Default.History,
+                title = languageState.value.getT("Call Support", "कॉल सहायता", "କଲ୍ ସହାୟତା"),
+                subtitle = SupportContact.DISPLAY,
+                icon = Icons.Default.Phone,
                 themeColor = themeColor,
-                onClick = onViewPrevious
+                onClick = { context.contactSupport() }
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -10249,6 +10498,7 @@ fun IssueSuccessScreen(
 @Composable
 fun MyReportsScreen(navController: NavHostController, userRole: UserRole?, onBack: () -> Unit) {
     val languageState = LocalAppLanguage.current
+    val context = LocalContext.current
     val themeColor = when (userRole) {
         UserRole.FARMER -> PrimaryBlue
         UserRole.COORDINATOR -> CoordinatorOrange
@@ -10344,7 +10594,7 @@ fun MyReportsScreen(navController: NavHostController, userRole: UserRole?, onBac
                             Text(languageState.value.getT("Can't find your issue?", "अपनी समस्या नहीं मिल रही?", "ଆପଣଙ୍କ ସମସ୍ୟା ପାଇଲେ ନାହିଁ କି?"), fontWeight = FontWeight.Bold)
                             Text(languageState.value.getT("Contact our support team directly.", "हमारी सहायता टीम से सीधे संपर्क करें।", "ଆମର ସହାୟତା ଟିମ୍ ସହିତ ସିଧାସଳଖ ଯୋଗାଯୋଗ କରନ୍ତୁ |"), fontSize = 12.sp, color = Color.Gray, textAlign = TextAlign.Center)
                             Spacer(modifier = Modifier.height(12.dp))
-                            TextButton(onClick = { navController.navigate("contact_support_home") }) {
+                            TextButton(onClick = { context.contactSupport() }) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.AutoMirrored.Filled.Chat, null, modifier = Modifier.size(18.dp), tint = SuccessGreen)
                                     Spacer(modifier = Modifier.width(8.dp))
