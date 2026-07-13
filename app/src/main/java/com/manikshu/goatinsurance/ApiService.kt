@@ -38,6 +38,10 @@ interface ApiService {
     @GET("auth/profile")
     suspend fun profile(): ProfileResponse
 
+    @Streaming
+    @GET("farmer/policy_certificate/{tag}")
+    suspend fun policyCertificate(@Path("tag") tag: String): okhttp3.ResponseBody
+
     @GET("auth/logout")
     suspend fun logout(): StatusResponse
 

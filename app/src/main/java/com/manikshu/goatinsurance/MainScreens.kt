@@ -5405,8 +5405,38 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
 
                 if (isFarmer) {
                     Spacer(modifier = Modifier.height(24.dp))
+                    val certVm: PolicyDetailViewModel = hiltViewModel()
+                    val certState by certVm.certificate.collectAsState()
+                    val certContext = LocalContext.current
+                    LaunchedEffect(certState) {
+                        when (val s = certState) {
+                            is SubmitState.Success -> {
+                                s.message?.let { path ->
+                                    val uri = FileProvider.getUriForFile(
+                                        certContext, "${certContext.packageName}.fileprovider", File(path)
+                                    )
+                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(uri, "application/pdf")
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    try {
+                                        certContext.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        Toast.makeText(certContext, languageState.value.getT("No PDF viewer installed", "कोई पीडीएफ व्यूअर नहीं मिला", "କୌଣସି PDF ଭ୍ୟୁଅର୍ ନାହିଁ"), Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                                certVm.resetCertificate()
+                            }
+                            is SubmitState.Error -> {
+                                Toast.makeText(certContext, s.message, Toast.LENGTH_LONG).show()
+                                certVm.resetCertificate()
+                            }
+                            else -> {}
+                        }
+                    }
                     Button(
-                        onClick = { /* Download Policy Logic */ },
+                        onClick = { certVm.downloadCertificate(displayTag, certContext.cacheDir) },
+                        enabled = certState !is SubmitState.Submitting,
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = themeColor)

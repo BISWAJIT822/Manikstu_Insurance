@@ -169,6 +169,10 @@ class PolicyDetailViewModel @Inject constructor(
     private val _state = MutableStateFlow<UiState<PolicyDetail>>(UiState.Loading)
     val state = _state.asStateFlow()
 
+    /** Idle -> Submitting while downloading; Success carries the saved PDF path. */
+    private val _certificate = MutableStateFlow<SubmitState>(SubmitState.Idle)
+    val certificate = _certificate.asStateFlow()
+
     fun load(policyNumber: String) {
         viewModelScope.launch {
             _state.value = UiState.Loading
@@ -177,6 +181,29 @@ class PolicyDetailViewModel @Inject constructor(
                 .onFailure { _state.value = UiState.Error(it.message ?: "Failed to load policy") }
         }
     }
+
+    fun downloadCertificate(earTag: String, targetDir: java.io.File) {
+        viewModelScope.launch {
+            _certificate.value = SubmitState.Submitting
+            repo.safeCall { policyCertificate(earTag) }
+                .onSuccess { body ->
+                    runCatching {
+                        val file = java.io.File(targetDir, "policy_$earTag.pdf")
+                        body.byteStream().use { input ->
+                            file.outputStream().use { output -> input.copyTo(output) }
+                        }
+                        file.absolutePath
+                    }.onSuccess { path ->
+                        _certificate.value = SubmitState.Success(path)
+                    }.onFailure {
+                        _certificate.value = SubmitState.Error("Could not save the certificate")
+                    }
+                }
+                .onFailure { _certificate.value = SubmitState.Error(it.message ?: "Download failed") }
+        }
+    }
+
+    fun resetCertificate() { _certificate.value = SubmitState.Idle }
 }
 
 @HiltViewModel
