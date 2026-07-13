@@ -2315,7 +2315,8 @@ fun EnrollmentGoatStep(breed: String, onBreedChange: (String) -> Unit, gender: S
                 stringResource(R.string.barbari),
                 stringResource(R.string.beetal),
                 stringResource(R.string.ganjam),
-                stringResource(R.string.osmanabadi)
+                stringResource(R.string.osmanabadi),
+                stringResource(R.string.anjori)
             ),
             onValueChange = onBreedChange
         )
