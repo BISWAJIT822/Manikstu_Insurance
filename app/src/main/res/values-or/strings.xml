@@ -177,6 +177,8 @@
     <string name="validity">ବୈଧତା</string>
     <string name="sum_insured">ବୀମା ରାଶି</string>
     <string name="download_certificate">ପ୍ରମାଣପତ୍ର ଡାଉନଲୋଡ୍ କରନ୍ତୁ</string>
+    <string name="download_policy">ପଲିସି ଡାଉନଲୋଡ୍ କରନ୍ତୁ</string>
+    <string name="scan_to_pay">ପେମେଣ୍ଟ ପାଇଁ ସ୍କାନ କରନ୍ତୁ</string>
 
     <!-- Profile & Settings -->
     <string name="profile_settings">ପ୍ରୋଫାଇଲ୍ ସେଟିଙ୍ଗ୍ସ</string>

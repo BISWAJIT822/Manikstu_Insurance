@@ -567,7 +567,7 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String) -> Unit, onNavigateToLo
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(320.dp)
+                .height(260.dp)
                 .clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp))
                 .background(PrimaryGreen)
         ) {
@@ -627,35 +627,16 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String) -> Unit, onNavigateToLo
                 }
             }
 
-            // Logo and Title
-            Column(
-                modifier = Modifier.align(Alignment.Center).padding(top = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Surface(
-                    modifier = Modifier.size(120.dp),
-                    shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.2f)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            painterResource(R.drawable.ic_logo_custom),
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(120.dp)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    stringResource(R.string.goat_insurance_title),
-                    style = MaterialTheme.typography.headlineSmall, color = Color.White, fontWeight = FontWeight.Bold, letterSpacing = 1.sp
-                )
-                Text(
-                    stringResource(R.string.community_livestock_protection),
-                    style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f)
-                )
-            }
+            // Logo
+            Icon(
+                painterResource(R.drawable.ic_logo_custom),
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(240.dp)
+                    .offset(y = 20.dp)
+            )
         }
 
         // SignUp Card
@@ -867,7 +848,7 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(320.dp)
+                .height(260.dp)
                 .clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp))
                 .background(PrimaryGreen)
         ) {
@@ -927,39 +908,16 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                 }
             }
 
-            // Logo and Title
-            Column(
-                modifier = Modifier.align(Alignment.Center).padding(top = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Surface(
-                    modifier = Modifier.size(120.dp),
-                    shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.2f)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            painterResource(R.drawable.ic_logo_custom),
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(120.dp)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    stringResource(R.string.goat_insurance_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-                Text(
-                    stringResource(R.string.community_livestock_protection),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.8f)
-                )
-            }
+            // Logo
+            Icon(
+                painterResource(R.drawable.ic_logo_custom),
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(240.dp)
+                    .offset(y = 20.dp)
+            )
         }
 
         // Login Card
@@ -2656,7 +2614,38 @@ fun EnrollmentPaymentStep() {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PaymentMethodChip(stringResource(R.string.payment_method_cash), selectedMethod == "Cash", modifier = Modifier.weight(1f)) { selectedMethod = "Cash" }
             PaymentMethodChip(stringResource(R.string.payment_method_upi), selectedMethod == "UPI", modifier = Modifier.weight(1f)) { selectedMethod = "UPI" }
-            PaymentMethodChip(stringResource(R.string.payment_method_wallet), selectedMethod == "Wallet", modifier = Modifier.weight(1f)) { selectedMethod = "Wallet" }
+        }
+        
+        if (selectedMethod == "UPI") {
+            Spacer(modifier = Modifier.height(24.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(stringResource(R.string.scan_to_pay), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.Black)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(200.dp)
+                            .background(Color.White, RoundedCornerShape(12.dp))
+                            .border(1.dp, Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_upi_qr),
+                            contentDescription = "UPI QR Code",
+                            modifier = Modifier.size(180.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Pay via any UPI App", fontSize = 12.sp, color = Color.Gray)
+                }
+            }
         }
         
         Spacer(modifier = Modifier.height(24.dp))
@@ -5186,6 +5175,20 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
                     VaccineStatusItem(stringResource(R.string.vaccine_ettt), true, themeColor) {}
                     VaccineStatusItem(stringResource(R.string.vaccine_fmd), false, themeColor) {}
                     VaccineStatusItem(stringResource(R.string.vaccine_goat_pox), false, themeColor) {}
+                }
+
+                if (isFarmer) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = { /* Download Policy Logic */ },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = themeColor)
+                    ) {
+                        Icon(Icons.Default.FileDownload, null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.download_policy), fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }

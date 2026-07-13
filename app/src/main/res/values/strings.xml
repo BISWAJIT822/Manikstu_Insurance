@@ -180,6 +180,8 @@
     <string name="validity">Validity</string>
     <string name="sum_insured">Sum Insured</string>
     <string name="download_certificate">Download Certificate</string>
+    <string name="download_policy">Download Policy</string>
+    <string name="scan_to_pay">Scan to Pay</string>
 
     <!-- Placeholders -->
     <string name="full_name_placeholder">Full Name</string>
