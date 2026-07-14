@@ -42,6 +42,9 @@ interface ApiService {
     @GET("auth/profile")
     suspend fun profile(): ProfileResponse
 
+    @PUT("auth/profile")
+    suspend fun updateProfile(@Body body: UpdateProfileRequest): ProfileResponse
+
     @Streaming
     @GET("farmer/policy_certificate/{tag}")
     suspend fun policyCertificate(@Path("tag") tag: String): okhttp3.ResponseBody

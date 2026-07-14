@@ -4192,6 +4192,21 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
     // are the fallback while the call is in flight or offline.
     val profileVm: ProfileViewModel = hiltViewModel()
     val dbProfile by profileVm.profile.collectAsState()
+    val saveState by profileVm.save.collectAsState()
+    val isSavingProfile = saveState is SubmitState.Submitting
+    LaunchedEffect(saveState) {
+        when (val s = saveState) {
+            is SubmitState.Success -> {
+                Toast.makeText(context, languageState.value.getT("Profile updated", "प्रोफ़ाइल अपडेट किया गया", "ପ୍ରୋଫାଇଲ୍ ଅପଡେଟ୍ ହୋଇଛି"), Toast.LENGTH_SHORT).show()
+                profileVm.resetSave()
+            }
+            is SubmitState.Error -> {
+                Toast.makeText(context, s.message, Toast.LENGTH_LONG).show()
+                profileVm.resetSave()
+            }
+            else -> {}
+        }
+    }
 
     val isFarmer = userRole == UserRole.FARMER
     val isCoordinator = userRole == UserRole.COORDINATOR
@@ -4239,7 +4254,8 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
             val internalUri = saveImageToInternalStorage(uri)
             if (internalUri != null) {
                 profileImageState.value = internalUri
-                Toast.makeText(context, languageState.value.getT("Saved", "सहेजा गया", "ସଂରକ୍ଷିତ"), Toast.LENGTH_SHORT).show()
+                // Upload the new photo and persist it on the account.
+                profileVm.updateProfile(name = null, village = null, photoUri = internalUri)
             }
         }
     }
@@ -4253,7 +4269,8 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
             val internalUri = saveImageToInternalStorage(uri)
             if (internalUri != null) {
                 profileImageState.value = internalUri
-                Toast.makeText(context, languageState.value.getT("Saved", "सहेजा गया", "ସଂରକ୍ଷିତ"), Toast.LENGTH_SHORT).show()
+                // Upload the new photo and persist it on the account.
+                profileVm.updateProfile(name = null, village = null, photoUri = internalUri)
             }
         }
     }
@@ -4284,6 +4301,48 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
     }
     
     var showPhotoOptions by remember { mutableStateOf(false) }
+    var showEditProfile by remember { mutableStateOf(false) }
+
+    if (showEditProfile) {
+        var editName by remember { mutableStateOf(userName) }
+        var editVillage by remember { mutableStateOf(userVillage ?: "") }
+        AlertDialog(
+            onDismissRequest = { showEditProfile = false },
+            title = { Text(languageState.value.getT("Edit Profile", "प्रोफ़ाइल संपादित करें", "ପ୍ରୋଫାଇଲ୍ ସଂପାଦନ କରନ୍ତୁ"), fontWeight = FontWeight.Bold, color = Color.Black) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = editName,
+                        onValueChange = { if (it.all { c -> c.isLetter() || c.isWhitespace() }) editName = it },
+                        label = { Text(languageState.value.getT("Full Name", "पूरा नाम", "ପୁରା ନାମ")) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, focusedBorderColor = themeColor)
+                    )
+                    OutlinedTextField(
+                        value = editVillage,
+                        onValueChange = { editVillage = it },
+                        label = { Text(languageState.value.getT("Location", "स्थान", "ଅବସ୍ଥାନ")) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, focusedBorderColor = themeColor)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = editName.isNotBlank() && !isSavingProfile,
+                    onClick = {
+                        profileVm.updateProfile(name = editName, village = editVillage, photoUri = null)
+                        showEditProfile = false
+                    }
+                ) { Text(languageState.value.getT("Save", "सहेजें", "ସେଭ୍"), fontWeight = FontWeight.Bold, color = themeColor) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditProfile = false }) {
+                    Text(languageState.value.getT("Cancel", "रद्द करें", "ବାତିଲ୍"), color = Color.Gray)
+                }
+            }
+        )
+    }
 
     if (showPhotoOptions) {
         AlertDialog(
@@ -4386,12 +4445,18 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
                 }
                 
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    userName,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        userName,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(onClick = { showEditProfile = true }, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit profile", tint = Color.White, modifier = Modifier.size(18.dp))
+                    }
+                }
                 Text(
                     userMobile?.let { "+91 $it" } ?: "",
                     style = MaterialTheme.typography.bodyMedium,

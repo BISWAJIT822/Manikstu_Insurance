@@ -99,6 +99,13 @@ data class ProfileResponse(
 )
 
 @Serializable
+data class UpdateProfileRequest(
+    @SerialName("full_name") val fullName: String? = null,
+    val village: String? = null,
+    val photo: String? = null,   // URL from /upload
+)
+
+@Serializable
 data class UploadResponse(val url: String)
 
 @Serializable

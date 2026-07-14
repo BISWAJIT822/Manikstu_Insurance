@@ -62,10 +62,14 @@ class UpdateGateViewModel @Inject constructor(
 class ProfileViewModel @Inject constructor(
     private val repo: Repository,
     private val session: SessionManager,
+    private val uploader: PhotoUploader,
 ) : ViewModel() {
 
     private val _profile = MutableStateFlow<ProfileResponse?>(null)
     val profile = _profile.asStateFlow()
+
+    private val _save = MutableStateFlow<SubmitState>(SubmitState.Idle)
+    val save = _save.asStateFlow()
 
     init { refresh() }
 
@@ -79,6 +83,43 @@ class ProfileViewModel @Inject constructor(
             // On failure the screen falls back to cached session values.
         }
     }
+
+    /**
+     * Persists profile edits. If [photoUri] is a freshly picked local image, it is
+     * uploaded first and the resulting URL saved as the profile photo.
+     */
+    fun updateProfile(name: String?, village: String?, photoUri: android.net.Uri?) {
+        viewModelScope.launch {
+            _save.value = SubmitState.Submitting
+            try {
+                var photoUrl: String? = null
+                if (photoUri != null) {
+                    val bytes = uploader.readBytes(photoUri)
+                    if (bytes == null) {
+                        _save.value = SubmitState.Error("Could not read the selected image")
+                        return@launch
+                    }
+                    photoUrl = repo.uploadPhoto(bytes, "profile_${System.currentTimeMillis()}.jpg")
+                }
+                val body = UpdateProfileRequest(
+                    fullName = name?.trim()?.takeIf { it.isNotBlank() },
+                    village = village?.trim(),
+                    photo = photoUrl,
+                )
+                repo.safeCall { updateProfile(body) }
+                    .onSuccess { p ->
+                        _profile.value = p
+                        session.saveProfileDetails(name = p.fullName, village = p.village, mobile = p.mobileNumber)
+                        _save.value = SubmitState.Success("Profile updated")
+                    }
+                    .onFailure { _save.value = SubmitState.Error(it.message ?: "Update failed") }
+            } catch (e: Exception) {
+                _save.value = SubmitState.Error(e.message ?: "Update failed")
+            }
+        }
+    }
+
+    fun resetSave() { _save.value = SubmitState.Idle }
 }
 
 /** Backs the cascading State -> District -> Block -> Village dropdowns on profile setup. */

@@ -20,30 +20,15 @@ object SupportContact {
 }
 
 /**
- * Handles a "contact support" tap: opens a WhatsApp chat with the support number
- * (preferred), and falls back to the phone dialer with the same number if no
- * WhatsApp variant is installed.
+ * Handles a "contact support" tap: opens the phone dialer pre-filled with the
+ * support number so the user can place a call.
  */
 fun Context.contactSupport() {
-    val waUrl = "https://wa.me/${SupportContact.E164_DIGITS}"
-    // Prefer WhatsApp, then WhatsApp Business.
-    for (pkg in listOf("com.whatsapp", "com.whatsapp.w4b")) {
-        val waIntent = Intent(Intent.ACTION_VIEW, Uri.parse(waUrl))
-            .setPackage(pkg)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        try {
-            startActivity(waIntent)
-            return
-        } catch (_: Exception) {
-            // This WhatsApp variant isn't installed; try the next option.
-        }
-    }
-    // Fallback: open the dialer pre-filled with the support number.
     val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:+${SupportContact.E164_DIGITS}"))
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     try {
         startActivity(dialIntent)
     } catch (_: Exception) {
-        Toast.makeText(this, "Unable to open WhatsApp or the phone dialer", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Unable to open the phone dialer", Toast.LENGTH_SHORT).show()
     }
 }
