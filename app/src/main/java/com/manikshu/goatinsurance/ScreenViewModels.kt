@@ -23,6 +23,40 @@ sealed interface SubmitState {
     data class Error(val message: String) : SubmitState
 }
 
+/** Force-update gate: checks the app version against the backend on launch. */
+sealed interface UpdateState {
+    data object Checking : UpdateState
+    data object Ok : UpdateState
+    data class UpdateRequired(val updateUrl: String, val latestVersion: String) : UpdateState
+}
+
+@HiltViewModel
+class UpdateGateViewModel @Inject constructor(
+    private val repo: Repository,
+) : ViewModel() {
+    private val _state = MutableStateFlow<UpdateState>(UpdateState.Checking)
+    val state = _state.asStateFlow()
+
+    init { check() }
+
+    fun check() {
+        _state.value = UpdateState.Checking
+        viewModelScope.launch {
+            // Bound the check so a cold-starting/slow backend fails open fast
+            // instead of leaving the user stuck on the splash.
+            val version = kotlinx.coroutines.withTimeoutOrNull(6000) {
+                repo.safeCall { appVersion() }.getOrNull()
+            }
+            _state.value = when {
+                version == null -> UpdateState.Ok  // unreachable/slow -> fail open
+                BuildConfig.VERSION_CODE < version.minVersionCode ->
+                    UpdateState.UpdateRequired(version.updateUrl, version.latestVersionName)
+                else -> UpdateState.Ok
+            }
+        }
+    }
+}
+
 /** Profile Settings: canonical account details fetched from the backend DB. */
 @HiltViewModel
 class ProfileViewModel @Inject constructor(

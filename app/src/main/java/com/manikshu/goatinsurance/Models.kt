@@ -101,6 +101,13 @@ data class ProfileResponse(
 @Serializable
 data class UploadResponse(val url: String)
 
+@Serializable
+data class AppVersionResponse(
+    @SerialName("min_version_code") val minVersionCode: Int,
+    @SerialName("latest_version_name") val latestVersionName: String = "",
+    @SerialName("update_url") val updateUrl: String = "",
+)
+
 // ----------------------- locations (cascading dropdowns) -----------------------
 @Serializable
 data class StatesResponse(val states: List<String> = emptyList())
@@ -370,6 +377,8 @@ data class SdClaimItem(
     @SerialName("claim_number") val claimNumber: String? = null,
     @SerialName("claim_status") val claimStatus: String? = null,
     @SerialName("claim_amount") val claimAmount: Double? = null,
+    @SerialName("sum_insured") val sumInsured: Double? = null,
+    @SerialName("vaccinations_done") val vaccinationsDone: Int? = null,
     @SerialName("death_notification") val deathNotification: String,
     @SerialName("site_visit") val siteVisit: String,
     @SerialName("carcass_verification") val carcassVerification: String,
@@ -452,6 +461,7 @@ data class FarmerClaimItem(
     @SerialName("claim_status") val claimStatus: String? = null,
     @SerialName("claim_amount") val claimAmount: Double? = null,
     @SerialName("sum_insured") val sumInsured: Double? = null,
+    @SerialName("vaccinations_done") val vaccinationsDone: Int? = null,
     val progress: Map<String, String> = emptyMap(),
 )
 
@@ -498,6 +508,8 @@ data class ClaimListItem(
     @SerialName("date_of_death") val dateOfDeath: String? = null,
     @SerialName("cause_of_death") val causeOfDeath: String? = null,
     @SerialName("sum_insured") val sumInsured: Double,
+    @SerialName("claim_amount") val claimAmount: Double? = null,
+    @SerialName("vaccinations_done") val vaccinationsDone: Int? = null,
     @SerialName("ai_confidence") val aiConfidence: Double? = null,
     val status: String,
 )
@@ -526,6 +538,7 @@ data class ClaimReview(
     @SerialName("date_of_death") val dateOfDeath: String? = null,
     @SerialName("cause_of_death") val causeOfDeath: String? = null,
     @SerialName("sum_insured") val sumInsured: Double,
+    @SerialName("vaccinations_done") val vaccinationsDone: Int? = null,
     @SerialName("ai_assessment") val aiAssessment: ClaimAiAssessment? = null,
     @SerialName("site_visit") val siteVisit: String? = null,
     @SerialName("claim_amount") val claimAmount: Double? = null,

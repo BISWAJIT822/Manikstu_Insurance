@@ -5,6 +5,10 @@ import retrofit2.http.*
 
 interface ApiService {
 
+    // ----------------- APP META -----------------
+    @GET("app/version")
+    suspend fun appVersion(): AppVersionResponse
+
     // ----------------- AUTH -----------------
     @GET("auth/config")
     suspend fun authConfig(): AuthConfigResponse

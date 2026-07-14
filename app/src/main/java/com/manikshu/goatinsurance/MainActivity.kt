@@ -88,7 +88,9 @@ class MainActivity : AppCompatActivity() {
                     LocalNotificationsEnabled provides notificationsEnabledState
                 ) {
                     if (tokenLoaded.value) {
-                        AppNavigation(navController, sessionManager)
+                        UpdateGate {
+                            AppNavigation(navController, sessionManager)
+                        }
                     }
                 }
             }
