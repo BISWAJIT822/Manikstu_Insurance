@@ -128,6 +128,9 @@ data class BlocksResponse(val blocks: List<String> = emptyList())
 @Serializable
 data class VillagesResponse(val villages: List<String> = emptyList())
 
+@Serializable
+data class PincodeResponse(val pincode: String = "")
+
 // =====================================================================================
 //  Admin (no admin UI in the app, kept for completeness)
 // =====================================================================================

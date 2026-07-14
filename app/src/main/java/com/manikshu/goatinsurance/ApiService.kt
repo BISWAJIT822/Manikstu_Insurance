@@ -81,6 +81,13 @@ interface ApiService {
         @Query("block") block: String,
     ): VillagesResponse
 
+    @GET("locations/pincode")
+    suspend fun pincode(
+        @Query("state") state: String,
+        @Query("district") district: String,
+        @Query("block") block: String,
+    ): PincodeResponse
+
     // ----------------- ADMIN -----------------
     @GET("admin/overview")
     suspend fun adminOverview(): AdminOverview

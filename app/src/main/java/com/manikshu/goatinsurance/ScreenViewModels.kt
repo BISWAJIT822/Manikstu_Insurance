@@ -139,6 +139,10 @@ class LocationViewModel @Inject constructor(
     private val _villages = MutableStateFlow<List<String>>(emptyList())
     val villages = _villages.asStateFlow()
 
+    // Pincode auto-filled from the selected block (blank if unknown).
+    private val _pincode = MutableStateFlow("")
+    val pincode = _pincode.asStateFlow()
+
     init { loadStates() }
 
     fun loadStates() {
@@ -168,6 +172,14 @@ class LocationViewModel @Inject constructor(
         if (state.isBlank() || district.isBlank() || block.isBlank()) return
         viewModelScope.launch {
             repo.safeCall { villages(state, district, block) }.onSuccess { _villages.value = it.villages }
+        }
+    }
+
+    fun loadPincode(state: String, district: String, block: String) {
+        _pincode.value = ""
+        if (state.isBlank() || district.isBlank() || block.isBlank()) return
+        viewModelScope.launch {
+            repo.safeCall { pincode(state, district, block) }.onSuccess { _pincode.value = it.pincode }
         }
     }
 }

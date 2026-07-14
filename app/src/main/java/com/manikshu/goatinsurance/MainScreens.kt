@@ -9025,15 +9025,17 @@ fun SetupProfileScreen(
     var signupPassword by remember { mutableStateOf("") }
     var signupPasswordConfirm by remember { mutableStateOf("") }
 
-    // Cascading location dropdowns served by the backend.
+    // Cascading location dropdowns served by the backend (State -> District -> Block).
     val locationVm: LocationViewModel = hiltViewModel()
     val stateOptions by locationVm.states.collectAsState()
     val districtOptions by locationVm.districts.collectAsState()
     val blockOptions by locationVm.blocks.collectAsState()
-    val villageOptions by locationVm.villages.collectAsState()
-    LaunchedEffect(state) { district = ""; block = ""; village = ""; locationVm.loadDistricts(state) }
-    LaunchedEffect(district) { block = ""; village = ""; locationVm.loadBlocks(state, district) }
-    LaunchedEffect(block) { village = ""; locationVm.loadVillages(state, district, block) }
+    val autoPincode by locationVm.pincode.collectAsState()
+    LaunchedEffect(state) { district = ""; block = ""; locationVm.loadDistricts(state) }
+    LaunchedEffect(district) { block = ""; locationVm.loadBlocks(state, district) }
+    LaunchedEffect(block) { locationVm.loadPincode(state, district, block) }
+    // Auto-fill the pincode when a block is picked (still editable).
+    LaunchedEffect(autoPincode) { if (autoPincode.isNotBlank()) pincode = autoPincode }
 
     val themeColor = when(role) {
         UserRole.FARMER -> PrimaryBlue
@@ -9236,10 +9238,9 @@ fun SetupProfileScreen(
                     borderColor = themeColor
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                EnrollmentDropdownField(
+                EnrollmentTextField(
                     label = locationLabel,
-                    selectedValue = village,
-                    options = villageOptions,
+                    value = village,
                     onValueChange = { village = it },
                     borderColor = themeColor
                 )
