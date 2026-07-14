@@ -21,7 +21,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
         // Real device on same Wi-Fi -> this PC's LAN IP. (Emulator alias was http://10.0.2.2:8000/)
-        buildConfigField("String", "BASE_URL", "\"http://192.168.29.169:8000/\"")
+        buildConfigField("String", "BASE_URL", "\"https://backend-goat.onrender.com/\"")
     }
 
     buildFeatures {
