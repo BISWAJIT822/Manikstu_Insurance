@@ -122,27 +122,38 @@ class ProfileViewModel @Inject constructor(
     fun resetSave() { _save.value = SubmitState.Idle }
 }
 
-/** Loads the role-appropriate recent-activity feed for the notifications sheet. */
+/** Loads the current user's in-app notifications (AjahFi notification workflow). */
 @HiltViewModel
 class NotificationsViewModel @Inject constructor(
     private val repo: Repository,
 ) : ViewModel() {
-    private val _items = MutableStateFlow<List<ActivityItem>>(emptyList())
+    private val _items = MutableStateFlow<List<NotificationOut>>(emptyList())
     val items = _items.asStateFlow()
 
     private val _loading = MutableStateFlow(true)
     val loading = _loading.asStateFlow()
 
-    fun load(role: UserRole?) {
+    private val _unread = MutableStateFlow(0)
+    val unread = _unread.asStateFlow()
+
+    fun load() {
         viewModelScope.launch {
             _loading.value = true
-            val result = when (role) {
-                UserRole.COORDINATOR -> repo.safeCall { coLiveActivity() }
-                UserRole.FARMER -> repo.safeCall { farmerLiveActivity() }
-                else -> repo.safeCall { sdLiveActivity() }
-            }
-            result.onSuccess { _items.value = it }
+            repo.safeCall { notifications() }.onSuccess { _items.value = it }
             _loading.value = false
+        }
+    }
+
+    fun refreshUnread() {
+        viewModelScope.launch {
+            repo.safeCall { notificationsUnread() }.onSuccess { _unread.value = it.unread }
+        }
+    }
+
+    fun markAllRead() {
+        viewModelScope.launch {
+            repo.safeCall { markNotificationsRead() }
+            _unread.value = 0
         }
     }
 }

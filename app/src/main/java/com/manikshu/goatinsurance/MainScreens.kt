@@ -1308,6 +1308,9 @@ fun DidiDashboard(navController: NavHostController, sessionManager: SessionManag
 fun DidiContent(padding: PaddingValues, navController: NavHostController, userName: String, stats: SdDashboard?, onNotificationClick: () -> Unit) {
     val languageState = LocalAppLanguage.current
     val context = LocalContext.current
+    val notifVm: NotificationsViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+    val unread by notifVm.unread.collectAsState()
+    LaunchedEffect(Unit) { notifVm.refreshUnread() }
     Column(
         modifier = Modifier
             .padding(bottom = padding.calculateBottomPadding())
@@ -1319,7 +1322,7 @@ fun DidiContent(padding: PaddingValues, navController: NavHostController, userNa
             userName,
             languageState.value.getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି"),
             onNotificationClick,
-            hasNotifications = true,
+            hasNotifications = unread > 0,
             onProfileClick = { navController.navigate("profile") }
         )
         
@@ -3421,6 +3424,9 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
     val languageState = LocalAppLanguage.current
     val context = LocalContext.current
     val activeCount = policies.count { it.status == "active" }
+    val notifVm: NotificationsViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+    val unread by notifVm.unread.collectAsState()
+    LaunchedEffect(Unit) { notifVm.refreshUnread() }
     
     // Blue Theme Palette for Farmer
     val lightBlue = Color(0xFFE3F2FD)
@@ -3441,7 +3447,7 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
             userName,
             languageState.value.getT("Farmer", "किसान", "କୃଷକ"),
             onNotificationClick,
-            hasNotifications = true,
+            hasNotifications = unread > 0,
             onProfileClick = { navController.navigate("profile") }
         )
         
@@ -4116,18 +4122,12 @@ fun NotificationSheet(userRole: UserRole?, themeColor: Color = PrimaryGreen, onD
     val vm: NotificationsViewModel = androidx.hilt.navigation.compose.hiltViewModel()
     val activity by vm.items.collectAsState()
     val loading by vm.loading.collectAsState()
-    LaunchedEffect(userRole) { vm.load(userRole) }
+    // Load and mark everything read as soon as the sheet opens.
+    LaunchedEffect(Unit) { vm.load(); vm.markAllRead() }
 
-    // Map a backend activity entry to a display notification.
-    fun toNotification(a: ActivityItem): AppNotification {
-        val title = when (a.type) {
-            "enrollment" -> languageState.value.getT("New Enrollment", "नया नामांकन", "ନୂତନ ପଞ୍ଜିକରଣ")
-            "vaccination" -> languageState.value.getT("Vaccination", "टीकाकरण", "ଟୀକାକରଣ")
-            "claim" -> languageState.value.getT("Claim Update", "दावा अपडेट", "ଦାବି ଅପଡେଟ୍")
-            else -> languageState.value.getT("Activity", "गतिविधि", "କାର୍ଯ୍ୟକଳାପ")
-        }
-        val time = a.time.take(16).replace("T", " ")
-        return AppNotification(title, a.detail.replaceFirstChar { it.uppercase() }, time)
+    fun toNotification(n: NotificationOut): AppNotification {
+        val time = n.createdAt.take(16).replace("T", " ")
+        return AppNotification(n.title, n.body ?: "", time)
     }
 
     ModalBottomSheet(

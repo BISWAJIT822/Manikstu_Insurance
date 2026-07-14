@@ -503,6 +503,19 @@ data class ActivityItem(
 )
 
 @Serializable
+data class NotificationOut(
+    val id: Int,
+    val type: String,
+    val title: String,
+    val body: String? = null,
+    @SerialName("is_read") val isRead: Boolean = false,
+    @SerialName("created_at") val createdAt: String,
+)
+
+@Serializable
+data class UnreadCountResponse(val unread: Int = 0)
+
+@Serializable
 data class ClusterDto(
     val id: Int,
     val name: String,

@@ -9,6 +9,16 @@ interface ApiService {
     @GET("app/version")
     suspend fun appVersion(): AppVersionResponse
 
+    // ----------------- NOTIFICATIONS -----------------
+    @GET("notifications")
+    suspend fun notifications(): List<NotificationOut>
+
+    @GET("notifications/unread_count")
+    suspend fun notificationsUnread(): UnreadCountResponse
+
+    @POST("notifications/read_all")
+    suspend fun markNotificationsRead(): StatusResponse
+
     // ----------------- AUTH -----------------
     @GET("auth/config")
     suspend fun authConfig(): AuthConfigResponse
