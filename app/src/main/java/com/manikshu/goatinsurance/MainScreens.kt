@@ -3498,7 +3498,8 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                 }
             }
 
-            // Policy Card (Single)
+            // Policy Card — only when the farmer actually has a policy.
+            if (policies.isNotEmpty()) {
             item(span = { GridItemSpan(gridColumns) }) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -3553,6 +3554,31 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                             ) {
                                 Text(languageState.value.getT("View Policy", "नीति देखें", "ନୀତି ଦେଖନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
+                        }
+                    }
+                }
+            }
+            } else {
+                item(span = { GridItemSpan(gridColumns) }) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(painterResource(R.drawable.ic_ewe_custom), null, tint = Color.LightGray, modifier = Modifier.size(40.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                languageState.value.getT("No policies yet", "अभी तक कोई नीति नहीं", "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ନୀତି ନାହିଁ"),
+                                color = Color.Gray, fontSize = 14.sp, fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                languageState.value.getT("Your enrolled goats will appear here.", "आपकी नामांकित बकरियां यहां दिखाई देंगी।", "ଆପଣଙ୍କ ପଞ୍ଜିକୃତ ଛେଳି ଏଠାରେ ଦେଖାଯିବ।"),
+                                color = Color.LightGray, fontSize = 12.sp, textAlign = TextAlign.Center
+                            )
                         }
                     }
                 }
