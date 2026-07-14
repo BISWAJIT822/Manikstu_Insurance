@@ -196,6 +196,12 @@ interface ApiService {
         @Query("page_size") pageSize: Int = 20,
     ): List<ActivityItem>
 
+    @GET("sd/live_activity")
+    suspend fun sdLiveActivity(): List<ActivityItem>
+
+    @GET("farmer/live_activity")
+    suspend fun farmerLiveActivity(): List<ActivityItem>
+
     @GET("coordinator/cluster_map")
     suspend fun coClusterMap(@Query("block") block: String? = null): List<ClusterDto>
 

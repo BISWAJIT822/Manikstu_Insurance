@@ -1213,7 +1213,7 @@ fun RoleCard(role: UserRole, label: String, icon: ImageVector, isSelected: Boole
 @Composable
 fun DidiDashboard(navController: NavHostController, sessionManager: SessionManager) {
     var showNotifications by remember { mutableStateOf(false) }
-    if (showNotifications) NotificationSheet(themeColor = PrimaryGreen) { showNotifications = false }
+    if (showNotifications) NotificationSheet(userRole = UserRole.SURAKSHA_DIDI, themeColor = PrimaryGreen) { showNotifications = false }
     val languageState = LocalAppLanguage.current
     val userName by sessionManager.userName.collectAsState(initial = "Sushma Didi")
 
@@ -3351,7 +3351,7 @@ fun PolicyDetailRow(label: String, value: String, isBold: Boolean = false) {
 @Composable
 fun FarmerDashboard(navController: NavHostController, sessionManager: SessionManager) {
     var showNotifications by remember { mutableStateOf(false) }
-    if (showNotifications) NotificationSheet(themeColor = PrimaryBlue) { showNotifications = false }
+    if (showNotifications) NotificationSheet(userRole = UserRole.FARMER, themeColor = PrimaryBlue) { showNotifications = false }
     val languageState = LocalAppLanguage.current
     val userName by sessionManager.userName.collectAsState(initial = "Ramesh Naik")
 
@@ -4085,15 +4085,25 @@ data class AppNotification(val title: String, val message: String, val time: Str
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationSheet(themeColor: Color = PrimaryGreen, onDismiss: () -> Unit) {
+fun NotificationSheet(userRole: UserRole?, themeColor: Color = PrimaryGreen, onDismiss: () -> Unit) {
     val languageState = LocalAppLanguage.current
-    val notifications = listOf(
-        AppNotification(languageState.value.getT("New Enrollment", "नया नामांकन", "ନୂତନ ପଞ୍ଜିକରଣ"), languageState.value.getT("Farmer Ram added a new goat.", "किसान राम ने एक नई बकरी जोड़ी।", "କୃଷକ ରାମ ଏକ ନୂତନ ଛେଳି ଯୋଡିଛନ୍ତି।"), languageState.value.getT("2 mins ago", "2 मिनट पहले", "୨ ମିନିଟ୍ ପୂର୍ବରୁ")),
-        AppNotification(languageState.value.getT("Vaccination Due", "टीकाकरण देय", "ଟୀକାକରଣ ବାକି"), languageState.value.getT("PPR Vaccine due for TAG-12345.", "TAG-12345 के लिए PPR वैक्सीन देय है।", "TAG-12345 ପାଇଁ PPR ଟୀକା ବାକି ଅଛି |"), languageState.value.getT("1 hour ago", "1 घंटे पहले", "୧ ଘଣ୍ଟା ପୂର୍ବରୁ")),
-        AppNotification(languageState.value.getT("Claim Approved", "दावा स्वीकृत", "ଦାବି ଅନୁମୋଦିତ"), languageState.value.getT("Claim #CLM7890 has been approved.", "दावा #CLM7890 स्वीकृत हो गया है।", "ଦାବି #CLM7890 ଅନୁମୋଦିତ ହୋଇଛି।"), languageState.value.getT("Yesterday", "कल", "ଗତକାଲି")),
-        AppNotification(languageState.value.getT("Visit Reminder", "मुलाकात अनुस्मारक", "ପରିଦର୍ଶନ ସ୍ମାରକୀ"), languageState.value.getT("Scheduled visit to Village Site B.", "गांव साइट बी की निर्धारित यात्रा।", "ଗ୍ରାମ ସାଇଟ୍ ବି କୁ ନିର୍ଦ୍ଧାରିତ ପରିଦର୍ଶନ |"), languageState.value.getT("Today, 4 PM", "आज, शाम 4 बजे", "ଆଜି, ଅପରାହ୍ନ ୪ ଟା"))
-    )
-    
+    val vm: NotificationsViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+    val activity by vm.items.collectAsState()
+    val loading by vm.loading.collectAsState()
+    LaunchedEffect(userRole) { vm.load(userRole) }
+
+    // Map a backend activity entry to a display notification.
+    fun toNotification(a: ActivityItem): AppNotification {
+        val title = when (a.type) {
+            "enrollment" -> languageState.value.getT("New Enrollment", "नया नामांकन", "ନୂତନ ପଞ୍ଜିକରଣ")
+            "vaccination" -> languageState.value.getT("Vaccination", "टीकाकरण", "ଟୀକାକରଣ")
+            "claim" -> languageState.value.getT("Claim Update", "दावा अपडेट", "ଦାବି ଅପଡେଟ୍")
+            else -> languageState.value.getT("Activity", "गतिविधि", "କାର୍ଯ୍ୟକଳାପ")
+        }
+        val time = a.time.take(16).replace("T", " ")
+        return AppNotification(title, a.detail.replaceFirstChar { it.uppercase() }, time)
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = Color.White,
@@ -4113,16 +4123,25 @@ fun NotificationSheet(themeColor: Color = PrimaryGreen, onDismiss: () -> Unit) {
                 color = Color.Black
             )
             Spacer(modifier = Modifier.height(16.dp))
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(bottom = 32.dp)
-            ) {
-                items(notifications) { notification ->
-                    NotificationItem(notification, themeColor)
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 12.dp),
-                        color = Color.LightGray.copy(alpha = 0.4f)
-                    )
+            when {
+                loading -> Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = themeColor)
+                }
+                activity.isEmpty() -> Text(
+                    languageState.value.getT("No recent activity", "कोई हालिया गतिविधि नहीं", "କୌଣସି ସାମ୍ପ୍ରତିକ କାର୍ଯ୍ୟକଳାପ ନାହିଁ"),
+                    color = Color.Gray, fontSize = 14.sp, modifier = Modifier.padding(vertical = 24.dp)
+                )
+                else -> LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp),
+                    contentPadding = PaddingValues(bottom = 32.dp)
+                ) {
+                    items(activity) { item ->
+                        NotificationItem(toNotification(item), themeColor)
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 12.dp),
+                            color = Color.LightGray.copy(alpha = 0.4f)
+                        )
+                    }
                 }
             }
         }

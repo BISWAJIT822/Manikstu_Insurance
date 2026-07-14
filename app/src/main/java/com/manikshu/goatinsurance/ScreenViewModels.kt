@@ -122,6 +122,31 @@ class ProfileViewModel @Inject constructor(
     fun resetSave() { _save.value = SubmitState.Idle }
 }
 
+/** Loads the role-appropriate recent-activity feed for the notifications sheet. */
+@HiltViewModel
+class NotificationsViewModel @Inject constructor(
+    private val repo: Repository,
+) : ViewModel() {
+    private val _items = MutableStateFlow<List<ActivityItem>>(emptyList())
+    val items = _items.asStateFlow()
+
+    private val _loading = MutableStateFlow(true)
+    val loading = _loading.asStateFlow()
+
+    fun load(role: UserRole?) {
+        viewModelScope.launch {
+            _loading.value = true
+            val result = when (role) {
+                UserRole.COORDINATOR -> repo.safeCall { coLiveActivity() }
+                UserRole.FARMER -> repo.safeCall { farmerLiveActivity() }
+                else -> repo.safeCall { sdLiveActivity() }
+            }
+            result.onSuccess { _items.value = it }
+            _loading.value = false
+        }
+    }
+}
+
 /** Backs the cascading State -> District -> Block -> Village dropdowns on profile setup. */
 @HiltViewModel
 class LocationViewModel @Inject constructor(
