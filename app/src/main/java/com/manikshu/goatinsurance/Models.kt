@@ -439,6 +439,7 @@ data class PolicyDetail(
     val status: String,
     @SerialName("certificate_url") val certificateUrl: String? = null,
     val goat: PolicyGoatInfo? = null,
+    val vaccinations: List<GoatVaccinationOut> = emptyList(),
     @SerialName("next_vaccination_date") val nextVaccinationDate: String? = null,
 )
 

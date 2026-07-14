@@ -5706,7 +5706,9 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
 
                 // Vaccination History
                 ProfileInfoSection(languageState.value.getT("Vaccination History", "टीकाकरण इतिहास", "ଟୀକାକରଣ ଇତିହାସ"), themeColor) {
-                    val vaccByType = g?.vaccinations?.associateBy { it.type } ?: emptyMap()
+                    // SD/coordinator view goes through GoatDetail; the farmer view through PolicyDetail.
+                    val vaccList = g?.vaccinations ?: policy?.vaccinations ?: emptyList()
+                    val vaccByType = vaccList.associateBy { it.type }
                     fun done(t: String) = vaccByType[t]?.status == "done"
                     VaccineStatusItem("PPR Vaccine", done("ppr"), themeColor) {}
                     VaccineStatusItem("ET + TT Vaccine", done("et_tt"), themeColor) {}
