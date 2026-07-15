@@ -7220,7 +7220,13 @@ fun ClaimReviewScreen(navController: NavHostController, claimId: String, userRol
 
     val claimsVm: CoordinatorClaimsViewModel = hiltViewModel()
     val reviewState by claimsVm.review.collectAsState()
-    LaunchedEffect(claimId) { if (userRole == UserRole.COORDINATOR) claimsVm.loadReview(claimId) }
+    LaunchedEffect(claimId) {
+        when (userRole) {
+            UserRole.COORDINATOR -> claimsVm.loadReview(claimId)
+            UserRole.SURAKSHA_DIDI -> claimsVm.loadSdReview(claimId)
+            else -> {}
+        }
+    }
     val review = (reviewState as? UiState.Success)?.data
 
     val mockClaim = mapOf(

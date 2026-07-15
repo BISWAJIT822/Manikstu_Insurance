@@ -245,6 +245,9 @@ interface ApiService {
     @GET("coordinator/claims/{claimNumber}")
     suspend fun coClaimReview(@Path("claimNumber") claimNumber: String): ClaimReview
 
+    @GET("sd/claims/{claimNumber}")
+    suspend fun sdClaimReview(@Path("claimNumber") claimNumber: String): ClaimReview
+
     @POST("coordinator/review_claim")
     suspend fun reviewClaim(@Body body: ReviewClaimRequest): StatusResponse
 
