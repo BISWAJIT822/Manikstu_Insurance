@@ -50,7 +50,11 @@ val CoordinatorLightOrange = Color(0xFFFFF3E0)
 @Composable
 fun CoordinatorDashboard(navController: NavHostController, sessionManager: SessionManager) {
     val languageState = LocalAppLanguage.current
-    val userName by sessionManager.userName.collectAsState(initial = "lalu")
+    val savedName by sessionManager.userName.collectAsState(initial = null)
+    // Canonical name from the backend (also re-syncs the session cache).
+    val profileVm: ProfileViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+    val dbProfile by profileVm.profile.collectAsState()
+    val userName = dbProfile?.fullName ?: savedName ?: ""
 
     val vm: CoordinatorDashboardViewModel = androidx.hilt.navigation.compose.hiltViewModel()
     val dashState by vm.dashboard.collectAsState()
@@ -70,7 +74,7 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
         ) {
             CoordinatorHeader(
                 navController,
-                userName ?: "lalu",
+                userName,
                 stringResource(R.string.role_coordinator),
                 onProfileClick = { navController.navigate("profile") }
             )

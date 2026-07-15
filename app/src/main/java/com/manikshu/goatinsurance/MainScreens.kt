@@ -1224,7 +1224,11 @@ fun DidiDashboard(navController: NavHostController, sessionManager: SessionManag
         onOpenMortality = { navController.navigate("mortality_queue") }
     ) { showNotifications = false }
     val languageState = LocalAppLanguage.current
-    val userName by sessionManager.userName.collectAsState(initial = "Sushma Didi")
+    val savedName by sessionManager.userName.collectAsState(initial = null)
+    // Canonical name from the backend (also re-syncs the session cache).
+    val profileVm: ProfileViewModel = hiltViewModel()
+    val dbProfile by profileVm.profile.collectAsState()
+    val userName = dbProfile?.fullName ?: savedName ?: ""
 
     val dashVm: DidiDashboardViewModel = hiltViewModel()
     val dashState by dashVm.state.collectAsState()
@@ -1237,7 +1241,7 @@ fun DidiDashboard(navController: NavHostController, sessionManager: SessionManag
                 bottomBar = { DidiBottomBar(navController) },
                 contentWindowInsets = WindowInsets(0, 0, 0, 0)
             ) { padding ->
-                DidiContent(padding, navController, userName ?: "Sushma Didi", stats) { showNotifications = true }
+                DidiContent(padding, navController, userName, stats) { showNotifications = true }
             }
         },
         expanded = {
@@ -1307,7 +1311,7 @@ fun DidiDashboard(navController: NavHostController, sessionManager: SessionManag
                         )
                     )
                 }
-                DidiContent(PaddingValues(0.dp), navController, userName ?: "Sushma Didi", stats) { showNotifications = true }
+                DidiContent(PaddingValues(0.dp), navController, userName, stats) { showNotifications = true }
             }
         }
     )
@@ -3365,7 +3369,10 @@ fun FarmerDashboard(navController: NavHostController, sessionManager: SessionMan
     var showNotifications by remember { mutableStateOf(false) }
     if (showNotifications) NotificationSheet(userRole = UserRole.FARMER, themeColor = PrimaryBlue) { showNotifications = false }
     val languageState = LocalAppLanguage.current
-    val userName by sessionManager.userName.collectAsState(initial = "Ramesh Naik")
+    val savedName by sessionManager.userName.collectAsState(initial = null)
+    val profileVm: ProfileViewModel = hiltViewModel()
+    val dbProfile by profileVm.profile.collectAsState()
+    val userName = dbProfile?.fullName ?: savedName ?: ""
 
     val farmerVm: FarmerHomeViewModel = hiltViewModel()
     val policiesState by farmerVm.policies.collectAsState()
@@ -3379,7 +3386,7 @@ fun FarmerDashboard(navController: NavHostController, sessionManager: SessionMan
                 bottomBar = { FarmerBottomBar(navController) },
                 contentWindowInsets = WindowInsets(0, 0, 0, 0)
             ) { padding ->
-                FarmerContent(padding, navController, userName ?: "Ramesh Naik", policies, schedule) { showNotifications = true }
+                FarmerContent(padding, navController, userName, policies, schedule) { showNotifications = true }
             }
         },
         expanded = {
@@ -3422,7 +3429,7 @@ fun FarmerDashboard(navController: NavHostController, sessionManager: SessionMan
                         )
                     )
                 }
-                FarmerContent(PaddingValues(0.dp), navController, userName ?: "Ramesh Naik", policies, schedule) { showNotifications = true }
+                FarmerContent(PaddingValues(0.dp), navController, userName, policies, schedule) { showNotifications = true }
             }
         }
     )
