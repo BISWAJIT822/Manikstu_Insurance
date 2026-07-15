@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,12 +33,14 @@ private val MortalityRed = Color(0xFFD32F2F)
 
 private fun prettyStatus(s: String) = s.replace('_', ' ').replaceFirstChar { it.uppercase() }
 
-/** Didi-facing queue of farmer-reported goat deaths pending review. */
+/** Didi-facing queue of farmer-reported goat deaths pending review.
+ *  Follows the Goat List design pattern: rounded search bar + white cards. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MortalityQueueScreen(navController: androidx.navigation.NavHostController, onBack: () -> Unit) {
     val vm: MortalityQueueViewModel = hiltViewModel()
     val state by vm.list.collectAsState()
+    var searchQuery by remember { mutableStateOf("") }
     LaunchedEffect(Unit) { vm.loadList() }
 
     Scaffold(
@@ -53,24 +57,51 @@ fun MortalityQueueScreen(navController: androidx.navigation.NavHostController, o
         },
         containerColor = Color(0xFFF8F9F5)
     ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-            when (val s = state) {
-                is UiState.Loading -> CircularProgressIndicator(
-                    color = PrimaryGreen, modifier = Modifier.align(Alignment.Center))
-                is UiState.Error -> Text(s.message, color = Color.Gray,
-                    modifier = Modifier.align(Alignment.Center).padding(24.dp))
-                is UiState.Success -> {
-                    if (s.data.isEmpty()) {
-                        Text("No death reports pending review.", color = Color.Gray,
-                            modifier = Modifier.align(Alignment.Center).padding(24.dp))
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(s.data) { r ->
-                                MortalityReportCard(r) { navController.navigate("mortality_detail/${r.id}") }
+        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            // Search bar (same style as the Goat List screen).
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                placeholder = { Text("Search by goat ID or farmer name") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
+                shape = RoundedCornerShape(24.dp),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White, unfocusedContainerColor = Color.White,
+                    unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f)
+                )
+            )
+
+            Box(modifier = Modifier.fillMaxSize()) {
+                when (val s = state) {
+                    is UiState.Loading -> CircularProgressIndicator(
+                        color = PrimaryGreen, modifier = Modifier.align(Alignment.Center))
+                    is UiState.Error -> Text(s.message, color = Color.Gray,
+                        modifier = Modifier.align(Alignment.Center).padding(24.dp))
+                    is UiState.Success -> {
+                        val filtered = s.data.filter {
+                            searchQuery.isBlank() ||
+                                it.earTagNumber.contains(searchQuery, ignoreCase = true) ||
+                                it.farmerName.contains(searchQuery, ignoreCase = true) ||
+                                (it.cause_ofDeathOrEmpty()).contains(searchQuery, ignoreCase = true)
+                        }
+                        if (filtered.isEmpty()) {
+                            Text(
+                                if (s.data.isEmpty()) "No death reports pending review."
+                                else "No reports match your search.",
+                                color = Color.Gray,
+                                modifier = Modifier.align(Alignment.Center).padding(24.dp)
+                            )
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                items(filtered) { r ->
+                                    MortalityReportCard(r) { navController.navigate("mortality_detail/${r.id}") }
+                                }
                             }
                         }
                     }
@@ -80,24 +111,33 @@ fun MortalityQueueScreen(navController: androidx.navigation.NavHostController, o
     }
 }
 
+private fun MortalityReportItem.cause_ofDeathOrEmpty() = causeOfDeath ?: ""
+
 @Composable
 private fun MortalityReportCard(r: MortalityReportItem, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.4f))
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier.size(44.dp).clip(CircleShape).background(MortalityRed.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center
-            ) { Icon(Icons.Default.Warning, null, tint = MortalityRed, modifier = Modifier.size(22.dp)) }
-            Spacer(modifier = Modifier.width(14.dp))
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Goat photo box, matching the Goat List card.
+            Surface(
+                modifier = Modifier.size(70.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFFF0F0F0)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(painterResource(R.drawable.ic_ewe_custom), null, tint = Color.Gray, modifier = Modifier.size(32.dp))
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(r.earTagNumber, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.Black)
-                Text("Farmer: ${r.farmerName}", fontSize = 13.sp, color = Color.Gray)
-                Text("Died: ${r.dateOfDeath.take(10)}", fontSize = 12.sp, color = Color.Gray)
+                Text("Farmer: ${r.farmerName}", color = Color.Gray, fontSize = 12.sp)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text("Died: ${r.dateOfDeath.take(10)}", fontSize = 11.sp, color = Color.Gray)
             }
             Surface(color = MortalityRed.copy(alpha = 0.12f), shape = RoundedCornerShape(8.dp)) {
                 Text(prettyStatus(r.status), color = MortalityRed, fontSize = 11.sp, fontWeight = FontWeight.Bold,
