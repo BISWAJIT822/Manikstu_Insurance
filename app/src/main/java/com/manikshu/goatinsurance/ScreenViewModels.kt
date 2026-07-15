@@ -635,12 +635,13 @@ class FarmerClaimsViewModel @Inject constructor(
         }
     }
 
-    fun reportDeath(goatId: Int, dateIso: String) {
+    fun reportDeath(goatId: Int, dateIso: String, cause: String? = null) {
         viewModelScope.launch {
             _submit.value = SubmitState.Submitting
-            repo.safeCall { farmerReportDeath(ReportDeathRequest(goatId, dateIso, null, true)) }
+            // New workflow: farmer report -> Didi review. Notifies the Didi.
+            repo.safeCall { mortalityReport(MortalityReportCreateRequest(goatId, dateIso, cause)) }
                 .onSuccess {
-                    if (it.status == "success") { _submit.value = SubmitState.Success("Death reported"); load() }
+                    if (it.status == "success") { _submit.value = SubmitState.Success("Death reported to your Didi"); load() }
                     else _submit.value = SubmitState.Error(it.reason ?: "Failed to report")
                 }
                 .onFailure { _submit.value = SubmitState.Error(it.message ?: "Failed to report") }
@@ -648,6 +649,61 @@ class FarmerClaimsViewModel @Inject constructor(
     }
 
     fun resetSubmit() { _submit.value = SubmitState.Idle }
+}
+
+/** Didi-facing queue of farmer-reported goat deaths + the complete->claim handoff. */
+@HiltViewModel
+class MortalityQueueViewModel @Inject constructor(
+    private val repo: Repository,
+) : ViewModel() {
+    private val _list = MutableStateFlow<UiState<List<MortalityReportItem>>>(UiState.Loading)
+    val list = _list.asStateFlow()
+
+    private val _detail = MutableStateFlow<UiState<MortalityReportDetail>>(UiState.Loading)
+    val detail = _detail.asStateFlow()
+
+    // Success carries the claim number to deep-link into the existing claim section.
+    private val _complete = MutableStateFlow<SubmitState>(SubmitState.Idle)
+    val complete = _complete.asStateFlow()
+
+    fun loadList() {
+        viewModelScope.launch {
+            _list.value = UiState.Loading
+            repo.safeCall { mortalityReports() }
+                .onSuccess { _list.value = UiState.Success(it.reports) }
+                .onFailure { _list.value = UiState.Error(it.message ?: "Failed to load reports") }
+        }
+    }
+
+    fun loadDetail(id: Int) {
+        viewModelScope.launch {
+            _detail.value = UiState.Loading
+            repo.safeCall { mortalityReportDetail(id) }
+                .onSuccess { _detail.value = UiState.Success(it) }
+                .onFailure { _detail.value = UiState.Error(it.message ?: "Failed to load report") }
+        }
+    }
+
+    fun completeReport(id: Int, cause: String?, notes: String?) {
+        viewModelScope.launch {
+            _complete.value = SubmitState.Submitting
+            // Save review edits first (moves to under_review), then complete -> claim.
+            if (!cause.isNullOrBlank() || !notes.isNullOrBlank()) {
+                repo.safeCall { mortalityReview(id, MortalityReviewRequest(cause, notes, carcassVerified = true)) }
+            }
+            repo.safeCall { mortalityComplete(id) }
+                .onSuccess {
+                    if (it.status == "success" && it.claimNumber != null) {
+                        _complete.value = SubmitState.Success(it.claimNumber)  // claim number for handoff
+                    } else {
+                        _complete.value = SubmitState.Error(it.reason ?: "Could not create claim")
+                    }
+                }
+                .onFailure { _complete.value = SubmitState.Error(it.message ?: "Failed to complete") }
+        }
+    }
+
+    fun resetComplete() { _complete.value = SubmitState.Idle }
 }
 
 // =====================================================================================

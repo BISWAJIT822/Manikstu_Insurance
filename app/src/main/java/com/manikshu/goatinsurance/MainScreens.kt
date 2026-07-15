@@ -273,6 +273,12 @@ fun AppNavigation(navController: NavHostController, sessionManager: SessionManag
         composable("premium_collection") { PremiumCollectionScreen(onComplete = { navController.popBackStack() }) }
         composable("mortality_report") { MortalityReportScreen(onBack = { navController.popBackStack() }, onComplete = { navController.popBackStack() }) }
         composable("farmer_report_death") { FarmerReportDeathScreen(onBack = { navController.popBackStack() }, onComplete = { navController.popBackStack() }) }
+        // Didi review queue for farmer-reported deaths + detail (complete -> claim).
+        composable("mortality_queue") { MortalityQueueScreen(navController, onBack = { navController.popBackStack() }) }
+        composable("mortality_detail/{id}") { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("id")?.toIntOrNull() ?: 0
+            MortalityDetailScreen(navController, id, onBack = { navController.popBackStack() })
+        }
         composable("claim_tracker") { ClaimStatusTracker() }
         composable("claim_list") { 
             ClaimListScreen(
@@ -1213,7 +1219,10 @@ fun RoleCard(role: UserRole, label: String, icon: ImageVector, isSelected: Boole
 @Composable
 fun DidiDashboard(navController: NavHostController, sessionManager: SessionManager) {
     var showNotifications by remember { mutableStateOf(false) }
-    if (showNotifications) NotificationSheet(userRole = UserRole.SURAKSHA_DIDI, themeColor = PrimaryGreen) { showNotifications = false }
+    if (showNotifications) NotificationSheet(
+        userRole = UserRole.SURAKSHA_DIDI, themeColor = PrimaryGreen,
+        onOpenMortality = { navController.navigate("mortality_queue") }
+    ) { showNotifications = false }
     val languageState = LocalAppLanguage.current
     val userName by sessionManager.userName.collectAsState(initial = "Sushma Didi")
 
@@ -4117,7 +4126,7 @@ data class AppNotification(val title: String, val message: String, val time: Str
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationSheet(userRole: UserRole?, themeColor: Color = PrimaryGreen, onDismiss: () -> Unit) {
+fun NotificationSheet(userRole: UserRole?, themeColor: Color = PrimaryGreen, onOpenMortality: (() -> Unit)? = null, onDismiss: () -> Unit) {
     val languageState = LocalAppLanguage.current
     val vm: NotificationsViewModel = androidx.hilt.navigation.compose.hiltViewModel()
     val activity by vm.items.collectAsState()
@@ -4162,7 +4171,10 @@ fun NotificationSheet(userRole: UserRole?, themeColor: Color = PrimaryGreen, onD
                     contentPadding = PaddingValues(bottom = 32.dp)
                 ) {
                     items(activity) { item ->
-                        NotificationItem(toNotification(item), themeColor)
+                        val tappable = item.type == "mortality" && onOpenMortality != null
+                        Box(modifier = if (tappable) Modifier.clickable { onDismiss(); onOpenMortality!!() } else Modifier) {
+                            NotificationItem(toNotification(item), themeColor)
+                        }
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 12.dp),
                             color = Color.LightGray.copy(alpha = 0.4f)

@@ -19,6 +19,26 @@ interface ApiService {
     @POST("notifications/read_all")
     suspend fun markNotificationsRead(): StatusResponse
 
+    // ----------------- MORTALITY WORKFLOW -----------------
+    @POST("mortality/report")
+    suspend fun mortalityReport(@Body body: MortalityReportCreateRequest): StatusResponse
+
+    @GET("mortality/reports")
+    suspend fun mortalityReports(
+        @Query("status") status: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("page_size") pageSize: Int = 50,
+    ): MortalityReportListResp
+
+    @GET("mortality/reports/{id}")
+    suspend fun mortalityReportDetail(@Path("id") id: Int): MortalityReportDetail
+
+    @PUT("mortality/reports/{id}")
+    suspend fun mortalityReview(@Path("id") id: Int, @Body body: MortalityReviewRequest): StatusResponse
+
+    @POST("mortality/reports/{id}/complete")
+    suspend fun mortalityComplete(@Path("id") id: Int): MortalityCompleteResp
+
     // ----------------- AUTH -----------------
     @GET("auth/config")
     suspend fun authConfig(): AuthConfigResponse

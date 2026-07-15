@@ -515,6 +515,76 @@ data class NotificationOut(
 @Serializable
 data class UnreadCountResponse(val unread: Int = 0)
 
+// ---- Mortality workflow (farmer report -> Didi review -> claim) ----
+@Serializable
+data class MortalityReportCreateRequest(
+    @SerialName("goat_id") val goatId: Int,
+    @SerialName("date_of_death") val dateOfDeath: String,
+    @SerialName("cause_of_death") val causeOfDeath: String? = null,
+    val notes: String? = null,
+    val photo: String? = null,
+)
+
+@Serializable
+data class MortalityReviewRequest(
+    @SerialName("cause_of_death") val causeOfDeath: String? = null,
+    val notes: String? = null,
+    @SerialName("site_visit_done") val siteVisitDone: Boolean? = null,
+    @SerialName("carcass_verified") val carcassVerified: Boolean? = null,
+)
+
+@Serializable
+data class MortalityReportItem(
+    val id: Int,
+    @SerialName("goat_id") val goatId: Int,
+    @SerialName("ear_tag_number") val earTagNumber: String,
+    val breed: String? = null,
+    @SerialName("farmer_id") val farmerId: Int? = null,
+    @SerialName("farmer_name") val farmerName: String,
+    @SerialName("date_of_death") val dateOfDeath: String,
+    @SerialName("cause_of_death") val causeOfDeath: String? = null,
+    val status: String,
+    @SerialName("reported_at") val reportedAt: String,
+)
+
+@Serializable
+data class MortalityReportListResp(
+    val total: Int = 0,
+    val page: Int = 1,
+    @SerialName("page_size") val pageSize: Int = 20,
+    val reports: List<MortalityReportItem> = emptyList(),
+)
+
+@Serializable
+data class MortalityPhotoOut(@SerialName("photo_type") val photoType: String, val url: String)
+
+@Serializable
+data class MortalityReportDetail(
+    val id: Int,
+    @SerialName("goat_id") val goatId: Int,
+    @SerialName("ear_tag_number") val earTagNumber: String,
+    val breed: String? = null,
+    @SerialName("farmer_name") val farmerName: String,
+    @SerialName("farmer_mobile") val farmerMobile: String? = null,
+    val village: String? = null,
+    @SerialName("date_of_death") val dateOfDeath: String,
+    @SerialName("cause_of_death") val causeOfDeath: String? = null,
+    val notes: String? = null,
+    val status: String,
+    @SerialName("claim_number") val claimNumber: String? = null,
+    val photos: List<MortalityPhotoOut> = emptyList(),
+    @SerialName("reported_at") val reportedAt: String,
+)
+
+@Serializable
+data class MortalityCompleteResp(
+    val status: String,
+    @SerialName("mortality_status") val mortalityStatus: String = "",
+    @SerialName("claim_id") val claimId: Int? = null,
+    @SerialName("claim_number") val claimNumber: String? = null,
+    val reason: String? = null,
+)
+
 @Serializable
 data class ClusterDto(
     val id: Int,
