@@ -20,15 +20,33 @@ object SupportContact {
 }
 
 /**
- * Handles a "contact support" tap: opens the phone dialer pre-filled with the
+ * Handles a "call support" tap: opens the phone dialer pre-filled with the
  * support number so the user can place a call.
+ *
+ * Calling and chatting are separate actions on purpose - see [chatOnWhatsApp].
  */
-fun Context.contactSupport() {
+fun Context.callSupport() {
     val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:+${SupportContact.E164_DIGITS}"))
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     try {
         startActivity(dialIntent)
     } catch (_: Exception) {
         Toast.makeText(this, "Unable to open the phone dialer", Toast.LENGTH_SHORT).show()
+    }
+}
+
+/**
+ * Handles a "chat on WhatsApp" tap: opens a WhatsApp conversation with the
+ * support number. Separate from [callSupport], which dials instead.
+ */
+fun Context.chatOnWhatsApp() {
+    // wa.me is WhatsApp's official deep link: it opens the app directly when
+    // installed, and falls back to the browser (which offers WhatsApp) when not.
+    val chatIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/${SupportContact.E164_DIGITS}"))
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        startActivity(chatIntent)
+    } catch (_: Exception) {
+        Toast.makeText(this, "Unable to open WhatsApp", Toast.LENGTH_SHORT).show()
     }
 }

@@ -363,10 +363,11 @@ fun AppNavigation(navController: NavHostController, sessionManager: SessionManag
             )
         }
         composable("faqs") {
+            val context = LocalContext.current
             FaqsScreen(
                 userRole = userRole,
                 onBack = { navController.popBackStack() },
-                onContactSupport = { navController.navigate("call_support") }
+                onChatSupport = { context.chatOnWhatsApp() }
             )
         }
         composable("call_support") {
@@ -4672,14 +4673,14 @@ fun HelpSupportScreen(navController: NavHostController, userRole: UserRole?, onR
                 subtitle = languageState.value.getT("Chat with us on WhatsApp", "व्हाट्सएप पर हमसे चैट करें", "ହ୍ୱାଟସ୍ଆପରେ ଆମ ସହ ଚାଟ୍ କରନ୍ତୁ"),
                 icon = Icons.AutoMirrored.Filled.Chat,
                 themeColor = themeColor,
-                onClick = { context.contactSupport() }
+                onClick = { context.chatOnWhatsApp() }
             )
             HelpItemCard(
                 title = languageState.value.getT("Call Support", "कॉल सहायता", "କଲ୍ ସହାୟତା"),
                 subtitle = SupportContact.DISPLAY,
                 icon = Icons.Default.Phone,
                 themeColor = themeColor,
-                onClick = { context.contactSupport() }
+                onClick = { context.callSupport() }
             )
             HelpItemCard(
                 title = languageState.value.getT("Report an Issue", "एक समस्या की रिपोर्ट करें", "ଏକ ସମସ୍ୟା ରିପୋର୍ଟ କରନ୍ତୁ"),
@@ -8547,7 +8548,7 @@ fun FarmerClaimDetailsScreen(navController: NavHostController, claim: Map<String
                         
                         Spacer(modifier = Modifier.height(24.dp))
                         OutlinedButton(
-                            onClick = { context.contactSupport() },
+                            onClick = { context.callSupport() },
                             modifier = Modifier.fillMaxWidth().height(50.dp),
                             shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, themeColor)
@@ -9697,7 +9698,7 @@ fun CallSupportScreen(userRole: UserRole?, onBack: () -> Unit, onCallEnded: (Str
     LaunchedEffect(callState) {
         if (callState == "Connecting") {
             kotlinx.coroutines.delay(1000)
-            context.contactSupport()
+            context.callSupport()
             callState = "InCall"
         } else if (callState == "InCall") {
             kotlinx.coroutines.delay(2000)
@@ -9754,7 +9755,7 @@ fun CallSupportScreen(userRole: UserRole?, onBack: () -> Unit, onCallEnded: (Str
                 )
                 Spacer(modifier = Modifier.height(40.dp))
                 Card(
-                    onClick = { context.contactSupport() },
+                    onClick = { context.callSupport() },
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                     border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f)),
@@ -10005,7 +10006,7 @@ fun CallDetailRow(themeColor: Color, icon: ImageVector, label: String, value: St
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FaqsScreen(userRole: UserRole?, onBack: () -> Unit, onContactSupport: () -> Unit) {
+fun FaqsScreen(userRole: UserRole?, onBack: () -> Unit, onChatSupport: () -> Unit) {
     val languageState = LocalAppLanguage.current
     val themeColor = when(userRole) {
         UserRole.FARMER -> PrimaryBlue
@@ -10150,7 +10151,7 @@ fun FaqsScreen(userRole: UserRole?, onBack: () -> Unit, onContactSupport: () -> 
 
             // Still need help?
             Card(
-                onClick = onContactSupport,
+                onClick = onChatSupport,
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f)),
@@ -10323,7 +10324,7 @@ fun ContactSupportHomeScreen(
                 subtitle = SupportContact.DISPLAY,
                 icon = Icons.AutoMirrored.Filled.Chat,
                 themeColor = themeColor,
-                onClick = { context.contactSupport() }
+                onClick = { context.chatOnWhatsApp() }
             )
             Spacer(modifier = Modifier.height(12.dp))
             HelpItemCard(
@@ -10331,7 +10332,7 @@ fun ContactSupportHomeScreen(
                 subtitle = SupportContact.DISPLAY,
                 icon = Icons.Default.Phone,
                 themeColor = themeColor,
-                onClick = { context.contactSupport() }
+                onClick = { context.callSupport() }
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -10895,7 +10896,7 @@ fun MyReportsScreen(navController: NavHostController, userRole: UserRole?, onBac
                             Text(languageState.value.getT("Can't find your issue?", "अपनी समस्या नहीं मिल रही?", "ଆପଣଙ୍କ ସମସ୍ୟା ପାଇଲେ ନାହିଁ କି?"), fontWeight = FontWeight.Bold)
                             Text(languageState.value.getT("Contact our support team directly.", "हमारी सहायता टीम से सीधे संपर्क करें।", "ଆମର ସହାୟତା ଟିମ୍ ସହିତ ସିଧାସଳଖ ଯୋଗାଯୋଗ କରନ୍ତୁ |"), fontSize = 12.sp, color = Color.Gray, textAlign = TextAlign.Center)
                             Spacer(modifier = Modifier.height(12.dp))
-                            TextButton(onClick = { context.contactSupport() }) {
+                            TextButton(onClick = { context.callSupport() }) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.AutoMirrored.Filled.Chat, null, modifier = Modifier.size(18.dp), tint = SuccessGreen)
                                     Spacer(modifier = Modifier.width(8.dp))
