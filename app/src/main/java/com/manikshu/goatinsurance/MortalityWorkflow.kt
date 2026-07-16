@@ -1,6 +1,10 @@
 package com.manikshu.goatinsurance
 
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,20 +18,27 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import java.io.File
 
 private val MortalityRed = Color(0xFFD32F2F)
 
@@ -168,6 +179,42 @@ fun MortalityDetailScreen(
         if (!seeded) { cause = d.causeOfDeath ?: ""; notes = d.notes ?: ""; seeded = true }
     }
 
+    // Completing the report requires all three: cause, carcass photo, verification tick.
+    var photoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+    var pendingPhotoUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var siteVisitVerified by rememberSaveable { mutableStateOf(false) }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) photoUri = pendingPhotoUri?.let { Uri.parse(it) }
+    }
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) pendingPhotoUri?.let { cameraLauncher.launch(Uri.parse(it)) }
+        else Toast.makeText(context, "Camera permission required", Toast.LENGTH_SHORT).show()
+    }
+
+    fun launchCamera() {
+        try {
+            val directory = File(context.cacheDir, "carcass_photos")
+            if (!directory.exists()) directory.mkdirs()
+            val file = File(directory, "carcass_${reportId}_${System.currentTimeMillis()}.jpg")
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            pendingPhotoUri = uri.toString()
+            if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED
+            ) {
+                cameraLauncher.launch(uri)
+            } else {
+                cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+            }
+        } catch (e: Exception) {
+            Toast.makeText(context, "Could not open the camera: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
     LaunchedEffect(complete) {
         when (val c = complete) {
             is SubmitState.Success -> {
@@ -236,11 +283,16 @@ fun MortalityDetailScreen(
 
                     OutlinedTextField(
                         value = cause, onValueChange = { cause = it },
-                        label = { Text("Cause of death") },
+                        label = { Text("Cause of death *") },
                         enabled = !alreadyClaimed,
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PrimaryGreen)
                     )
+
+                    if (!alreadyClaimed) {
+                        CarcassPhotoSection(photoUri = photoUri, onCapture = { launchCamera() })
+                    }
+
                     OutlinedTextField(
                         value = notes, onValueChange = { notes = it },
                         label = { Text("Verification notes") },
@@ -249,6 +301,13 @@ fun MortalityDetailScreen(
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PrimaryGreen)
                     )
+
+                    if (!alreadyClaimed) {
+                        SiteVisitCheckbox(
+                            checked = siteVisitVerified,
+                            onCheckedChange = { siteVisitVerified = it },
+                        )
+                    }
 
                     if (alreadyClaimed) {
                         Button(
@@ -259,9 +318,15 @@ fun MortalityDetailScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
                         ) { Text("Go to Claim", fontWeight = FontWeight.Bold, fontSize = 16.sp) }
                     } else {
+                        val photo = photoUri
+                        val ready = cause.isNotBlank() && photo != null && siteVisitVerified
                         Button(
-                            onClick = { vm.completeReport(d.id, cause, notes) },
-                            enabled = complete !is SubmitState.Submitting,
+                            onClick = {
+                                if (photo != null) {
+                                    vm.completeReport(d.id, cause.trim(), notes.ifBlank { null }, photo, true)
+                                }
+                            },
+                            enabled = ready && complete !is SubmitState.Submitting,
                             modifier = Modifier.fillMaxWidth().height(56.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
@@ -271,9 +336,80 @@ fun MortalityDetailScreen(
                                 fontWeight = FontWeight.Bold, fontSize = 16.sp
                             )
                         }
+                        if (!ready) {
+                            Text(
+                                "Add the cause of death, capture a carcass photo, and confirm the " +
+                                    "site visit to complete this report.",
+                                fontSize = 12.sp, color = Color.Gray
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
+            }
+        }
+    }
+}
+
+/** Mandatory carcass photo: capture, then show a thumbnail with a retake option. */
+@Composable
+private fun CarcassPhotoSection(photoUri: Uri?, onCapture: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Carcass photo *", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Black)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Surface(
+                modifier = Modifier.size(100.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = Color.White,
+                border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f)),
+                onClick = onCapture
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    if (photoUri != null) {
+                        AsyncImage(
+                            model = photoUri,
+                            contentDescription = "Carcass photo",
+                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(Icons.Default.CameraAlt, null, tint = Color.Gray, modifier = Modifier.size(32.dp))
+                    }
+                }
+            }
+            Text(
+                if (photoUri == null) "Tap to capture a photo of the carcass."
+                else "Photo captured. Tap it to retake.",
+                fontSize = 12.sp, color = Color.Gray
+            )
+        }
+    }
+}
+
+/** Mandatory site visit + carcass verification confirmation. */
+@Composable
+private fun SiteVisitCheckbox(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.4f))
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!checked) }.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = CheckboxDefaults.colors(checkedColor = PrimaryGreen)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Column {
+                Text("Site Visit & Carcass Verification *",
+                    fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Black)
+                Text("I visited the site and verified the carcass.",
+                    fontSize = 12.sp, color = Color.Gray)
             }
         }
     }

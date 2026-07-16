@@ -1,5 +1,6 @@
 package com.manikshu.goatinsurance
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -655,6 +656,7 @@ class FarmerClaimsViewModel @Inject constructor(
 @HiltViewModel
 class MortalityQueueViewModel @Inject constructor(
     private val repo: Repository,
+    private val photoUploader: PhotoUploader,
 ) : ViewModel() {
     private val _list = MutableStateFlow<UiState<List<MortalityReportItem>>>(UiState.Loading)
     val list = _list.asStateFlow()
@@ -684,13 +686,43 @@ class MortalityQueueViewModel @Inject constructor(
         }
     }
 
-    fun completeReport(id: Int, cause: String?, notes: String?) {
+    /**
+     * Completes the report: uploads the carcass photo, saves the Didi's review
+     * (cause, notes, site visit + carcass verification), then hands off to the claim.
+     *
+     * The screen only enables this once cause, photo and the verification tick are
+     * all present, so a failure here is a transport problem, not a validation one.
+     */
+    fun completeReport(id: Int, cause: String, notes: String?, photoUri: Uri, siteVisitDone: Boolean) {
         viewModelScope.launch {
             _complete.value = SubmitState.Submitting
-            // Save review edits first (moves to under_review), then complete -> claim.
-            if (!cause.isNullOrBlank() || !notes.isNullOrBlank()) {
-                repo.safeCall { mortalityReview(id, MortalityReviewRequest(cause, notes, carcassVerified = true)) }
+
+            // Upload first: the review call stores the returned URL, so a failed
+            // upload must not leave the report completed without its photo.
+            val bytes = photoUploader.readBytes(photoUri)
+            if (bytes == null) {
+                _complete.value = SubmitState.Error("Could not read the photo. Capture it again.")
+                return@launch
             }
+            val url = runCatching { repo.uploadPhoto(bytes, "carcass_${id}.jpg") }.getOrNull()
+            if (url == null) {
+                _complete.value = SubmitState.Error("Photo upload failed. Check your connection and retry.")
+                return@launch
+            }
+
+            val review = repo.safeCall {
+                mortalityReview(id, MortalityReviewRequest(
+                    causeOfDeath = cause, notes = notes,
+                    siteVisitDone = siteVisitDone, carcassVerified = true,
+                    photos = listOf(MortalityPhotoIn("full_body", url)),
+                ))
+            }
+            if (review.isFailure) {
+                _complete.value = SubmitState.Error(
+                    review.exceptionOrNull()?.message ?: "Could not save the review")
+                return@launch
+            }
+
             repo.safeCall { mortalityComplete(id) }
                 .onSuccess {
                     if (it.status == "success" && it.claimNumber != null) {

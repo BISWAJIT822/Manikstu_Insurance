@@ -533,6 +533,7 @@ data class MortalityReviewRequest(
     val notes: String? = null,
     @SerialName("site_visit_done") val siteVisitDone: Boolean? = null,
     @SerialName("carcass_verified") val carcassVerified: Boolean? = null,
+    val photos: List<MortalityPhotoIn>? = null,
 )
 
 @Serializable
