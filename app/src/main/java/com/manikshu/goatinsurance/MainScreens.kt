@@ -2296,8 +2296,10 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
     var aadhaar by rememberSaveable { mutableStateOf("") }
     
     // Current goat form (one goat being added/edited).
-    var breed by rememberSaveable { mutableStateOf("Black Bengal") }
-    var gender by rememberSaveable { mutableStateOf(languageState.value.getT("Female", "मादा", "ମାଈ")) }
+    // Breed and gender start empty so the Didi has to choose: a pre-filled default
+    // is silently accepted by the step-2 isNotBlank() check and enrols the wrong goat.
+    var breed by rememberSaveable { mutableStateOf("") }
+    var gender by rememberSaveable { mutableStateOf("") }
     var age by rememberSaveable { mutableStateOf("") }
     var ageUnit by rememberSaveable { mutableStateOf(languageState.value.getT("Months", "महीने", "ମାସ")) }
     var weight by rememberSaveable { mutableStateOf("") }
@@ -2321,10 +2323,9 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
     var poxGiven by rememberSaveable { mutableStateOf(false) }
 
     val monthsLabel = languageState.value.getT("Months", "महीने", "ମାସ")
-    val femaleLabel = languageState.value.getT("Female", "मादा", "ମାଈ")
 
     fun resetGoatForm() {
-        breed = "Black Bengal"; gender = femaleLabel; age = ""; ageUnit = monthsLabel
+        breed = ""; gender = ""; age = ""; ageUnit = monthsLabel
         weight = ""; colorMarks = ""; earTagNumber = ""
         leftPhotoUri = null; rightPhotoUri = null; frontPhotoUri = null; tagPhotoUri = null
     }
@@ -2562,12 +2563,14 @@ fun EnrollmentGoatStep(breed: String, onBreedChange: (String) -> Unit, gender: S
         EnrollmentDropdownField(
             label = languageState.value.getT("Breed *", "नस्ल *", "ପ୍ରଜାତି *"),
             selectedValue = breed,
+            placeholder = languageState.value.getT("Select Breed", "नस्ल चुनें", "ପ୍ରଜାତି ବାଛନ୍ତୁ"),
             options = listOf("Black Bengal", "Jamunapari", "Sirohi", "Barbari", "Beetal", "Ganjam", "Osmanabadi", "Anjori"),
             onValueChange = onBreedChange
         )
         EnrollmentDropdownField(
             label = languageState.value.getT("Gender *", "लिंग *", "ଲିଙ୍ଗ *"),
             selectedValue = gender,
+            placeholder = languageState.value.getT("Select Gender", "लिंग चुनें", "ଲିଙ୍ଗ ବାଛନ୍ତୁ"),
             options = listOf(
                 languageState.value.getT("Female", "मादा", "ମାଈ"),
                 languageState.value.getT("Male", "नर", "ଅଣ୍ଡିରା")
@@ -3212,7 +3215,7 @@ fun EnrollmentTextField(label: String, value: String, onValueChange: (String) ->
 }
 
 @Composable
-fun EnrollmentDropdownField(label: String, selectedValue: String, options: List<String>, onValueChange: (String) -> Unit, borderColor: Color = PrimaryGreen) {
+fun EnrollmentDropdownField(label: String, selectedValue: String, options: List<String>, onValueChange: (String) -> Unit, borderColor: Color = PrimaryGreen, placeholder: String? = null) {
     var expanded by remember { mutableStateOf(false) }
     val styledLabel = buildAnnotatedString {
         label.forEach { char ->
@@ -3236,6 +3239,9 @@ fun EnrollmentDropdownField(label: String, selectedValue: String, options: List<
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
+                // Shown only while nothing is selected, so an empty field reads as a
+                // prompt rather than as a value.
+                placeholder = placeholder?.let { { Text(it, color = Color.Gray) } },
                 trailingIcon = {
                     Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.DarkGray)
                 },
