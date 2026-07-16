@@ -1848,7 +1848,10 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
 
     val farmerVm: FarmerHomeViewModel = hiltViewModel()
     val policiesState by farmerVm.policies.collectAsState()
-    val policies = (policiesState as? UiState.Success)?.data?.policies ?: emptyList()
+    // A goat whose death is already reported (or whose claim is approved) can't be
+    // reported again — the backend rejects it, so keep it out of the picker.
+    val policies = ((policiesState as? UiState.Success)?.data?.policies ?: emptyList())
+        .filter { it.status != "dead" && it.status != "claimed" }
     val claimsVm: FarmerClaimsViewModel = hiltViewModel()
     val submitState by claimsVm.submit.collectAsState()
     val isSubmitting = submitState is SubmitState.Submitting
@@ -5385,7 +5388,13 @@ fun GoatListContent(
             if (isFarmer) {
                 // Simple list for Farmer
                 items(filteredGoats) { goat ->
-                    val isExpired = statusByTag[goat.first] == "expired"
+                    val status = statusByTag[goat.first]
+                    val isExpired = status == "expired"
+                    // Death reported (or claim already approved): the goat is no longer
+                    // live, so it can't be reported again — the claim section owns it now.
+                    val isClaimed = status == "claimed"
+                    val isDead = status == "dead"
+                    val isGone = isDead || isClaimed
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -5409,16 +5418,23 @@ fun GoatListContent(
                                     Text("Black Bengal • ${languageState.value.getT("Female", "मादा", "ମାଈ")} • 12M", color = Color.Gray, fontSize = 12.sp)
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        if (isExpired) languageState.value.getT("Policy Expired", "पॉलिसी समाप्त", "ନୀତି ସମାପ୍ତ") 
-                                        else languageState.value.getT("Policy Active", "पॉलिसी सक्रिय", "ନୀତି ସକ୍ରିୟ"), 
-                                        color = if (isExpired) Color.Red else SuccessGreen, 
-                                        fontWeight = FontWeight.Bold, 
+                                        when {
+                                            isClaimed -> languageState.value.getT("Claim Approved", "दावा स्वीकृत", "ଦାବି ମଞ୍ଜୁର")
+                                            isDead -> languageState.value.getT("Death Reported", "मृत्यु की सूचना दी गई", "ମୃତ୍ୟୁ ରିପୋର୍ଟ ହୋଇଛି")
+                                            isExpired -> languageState.value.getT("Policy Expired", "पॉलिसी समाप्त", "ନୀତି ସମାପ୍ତ")
+                                            else -> languageState.value.getT("Policy Active", "पॉलिसी सक्रिय", "ନୀତି ସକ୍ରିୟ")
+                                        },
+                                        color = if (isExpired || isDead) Color.Red else if (isClaimed) Color.Gray else SuccessGreen,
+                                        fontWeight = FontWeight.Bold,
                                         fontSize = 13.sp
                                     )
                                     Text(
-                                        if (isExpired) languageState.value.getT("Expired on: 31 May 2024", "31 मई 2024 को समाप्त", "୩୧ ମଇ ୨୦୨୪ ରେ ସମାପ୍ତ") 
-                                        else languageState.value.getT("Valid till 31 May 2025", "31 मई 2025 तक मान्य", "୩୧ ମଇ ୨୦୨୫ ପର୍ଯ୍ୟନ୍ତ ବୈଧ"), 
-                                        fontSize = 11.sp, 
+                                        when {
+                                            isGone -> languageState.value.getT("See the Claims section", "दावा अनुभाग देखें", "ଦାବି ବିଭାଗ ଦେଖନ୍ତୁ")
+                                            isExpired -> languageState.value.getT("Expired on: 31 May 2024", "31 मई 2024 को समाप्त", "୩୧ ମଇ ୨୦୨୪ ରେ ସମାପ୍ତ")
+                                            else -> languageState.value.getT("Valid till 31 May 2025", "31 मई 2025 तक मान्य", "୩୧ ମଇ ୨୦୨୫ ପର୍ଯ୍ୟନ୍ତ ବୈଧ")
+                                        },
+                                        fontSize = 11.sp,
                                         color = Color.Gray
                                     )
                                 }
@@ -5427,14 +5443,16 @@ fun GoatListContent(
                             Spacer(modifier = Modifier.height(16.dp))
                             
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Button(
-                                    onClick = { onReportDeath(goat.first) },
-                                    modifier = Modifier.weight(1f).height(40.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
-                                    shape = RoundedCornerShape(8.dp),
-                                    contentPadding = PaddingValues(0.dp)
-                                ) {
-                                    Text(languageState.value.getT("Report Death", "मृत्यु की सूचना", "ମୃତ୍ୟୁ ରିପୋର୍ଟ"), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                if (!isGone) {
+                                    Button(
+                                        onClick = { onReportDeath(goat.first) },
+                                        modifier = Modifier.weight(1f).height(40.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = PaddingValues(0.dp)
+                                    ) {
+                                        Text(languageState.value.getT("Report Death", "मृत्यु की सूचना", "ମୃତ୍ୟୁ ରିପୋର୍ଟ"), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    }
                                 }
                                 Button(
                                     onClick = { onGoatClick(clickIdByTag[goat.first] ?: goat.first) },
@@ -7218,6 +7236,8 @@ fun ClaimReviewScreen(navController: NavHostController, claimId: String, userRol
         else -> PrimaryGreen
     }
 
+    val isFarmerRole = userRole == UserRole.FARMER
+
     val claimsVm: CoordinatorClaimsViewModel = hiltViewModel()
     val reviewState by claimsVm.review.collectAsState()
     LaunchedEffect(claimId) {
@@ -7229,21 +7249,49 @@ fun ClaimReviewScreen(navController: NavHostController, claimId: String, userRol
     }
     val review = (reviewState as? UiState.Success)?.data
 
-    val mockClaim = mapOf(
-        "id" to (review?.claimNumber ?: claimId),
-        "status" to (review?.status ?: "—"),
-        "tag" to (review?.goat?.earTagNumber ?: "—"),
+    // There is no farmer-facing claim-detail endpoint, but /farmer/claims already
+    // carries everything this screen shows, so pick this claim out of that list.
+    var farmerClaim by remember { mutableStateOf<FarmerClaimItem?>(null) }
+    if (isFarmerRole) {
+        val farmerClaimsVm: FarmerClaimsViewModel = hiltViewModel()
+        val farmerClaimsState by farmerClaimsVm.state.collectAsState()
+        LaunchedEffect(farmerClaimsState, claimId) {
+            farmerClaim = (farmerClaimsState as? UiState.Success)?.data?.claims
+                ?.firstOrNull { (it.claimNumber ?: "MORT-${it.mortalityId}") == claimId }
+        }
+    }
+
+    val claimNumber = if (isFarmerRole) farmerClaim?.claimNumber else review?.claimNumber
+    val claimStatus = if (isFarmerRole) farmerClaim?.claimStatus else review?.status
+    val earTag = if (isFarmerRole) farmerClaim?.earTagNumber else review?.goat?.earTagNumber
+    val deathDate = if (isFarmerRole) farmerClaim?.dateOfDeath else review?.dateOfDeath
+    val cause = if (isFarmerRole) farmerClaim?.causeOfDeath else review?.causeOfDeath
+    val amount = if (isFarmerRole) (farmerClaim?.claimAmount ?: farmerClaim?.sumInsured)
+                 else (review?.claimAmount ?: review?.sumInsured)
+    val vaccines = if (isFarmerRole) farmerClaim?.vaccinationsDone else review?.vaccinationsDone
+    val progress = (if (isFarmerRole) farmerClaim?.progress else review?.progress) ?: emptyMap()
+
+    val claimData = mapOf(
+        "id" to (claimNumber ?: claimId),
+        "status" to (claimStatus ?: "—"),
+        "tag" to (earTag ?: "—"),
         "farmer" to (review?.farmer ?: "—"),
-        "date" to (review?.dateOfDeath?.take(10) ?: "—"),
+        "date" to (deathDate?.take(10) ?: "—"),
+        "deathDate" to (deathDate?.take(10) ?: "—"),
         "time" to "",
-        "policy" to (review?.claimNumber ?: "—"),
-        "cause" to (review?.causeOfDeath ?: "—"),
-        "amount" to ((review?.claimAmount ?: review?.sumInsured)?.toInt()?.toString() ?: "—"),
-        "vaccines" to (review?.vaccinationsDone?.toString() ?: ""),
+        "policy" to (claimNumber ?: "—"),
+        "cause" to (cause ?: "—"),
+        "amount" to (amount?.toInt()?.toString() ?: "—"),
+        "vaccines" to (vaccines?.toString() ?: ""),
+        // Claim progress stepper, straight from the backend.
+        "p_death" to (progress["death_notification"] ?: "pending"),
+        "p_site" to (progress["site_visit"] ?: "pending"),
+        "p_verify" to (progress["carcass_verification"] ?: "pending"),
+        "p_review" to (progress["claim_review"] ?: "pending"),
     )
 
-    if (userRole == UserRole.FARMER) {
-        FarmerClaimFlow(navController, mockClaim, themeColor, onBack)
+    if (isFarmerRole) {
+        FarmerClaimFlow(navController, claimData, themeColor, onBack)
         return
     }
 
@@ -7269,7 +7317,7 @@ fun ClaimReviewScreen(navController: NavHostController, claimId: String, userRol
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             DidiClaimDetailsContent(
-                claim = mockClaim,
+                claim = claimData,
                 themeColor = themeColor,
                 selectedTab = selectedTab,
                 onTabSelected = { selectedTab = it },
@@ -7500,14 +7548,29 @@ fun DidiClaimDetailsContent(
                             Text(languageState.value.getT("Claim Progress", "दावा प्रगति", "ଦାବି ପ୍ରଗତି"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             Spacer(modifier = Modifier.height(20.dp))
                             
+                            val doneText = languageState.value.getT("Completed", "पूर्ण", "ସମ୍ପୂର୍ଣ୍ଣ")
+                            val pendingText = languageState.value.getT("Pending", "लंबित", "ବିଚାରାଧୀନ")
+                            val reviewSubtitle = when (claim["status"]) {
+                                "approved", "claimed" -> languageState.value.getT("Approved", "स्वीकृत", "ମଞ୍ଜୁର")
+                                "rejected" -> languageState.value.getT("Rejected", "अस्वीकृत", "ଅସ୍ୱୀକୃତ")
+                                "hold" -> languageState.value.getT("On hold", "होल्ड पर", "ଅପେକ୍ଷାରେ")
+                                else -> pendingText
+                            }
                             val steps = listOf(
-                                Triple("Death Reported", "20 May 2024, 10:30 AM", true),
-                                Triple("Didi Site Visit", "20 May 2024, 02:15 PM", true),
-                                Triple("Verification", "21 May 2024, 11:40 AM", true),
-                                Triple("Coordinator Review", "Pending", false),
-                                Triple("Payment Sent", "Upcoming", false)
+                                Triple(languageState.value.getT("Death Reported", "मृत्यु की सूचना", "ମୃତ୍ୟୁ ରିପୋର୍ଟ"),
+                                    claim["date"].takeUnless { it.isNullOrBlank() || it == "—" } ?: doneText,
+                                    claim["p_death"] == "completed"),
+                                Triple(languageState.value.getT("Didi Site Visit", "दीदी साइट विज़िट", "ଦିଦି ସାଇଟ୍ ପରିଦର୍ଶନ"),
+                                    if (claim["p_site"] == "completed") doneText else pendingText,
+                                    claim["p_site"] == "completed"),
+                                Triple(languageState.value.getT("Verification", "सत्यापन", "ଯାଞ୍ଚ"),
+                                    if (claim["p_verify"] == "completed") doneText else pendingText,
+                                    claim["p_verify"] == "completed"),
+                                Triple(languageState.value.getT("Coordinator Review", "समन्वयक समीक्षा", "ସମନ୍ୱୟକ ସମୀକ୍ଷା"),
+                                    reviewSubtitle,
+                                    claim["p_review"] == "completed"),
                             )
-                            
+
                             steps.forEachIndexed { index, step ->
                                 DidiClaimProgressItem(
                                     stepNumber = index + 1,
@@ -8198,15 +8261,25 @@ fun FarmerClaimStatusScreen(navController: NavHostController, claim: Map<String,
                             }
                         }
                         Spacer(modifier = Modifier.width(16.dp))
+                        val isApproved = claim["p_review"] == "completed" && claim["status"] != "rejected"
+                        val isRejected = claim["status"] == "rejected"
                         Column {
                             Text(
-                                text = languageState.value.getT("Your Claim is in Progress", "आपका दावा प्रगति पर है", "ଆପଣଙ୍କ ଦାବି ପ୍ରଗତିରେ ଅଛି"),
+                                text = when {
+                                    isApproved -> languageState.value.getT("Your Claim is Approved", "आपका दावा स्वीकृत है", "ଆପଣଙ୍କ ଦାବି ମଞ୍ଜୁର ହୋଇଛି")
+                                    isRejected -> languageState.value.getT("Your Claim was Rejected", "आपका दावा अस्वीकृत हुआ", "ଆପଣଙ୍କ ଦାବି ଅସ୍ୱୀକୃତ ହୋଇଛି")
+                                    else -> languageState.value.getT("Your Claim is in Progress", "आपका दावा प्रगति पर है", "ଆପଣଙ୍କ ଦାବି ପ୍ରଗତିରେ ଅଛି")
+                                },
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 18.sp,
-                                color = themeColor
+                                color = if (isRejected) Color(0xFFD32F2F) else themeColor
                             )
                             Text(
-                                text = languageState.value.getT("We are reviewing your claim.", "हम आपके दावे की समीक्षा कर रहे हैं।", "ଆମେ ଆପଣଙ୍କ ଦାବିର ସମୀକ୍ଷା କରୁଛୁ |"),
+                                text = when {
+                                    isApproved -> languageState.value.getT("Your claim has been approved.", "आपका दावा स्वीकृत कर दिया गया है।", "ଆପଣଙ୍କ ଦାବି ମଞ୍ଜୁର କରାଯାଇଛି |")
+                                    isRejected -> languageState.value.getT("Please contact your Didi for details.", "विवरण के लिए अपनी दीदी से संपर्क करें।", "ବିବରଣୀ ପାଇଁ ଆପଣଙ୍କ ଦିଦିଙ୍କ ସହ ଯୋଗାଯୋଗ କରନ୍ତୁ |")
+                                    else -> languageState.value.getT("We are reviewing your claim.", "हम आपके दावे की समीक्षा कर रहे हैं।", "ଆମେ ଆପଣଙ୍କ ଦାବିର ସମୀକ୍ଷା କରୁଛୁ |")
+                                },
                                 fontSize = 14.sp,
                                 color = Color.Gray
                             )
@@ -8260,21 +8333,45 @@ fun FarmerClaimStatusScreen(navController: NavHostController, claim: Map<String,
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                     
+                    val siteDone = claim["p_site"] == "completed"
+                    val verifyDone = claim["p_verify"] == "completed"
+                    val reviewDone = claim["p_review"] == "completed"
                     val steps = listOf(
-                        Triple("Death Reported", "You have reported the death of your goat.", "20 May 2024, 10:30 AM"),
-                        Triple("Didi Site Visit", "Our Didi has visited your location.", "20 May 2024, 02:15 PM"),
-                        Triple("Verification", "Verification completed successfully.", "21 May 2024, 11:40 AM"),
-                        Triple("Coordinator Review", "Your claim is under review.", ""),
-                        Triple("Payment Sent", "Payment will be sent to your account.", "")
+                        Triple(
+                            languageState.value.getT("Death Reported", "मृत्यु की सूचना", "ମୃତ୍ୟୁ ରିପୋର୍ଟ"),
+                            languageState.value.getT("You have reported the death of your goat.", "आपने अपनी बकरी की मृत्यु की सूचना दी है।", "ଆପଣ ଆପଣଙ୍କ ଛେଳିର ମୃତ୍ୟୁ ରିପୋର୍ଟ କରିଛନ୍ତି |"),
+                            claim["p_death"] == "completed"
+                        ),
+                        Triple(
+                            languageState.value.getT("Didi Site Visit", "दीदी साइट विज़िट", "ଦିଦି ସାଇଟ୍ ପରିଦର୍ଶନ"),
+                            if (siteDone) languageState.value.getT("Our Didi has visited your location.", "हमारी दीदी ने आपके स्थान का दौरा किया है।", "ଆମ ଦିଦି ଆପଣଙ୍କ ସ୍ଥାନ ପରିଦର୍ଶନ କରିଛନ୍ତି |")
+                            else languageState.value.getT("Our Didi will visit your location.", "हमारी दीदी आपके स्थान पर आएंगी।", "ଆମ ଦିଦି ଆପଣଙ୍କ ସ୍ଥାନ ପରିଦର୍ଶନ କରିବେ |"),
+                            siteDone
+                        ),
+                        Triple(
+                            languageState.value.getT("Verification", "सत्यापन", "ଯାଞ୍ଚ"),
+                            if (verifyDone) languageState.value.getT("Verification completed successfully.", "सत्यापन सफलतापूर्वक पूरा हुआ।", "ଯାଞ୍ଚ ସଫଳତାର ସହିତ ସମ୍ପୂର୍ଣ୍ଣ ହୋଇଛି |")
+                            else languageState.value.getT("Verification is pending.", "सत्यापन लंबित है।", "ଯାଞ୍ଚ ବିଚାରାଧୀନ ଅଛି |"),
+                            verifyDone
+                        ),
+                        Triple(
+                            languageState.value.getT("Coordinator Review", "समन्वयक समीक्षा", "ସମନ୍ୱୟକ ସମୀକ୍ଷା"),
+                            when {
+                                claim["status"] == "rejected" -> languageState.value.getT("Your claim was rejected.", "आपका दावा अस्वीकृत कर दिया गया।", "ଆପଣଙ୍କ ଦାବି ଅସ୍ୱୀକୃତ ହୋଇଛି |")
+                                reviewDone -> languageState.value.getT("Your claim was approved.", "आपका दावा स्वीकृत हो गया।", "ଆପଣଙ୍କ ଦାବି ମଞ୍ଜୁର ହୋଇଛି |")
+                                else -> languageState.value.getT("Your claim is under review.", "आपका दावा समीक्षाधीन है।", "ଆପଣଙ୍କ ଦାବି ସମୀକ୍ଷାଧୀନ ଅଛି |")
+                            },
+                            reviewDone
+                        ),
                     )
-                    
+
                     steps.forEachIndexed { index, step ->
                         ClaimProgressItem(
                             stepNumber = index + 1,
                             title = step.first,
                             subtitle = step.second,
-                            time = step.third,
-                            isCompleted = index <= 2,
+                            time = if (index == 0) (claim["deathDate"].takeUnless { it.isNullOrBlank() || it == "—" } ?: "") else "",
+                            isCompleted = step.third,
                             isLast = index == steps.size - 1,
                             themeColor = themeColor
                         )

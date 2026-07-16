@@ -353,6 +353,7 @@ data class MortalityProgress(
     @SerialName("carcass_verification") val carcassVerification: String,
     @SerialName("ai_assessment") val aiAssessment: String,
     @SerialName("claim_submission") val claimSubmission: String,
+    @SerialName("claim_review") val claimReview: String = "pending",
 )
 
 @Serializable
@@ -394,6 +395,7 @@ data class SdClaimItem(
     @SerialName("carcass_verification") val carcassVerification: String,
     @SerialName("ai_assessment") val aiAssessment: String,
     @SerialName("claim_submission") val claimSubmission: String,
+    @SerialName("claim_review") val claimReview: String = "pending",
 )
 
 @Serializable
@@ -636,6 +638,7 @@ data class ClaimReview(
     @SerialName("ai_assessment") val aiAssessment: ClaimAiAssessment? = null,
     @SerialName("site_visit") val siteVisit: String? = null,
     @SerialName("claim_amount") val claimAmount: Double? = null,
+    val progress: Map<String, String> = emptyMap(),
 )
 
 @Serializable
