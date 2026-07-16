@@ -496,6 +496,23 @@ data class CoDashboard(
     @SerialName("active_policies") val activePolicies: Int,
 )
 
+/** One bar of the Performance Overview chart. */
+@Serializable
+data class PerformanceDay(
+    val date: String,
+    val label: String,      // Mon / Tue / ... straight from the backend
+    val count: Int,
+    val enrollments: Int = 0,
+    val claims: Int = 0,
+    @SerialName("active_policies") val activePolicies: Int = 0,
+)
+
+@Serializable
+data class PerformanceResponse(
+    val days: List<PerformanceDay> = emptyList(),
+    val total: Int = 0,
+)
+
 @Serializable
 data class ActivityItem(
     val type: String,

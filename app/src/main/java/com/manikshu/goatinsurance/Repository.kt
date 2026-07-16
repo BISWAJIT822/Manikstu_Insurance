@@ -108,6 +108,7 @@ class Repository @Inject constructor(
     // ---------------- coordinator ----------------
     suspend fun coProfile() = api.coProfile()
     suspend fun coDashboard() = api.coDashboard()
+    suspend fun coPerformance() = api.coPerformance()
     suspend fun coLiveActivity(page: Int = 1) = api.coLiveActivity(page)
     suspend fun coClusterMap(block: String? = null) = api.coClusterMap(block)
     suspend fun coClaims(status: String? = null, page: Int = 1) = api.coClaims(status, page)

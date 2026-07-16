@@ -220,6 +220,9 @@ interface ApiService {
     @GET("coordinator/dashboard")
     suspend fun coDashboard(): CoDashboard
 
+    @GET("coordinator/performance")
+    suspend fun coPerformance(): PerformanceResponse
+
     @GET("coordinator/live_activity")
     suspend fun coLiveActivity(
         @Query("page") page: Int = 1,

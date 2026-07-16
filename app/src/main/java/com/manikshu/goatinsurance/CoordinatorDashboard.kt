@@ -25,8 +25,11 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.compose.ui.text.font.FontWeight
@@ -59,7 +62,21 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
     val vm: CoordinatorDashboardViewModel = androidx.hilt.navigation.compose.hiltViewModel()
     val dashState by vm.dashboard.collectAsState()
     val activity by vm.activity.collectAsState()
+    val performance by vm.performance.collectAsState()
     val dash = (dashState as? UiState.Success)?.data
+    // One fetch feeds both the chart and the stat-card sparklines.
+    val perfDays = (performance as? UiState.Success)?.data?.days ?: emptyList()
+
+    // Keep the chart live: re-fetch whenever the dashboard returns to the foreground,
+    // so activity recorded elsewhere (an enrolment, a claim) shows up without a restart.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) vm.refresh()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     Scaffold(
         bottomBar = { CoordinatorBottomBar(navController) },
@@ -94,7 +111,7 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
                         trend = "",
                         trendColor = SuccessGreen,
                         icon = Icons.Default.Security,
-                        points = listOf(0.2f, 0.4f, 0.3f, 0.6f, 0.5f, 0.8f)
+                        points = sparkline(perfDays.map { it.activePolicies })
                     )
                     CoordinatorStatCard(
                         modifier = Modifier.weight(1f).clickable { navController.navigate("claim_list") },
@@ -103,7 +120,7 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
                         trend = "",
                         trendColor = SuccessGreen,
                         icon = Icons.Default.Assignment,
-                        points = listOf(0.1f, 0.2f, 0.5f, 0.4f, 0.7f, 0.9f)
+                        points = sparkline(perfDays.map { it.claims })
                     )
                     CoordinatorStatCard(
                         modifier = Modifier.weight(1f),
@@ -112,13 +129,13 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
                         trend = "",
                         trendColor = SuccessGreen,
                         icon = Icons.Default.Assessment,
-                        points = listOf(0.8f, 0.7f, 0.9f, 0.6f, 0.4f, 0.2f)
+                        points = sparkline(perfDays.map { it.enrollments })
                     )
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                PerformanceOverviewCard()
+                PerformanceOverviewCard(performance)
 
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -308,8 +325,25 @@ fun CoordinatorStatCard(
     }
 }
 
+/** Tallest a bar can draw; the rest of the 150.dp chart area holds the day label. */
+private val MaxBarHeight = 120.dp
+
+/**
+ * Turns a daily series into the 0..1 fractions the stat-card sparkline draws,
+ * scaled against its own peak.
+ *
+ * A series that is empty (still loading) or flat zero draws along the baseline
+ * instead of inventing a shape. The two-point floor matters: the sparkline Canvas
+ * divides by `points.size - 1`.
+ */
+private fun sparkline(values: List<Int>): List<Float> {
+    if (values.size < 2) return listOf(0f, 0f)
+    val peak = values.max()
+    return if (peak <= 0) values.map { 0f } else values.map { it.toFloat() / peak }
+}
+
 @Composable
-fun PerformanceOverviewCard() {
+fun PerformanceOverviewCard(state: UiState<PerformanceResponse>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -336,39 +370,53 @@ fun PerformanceOverviewCard() {
                 }
                 Icon(Icons.Default.MoreVert, null, tint = Color.Gray)
             }
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
-            // Bar Chart
-            Row(
+
+            Box(
                 modifier = Modifier.fillMaxWidth().height(150.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
+                contentAlignment = Alignment.Center
             ) {
-                val days = listOf(
-        stringResource(R.string.mon),
-        stringResource(R.string.tue),
-        stringResource(R.string.wed),
-        stringResource(R.string.thu),
-        stringResource(R.string.fri),
-        stringResource(R.string.sat),
-        stringResource(R.string.sun)
-    )
-                val heights = listOf(0.6f, 0.3f, 0.7f, 0.4f, 0.8f, 0.6f, 0.7f)
-                
-                days.forEachIndexed { index, day ->
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            modifier = Modifier
-                                .width(24.dp)
-                                .fillMaxHeight(heights[index])
-                                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                                .background(CoordinatorOrange)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(day, fontSize = 10.sp, color = Color.Gray)
-                    }
+                when (state) {
+                    is UiState.Loading -> CircularProgressIndicator(
+                        color = CoordinatorOrange, modifier = Modifier.size(32.dp), strokeWidth = 3.dp
+                    )
+                    is UiState.Error -> Text(
+                        state.message, fontSize = 12.sp, color = Color.Gray, textAlign = TextAlign.Center
+                    )
+                    is UiState.Success ->
+                        // A window with nothing in it is empty, not a row of flat bars.
+                        if (state.data.total == 0 || state.data.days.isEmpty()) {
+                            Text("No Data Available", fontSize = 13.sp, color = Color.Gray)
+                        } else {
+                            ActivityBars(state.data.days)
+                        }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActivityBars(days: List<PerformanceDay>) {
+    // Scale against the busiest day so the chart always uses the full height.
+    val maxCount = (days.maxOfOrNull { it.count } ?: 0).coerceAtLeast(1)
+    Row(
+        modifier = Modifier.fillMaxSize(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Bottom
+    ) {
+        days.forEach { day ->
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .width(24.dp)
+                        .height(MaxBarHeight * (day.count.toFloat() / maxCount))
+                        .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                        .background(CoordinatorOrange)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(day.label, fontSize = 10.sp, color = Color.Gray)
             }
         }
     }

@@ -752,6 +752,10 @@ class CoordinatorDashboardViewModel @Inject constructor(
     private val _activity = MutableStateFlow<List<ActivityItem>>(emptyList())
     val activity = _activity.asStateFlow()
 
+    /** Performance Overview chart: last 7 days of activity. */
+    private val _performance = MutableStateFlow<UiState<PerformanceResponse>>(UiState.Loading)
+    val performance = _performance.asStateFlow()
+
     private val _team = MutableStateFlow<List<TeamMember>>(emptyList())
     val team = _team.asStateFlow()
 
@@ -760,12 +764,19 @@ class CoordinatorDashboardViewModel @Inject constructor(
 
     init { load() }
 
-    fun load() {
+    /** Re-fetch without flashing the loading state - for returning to the screen. */
+    fun refresh() = load(showLoading = false)
+
+    fun load(showLoading: Boolean = true) {
         viewModelScope.launch {
-            _dashboard.value = UiState.Loading
+            if (showLoading) _dashboard.value = UiState.Loading
             repo.safeCall { coDashboard() }
                 .onSuccess { _dashboard.value = UiState.Success(it) }
                 .onFailure { _dashboard.value = UiState.Error(it.message ?: "Failed to load dashboard") }
+            if (showLoading) _performance.value = UiState.Loading
+            repo.safeCall { coPerformance() }
+                .onSuccess { _performance.value = UiState.Success(it) }
+                .onFailure { _performance.value = UiState.Error(it.message ?: "Failed to load activity") }
             repo.safeCall { coLiveActivity() }.onSuccess { _activity.value = it }
             repo.safeCall { coTeam() }.onSuccess { _team.value = it.team }
             repo.safeCall { coClusterMap() }.onSuccess { _clusters.value = it }
