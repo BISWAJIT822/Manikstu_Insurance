@@ -17,21 +17,18 @@ class AuthViewModel @Inject constructor(
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState = _authState.asStateFlow()
 
-    // "otp" or "password" - admin-controlled; decides which login UI is rendered.
-    private val _loginMethod = MutableStateFlow("otp")
+    /**
+     * The app is password-only.
+     *
+     * This used to default to "otp" and then ask /auth/config, which meant the OTP
+     * form rendered first and swapped to the password form once the server answered
+     * - a wrong-form flash that lasts as long as the request takes (up to ~53s on a
+     * cold start). Since OTP needs SMS delivery, which is disabled in production,
+     * there was never anything to switch to. Rendering password immediately is both
+     * correct and instant, with no network round-trip to decide.
+     */
+    private val _loginMethod = MutableStateFlow("password")
     val loginMethod = _loginMethod.asStateFlow()
-
-    init {
-        loadAuthConfig()
-    }
-
-    fun loadAuthConfig() {
-        viewModelScope.launch {
-            repository.safeCall { authConfig() }
-                .onSuccess { _loginMethod.value = if (it.loginMethod == "password") "password" else "otp" }
-            // On failure keep the current value; OTP is the safe default.
-        }
-    }
 
     fun reset() { _authState.value = AuthState.Idle }
 
