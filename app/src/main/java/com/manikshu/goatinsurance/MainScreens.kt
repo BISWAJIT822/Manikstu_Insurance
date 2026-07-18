@@ -72,6 +72,15 @@ import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarOutline
 import androidx.compose.material.icons.filled.RemoveRedEye
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Eco
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.material.icons.filled.ThumbUpOffAlt
 import androidx.compose.material.icons.filled.ThumbUpOffAlt
 import androidx.compose.material.icons.filled.ThumbDownOffAlt
@@ -529,11 +538,12 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
 
     val context = LocalContext.current
     val languageState = LocalAppLanguage.current
+    val lang = languageState.value
 
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.authState.collectAsState()
     val loginMethod by authViewModel.loginMethod.collectAsState()
-    // Password mode: no OTP round-trip at signup - the button becomes "Create Account"
+    // Password mode: no OTP round-trip at signup - the button becomes "Sign Up"
     // and leads straight to the profile form (which collects the password).
     val isPasswordMode = loginMethod == "password"
     val isAuthLoading = authState is AuthState.Loading
@@ -563,244 +573,163 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
             Toast.makeText(context, context.getString(R.string.permissions_required_message), Toast.LENGTH_LONG).show()
         }
     }
-    
+
     if (showPermissionDialog) {
         AlertDialog(
             onDismissRequest = { showPermissionDialog = false },
             title = { Text(stringResource(R.string.permissions_required_title), fontWeight = FontWeight.Bold) },
-            text = { 
-                Text(stringResource(R.string.permissions_required_message))
-            },
+            text = { Text(stringResource(R.string.permissions_required_message)) },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        showPermissionDialog = false
-                        permissionLauncher.launch(permissionsToRequest)
-                    }
-                ) {
-                    Text(stringResource(R.string.allow))
-                }
+                TextButton(onClick = {
+                    showPermissionDialog = false
+                    permissionLauncher.launch(permissionsToRequest)
+                }) { Text(stringResource(R.string.allow)) }
             },
             dismissButton = {
-                TextButton(onClick = { showPermissionDialog = false }) {
-                    Text(stringResource(R.string.deny))
-                }
+                TextButton(onClick = { showPermissionDialog = false }) { Text(stringResource(R.string.deny)) }
             },
             shape = RoundedCornerShape(16.dp)
         )
     }
 
-    var showLanguagePicker by remember { mutableStateOf(false) }
-
-    val backgroundColor = Color(0xFFF8F9F5)
-    
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .navigationBarsPadding()
-            .background(backgroundColor)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Green Header
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8F4E7))) {
+        Image(
+            painter = painterResource(R.drawable.ic_bg_login),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(260.dp)
-                .clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp))
-                .background(PrimaryGreen)
-        ) {
-            // Language selector
-            Surface(
-                onClick = { showLanguagePicker = true },
-                color = Color.White.copy(alpha = 0.15f),
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 48.dp, end = 24.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Public, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = languageState.value.code.uppercase(),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
-                    )
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                }
-
-                MaterialTheme(
-                    colorScheme = MaterialTheme.colorScheme.copy(surface = Color.White.copy(alpha = 0.9f))
-                ) {
-                    DropdownMenu(
-                        expanded = showLanguagePicker,
-                        onDismissRequest = { showLanguagePicker = false }
-                    ) {
-                        DropdownMenuItem(text = { Text("English") }, onClick = { languageState.value = AppLanguage.ENGLISH; showLanguagePicker = false })
-                        DropdownMenuItem(text = { Text("हिन्दी") }, onClick = { languageState.value = AppLanguage.HINDI; showLanguagePicker = false })
-                        DropdownMenuItem(text = { Text("ଓଡ଼ିଆ") }, onClick = { languageState.value = AppLanguage.ODIA; showLanguagePicker = false })
-                    }
-                }
-            }
-
-            // Logo
-            Icon(
-                painterResource(R.drawable.ic_logo_custom),
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(240.dp)
-                    .offset(y = 20.dp)
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    0.0f to Color(0xFFFBF6E9).copy(alpha = 0.05f),
+                    0.42f to Color(0xFFFBF6E9).copy(alpha = 0.55f),
+                    0.70f to Color(0xFFF4EFDC).copy(alpha = 0.42f),
+                    1.0f to Color(0xFFF0F3DB).copy(alpha = 0.20f)
+                )
             )
-        }
-
-        // SignUp Card
-        Card(
-            modifier = Modifier.padding(horizontal = 24.dp).offset(y = (-40).dp).fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .navigationBarsPadding()
+                .padding(horizontal = 50.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.padding(vertical = 32.dp, horizontal = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            Spacer(Modifier.height(110.dp))
+            AjahFiLogo()
+            if (step == 1) {
+                Spacer(Modifier.height(18.dp))
                 Text(
-                    stringResource(R.string.create_account),
-                    style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold
+                    lang.getT("Create Account", "खाता बनाएं", "ଖାତା ତିଆରି କରନ୍ତୁ"),
+                    fontSize = 22.sp, fontWeight = FontWeight.Bold, color = LoginWelcomeGreen
                 )
+                Spacer(Modifier.height(5.dp))
                 Text(
-                    stringResource(R.string.register_subtitle),
-                    style = MaterialTheme.typography.bodyMedium, color = Color.Gray, textAlign = TextAlign.Center
+                    lang.getT("Sign up to get started", "आरंभ करने के लिए साइन अप करें", "ଆରମ୍ଭ କରିବାକୁ ସାଇନ୍ ଅପ୍ କରନ୍ତୁ"),
+                    fontSize = 14.sp, color = LoginNavy, fontWeight = FontWeight.Medium
                 )
-                Spacer(modifier = Modifier.height(32.dp))
-
-                if (step == 1) {
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) name = it },
-                        placeholder = { Text(stringResource(R.string.full_name), color = Color.Gray) },
-                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = Color.DarkGray) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f), focusedBorderColor = PrimaryGreen)
+                Spacer(Modifier.height(16.dp))
+                LoginField(
+                    value = name,
+                    onValueChange = { if (it.all { c -> c.isLetter() || c.isWhitespace() }) name = it },
+                    placeholder = lang.getT("Enter name", "नाम दर्ज करें", "ନାମ ଲେଖନ୍ତୁ"),
+                    leading = Icons.Default.Person
+                )
+                Spacer(Modifier.height(14.dp))
+                LoginField(
+                    value = phone,
+                    onValueChange = { if (it.length <= 10 && it.all(Char::isDigit)) phone = it },
+                    placeholder = lang.getT("Enter mobile number", "मोबाइल नंबर दर्ज करें", "ମୋବାଇଲ୍ ନମ୍ବର ଲେଖନ୍ତୁ"),
+                    leading = Icons.Default.Phone,
+                    keyboardType = KeyboardType.Phone
+                )
+                Spacer(Modifier.height(18.dp))
+                Button(
+                    onClick = {
+                        when {
+                            name.isBlank() -> Toast.makeText(context, lang.getT("Enter your name", "अपना नाम दर्ज करें", "ଆପଣଙ୍କ ନାମ ଲେଖନ୍ତୁ"), Toast.LENGTH_SHORT).show()
+                            phone.length != 10 -> Toast.makeText(context, lang.getT("Enter a valid 10-digit mobile number", "मान्य 10 अंकों का मोबाइल नंबर दर्ज करें", "ଏକ ବୈଧ ୧୦ ଅଙ୍କ ମୋବାଇଲ୍ ନମ୍ବର ଲେଖନ୍ତୁ"), Toast.LENGTH_SHORT).show()
+                            selectedRole == null -> Toast.makeText(context, lang.getT("Choose a role", "एक भूमिका चुनें", "ଏକ ଭୂମିକା ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show()
+                            isPasswordMode -> onVerifyOtp(selectedRole!!, name, phone, "NA")
+                            else -> authViewModel.sendSignupOtp(name, phone, selectedRole!!)
+                        }
+                    },
+                    enabled = !isAuthLoading,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = LoginButtonGreen, contentColor = Color.White,
+                        disabledContainerColor = LoginButtonGreen, disabledContentColor = Color.White
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = phone,
-                        onValueChange = { if (it.length <= 10) phone = it },
-                        placeholder = { Text(stringResource(R.string.mobile_number), color = Color.Gray) },
-                        leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = Color.DarkGray) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f), focusedBorderColor = PrimaryGreen)
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = {
-                            if (selectedRole == null) {
-                                Toast.makeText(context, context.getString(R.string.scroll_choose_role_toast), Toast.LENGTH_SHORT).show()
-                            } else if (isPasswordMode) {
-                                // No OTP step: continue to the profile form, which collects
-                                // the password and submits the registration for approval.
-                                onVerifyOtp(selectedRole!!, name, phone, "NA")
-                            } else {
-                                authViewModel.sendSignupOtp(name, phone, selectedRole!!)
-                            }
-                        },
-                        enabled = (name.isNotBlank() && phone.length == 10) && !isAuthLoading,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f))
-                    ) {
-                        Text(
-                            if (isPasswordMode) stringResource(R.string.create_account)
-                            else stringResource(R.string.send_otp),
-                            fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
+                ) {
                     Text(
-                        text = stringResource(R.string.already_have_account_login),
-                        color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                        if (isPasswordMode) lang.getT("Sign Up", "साइन अप करें", "ସାଇନ୍ ଅପ୍")
+                        else lang.getT("Send OTP", "ओटीपी भेजें", "ଓଟିପି ପଠାନ୍ତୁ"),
+                        fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(lang.getT("Already have an account? ", "पहले से खाता है? ", "ପୂର୍ବରୁ ଖାତା ଅଛି? "), color = LoginNavy, fontSize = 14.sp)
+                    Text(
+                        lang.getT("Sign In", "साइन इन करें", "ସାଇନ୍ ଇନ୍"),
+                        color = LoginWelcomeGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                        textDecoration = TextDecoration.Underline,
                         modifier = Modifier.clickable { onNavigateToLogin() }
                     )
-                } else {
-                    Text(stringResource(R.string.enter_otp_sent_to, phone), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
-                    Spacer(modifier = Modifier.height(24.dp))
-                    OtpInput(otp, { otp = it }, onDone = {
-                        if (otp.length == 6) {
-                            val allGranted = permissionsToRequest.all {
-                                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-                            }
-                            if (allGranted) {
-                                onVerifyOtp(selectedRole!!, name, phone, otp)
-                            } else {
-                                showPermissionDialog = true
-                            }
-                        }
-                    })
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = {
-                            val allGranted = permissionsToRequest.all {
-                                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-                            }
-                            if (allGranted) {
-                                onVerifyOtp(selectedRole!!, name, phone, otp)
-                            } else {
-                                showPermissionDialog = true
-                            }
-                        },
-                        enabled = otp.length == 6,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
-                    ) { Text(stringResource(R.string.verify_next), fontSize = 16.sp, fontWeight = FontWeight.Bold) }
-
-                    TextButton(onClick = { step = 1 }) { Text(stringResource(R.string.go_back), color = PrimaryGreen) }
                 }
-            }
-        }
-
-        if (step == 1) {
-            // Divider
-            Row(modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.LightGray.copy(alpha = 0.5f))
-                Text(stringResource(R.string.choose_a_role), modifier = Modifier.padding(horizontal = 16.dp), color = Color.Gray, fontSize = 14.sp)
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.LightGray.copy(alpha = 0.5f))
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Role Selection
-            Row(modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                RoleCard(UserRole.SURAKSHA_DIDI, stringResource(R.string.role_suraksha_didi), Icons.Default.Person, selectedRole == UserRole.SURAKSHA_DIDI, modifier = Modifier.weight(1f)) { selectedRole = it }
-                RoleCard(UserRole.FARMER, stringResource(R.string.role_farmer), Icons.Default.Agriculture, selectedRole == UserRole.FARMER, modifier = Modifier.weight(1f)) { selectedRole = it }
-                RoleCard(UserRole.COORDINATOR, stringResource(R.string.role_coordinator), Icons.Default.Badge, selectedRole == UserRole.COORDINATOR, modifier = Modifier.weight(1f)) { selectedRole = it }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-        }
-
-        // Footer
-        Row(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.version_label, "1.0.0"), color = Color.Gray, fontSize = 12.sp)
-            Surface(color = Color(0xFFE8F5E9), shape = RoundedCornerShape(16.dp)) {
-                Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF4CAF50)))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.online), color = Color(0xFF4CAF50), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(14.dp))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    HorizontalDivider(modifier = Modifier.weight(1f), thickness = 2.dp, color = LoginGold)
+                    Text(
+                        lang.getT("Choose a Role", "एक भूमिका चुनें", "ଏକ ଭୂମିକା ବାଛନ୍ତୁ"),
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp
+                    )
+                    HorizontalDivider(modifier = Modifier.weight(1f), thickness = 2.dp, color = LoginGold)
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    LoginRoleCard(UserRole.SURAKSHA_DIDI, lang.getT("Suraksha", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି"), R.drawable.avatar_didi, selectedRole == UserRole.SURAKSHA_DIDI, modifier = Modifier.weight(1f)) { selectedRole = it }
+                    LoginRoleCard(UserRole.FARMER, lang.getT("Farmer", "किसान", "କୃଷକ"), R.drawable.avatar_farmer, selectedRole == UserRole.FARMER, modifier = Modifier.weight(1f)) { selectedRole = it }
+                    LoginRoleCard(UserRole.COORDINATOR, lang.getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ"), R.drawable.avatar_coordinator, selectedRole == UserRole.COORDINATOR, modifier = Modifier.weight(1f)) { selectedRole = it }
+                }
+                Spacer(Modifier.weight(1f))            // pin version to the bottom
+                Text(
+                    lang.getT("Version 2.0.0", "संस्करण 2.0.0", "ସଂସ୍କରଣ ୨.୦.୦"),
+                    fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.White
+                )
+                Spacer(Modifier.height(14.dp))
+            } else {
+                Spacer(Modifier.height(28.dp))
+                Surface(color = Color.White, shape = RoundedCornerShape(20.dp), shadowElevation = 4.dp, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(lang.getT("Enter the OTP sent to +91 $phone", "+91 $phone पर भेजा गया ओटीपी दर्ज करें", "+91 $phone କୁ ପଠାଯାଇଥିବା ଓଟିପି ଦିଅନ୍ତୁ"), fontSize = 14.sp, textAlign = TextAlign.Center, color = LoginNavy)
+                        Spacer(Modifier.height(18.dp))
+                        OtpInput(otp, { otp = it }, onDone = {
+                            if (otp.length == 6) {
+                                val allGranted = permissionsToRequest.all {
+                                    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                                }
+                                if (allGranted) onVerifyOtp(selectedRole!!, name, phone, otp) else showPermissionDialog = true
+                            }
+                        })
+                        Spacer(Modifier.height(18.dp))
+                        Button(
+                            onClick = {
+                                val allGranted = permissionsToRequest.all {
+                                    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                                }
+                                if (allGranted) onVerifyOtp(selectedRole!!, name, phone, otp) else showPermissionDialog = true
+                            },
+                            enabled = otp.length == 6,
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = LoginButtonGreen)
+                        ) { Text(stringResource(R.string.verify_next), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White) }
+                        TextButton(onClick = { step = 1 }) { Text(stringResource(R.string.go_back), color = LoginWelcomeGreen) }
+                    }
                 }
             }
         }
@@ -809,16 +738,26 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
 
 // --- SCREENS ---
 
+
+private val LoginNavy = Color(0xFF1C3B5E)
+private val LoginWelcomeGreen = Color(0xFF2E7D32)
+private val LoginButtonGreen = Color(0xFF15672C)
+private val LoginGold = Color(0xFFC79A3B)
+private val RoleCardCream = Color(0xFFF7F0DD)
+
 @Composable
 fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Unit) {
     var phone by remember { mutableStateOf("") }
     var otp by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var showForgotDialog by remember { mutableStateOf(false) }
     var step by remember { mutableIntStateOf(1) }
     var selectedRole by remember { mutableStateOf<UserRole?>(null) }
 
     val context = LocalContext.current
     val languageState = LocalAppLanguage.current
+    val lang = languageState.value
 
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.authState.collectAsState()
@@ -849,329 +788,318 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
     ) { permissions ->
         val allGranted = permissions.values.all { it }
         if (!allGranted) {
-            Toast.makeText(context, languageState.value.getT("Required permissions denied.", "आवश्यक अनुमतियां अस्वीकार कर दी गईं।", "ଆବଶ୍ୟକ ଅନୁମତି ପ୍ରତ୍ୟାଖ୍ୟାନ କରାଯାଇଛି |"), Toast.LENGTH_LONG).show()
+            Toast.makeText(context, lang.getT("Required permissions denied.", "आवश्यक अनुमतियां अस्वीकार कर दी गईं।", "ଆବଶ୍ୟକ ଅନୁମତି ପ୍ରତ୍ୟାଖ୍ୟାନ କରାଯାଇଛି |"), Toast.LENGTH_LONG).show()
         }
     }
-    
+
     if (showPermissionDialog) {
         AlertDialog(
             onDismissRequest = { showPermissionDialog = false },
-            title = { Text(languageState.value.getT("Permissions Required", "अनुमतियाँ आवश्यक हैं", "ଅନୁମତି ଆବଶ୍ୟକ"), fontWeight = FontWeight.Bold, color = Color.Black) },
-            text = { 
-                Text(languageState.value.getT(
-                    "This app needs Camera and Location access to verify livestock and record service areas.",
-                    "पशुधन को सत्यापित करने और सेवा क्षेत्रों को रिकॉर्ड करने के लिए इस ऐप को कैमरा और स्थान पहुंच की आवश्यकता है।",
-                    "ପ୍ରାଣୀସମ୍ପଦ ଯାଞ୍ଚ କରିବା ଏବଂ ସେବା କ୍ଷେତ୍ର ରେକର୍ଡ କରିବାକୁ ଏହି ଆପ୍‌ କ୍ୟାମେରା ଏବଂ ଅବସ୍ଥାନ ଅନୁମତି ଆବଶ୍ୟକ କରେ |"
-                ), color = Color.Black)
-            },
+            title = { Text(lang.getT("Permissions Required", "अनुमतियाँ आवश्यक हैं", "ଅନୁମତି ଆବଶ୍ୟକ"), fontWeight = FontWeight.Bold, color = Color.Black) },
+            text = { Text(lang.getT(
+                "This app needs Camera and Location access to verify livestock and record service areas.",
+                "पशुधन को सत्यापित करने और सेवा क्षेत्रों को रिकॉर्ड करने के लिए इस ऐप को कैमरा और स्थान पहुंच की आवश्यकता है।",
+                "ପ୍ରାଣୀସମ୍ପଦ ଯାଞ୍ଚ କରିବା ଏବଂ ସେବା କ୍ଷେତ୍ର ରେକର୍ଡ କରିବାକୁ ଏହି ଆପ୍‌ କ୍ୟାମେରା ଏବଂ ଅବସ୍ଥାନ ଅନୁମତି ଆବଶ୍ୟକ କରେ |"
+            ), color = Color.Black) },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        showPermissionDialog = false
-                        permissionLauncher.launch(permissionsToRequest)
-                    }
-                ) {
-                    Text(languageState.value.getT("Allow", "अनुमति दें", "ଅନୁମତି ଦିଅନ୍ତୁ"))
-                }
+                TextButton(onClick = {
+                    showPermissionDialog = false
+                    permissionLauncher.launch(permissionsToRequest)
+                }) { Text(lang.getT("Allow", "अनुमति दें", "ଅନୁମତି ଦିଅନ୍ତୁ")) }
             },
             dismissButton = {
-                TextButton(onClick = { showPermissionDialog = false }) {
-                    Text(languageState.value.getT("Deny", "अस्वीकार करें", "ପ୍ରତ୍ୟାଖ୍ୟାନ କରନ୍ତୁ"))
-                }
+                TextButton(onClick = { showPermissionDialog = false }) { Text(lang.getT("Deny", "अस्वीकार करें", "ପ୍ରତ୍ୟାଖ୍ୟାନ କରନ୍ତୁ")) }
             },
             shape = RoundedCornerShape(16.dp)
         )
     }
 
-    var showLanguagePicker by remember { mutableStateOf(false) }
+    if (showForgotDialog) ForgotPasswordDialog(lang) { showForgotDialog = false }
 
-    val backgroundColor = Color(0xFFF8F9F5)
-    
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .navigationBarsPadding()
-            .background(backgroundColor)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Green Header
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8F4E7))) {
+        Image(
+            painter = painterResource(R.drawable.ic_bg_login),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        // Soft cream scrim: keeps text legible over the bright lower hills and
+        // gives the photo the faded, pastel look of the design reference.
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(260.dp)
-                .clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp))
-                .background(PrimaryGreen)
-        ) {
-            // Language selector
-            Surface(
-                onClick = { showLanguagePicker = true },
-                color = Color.White.copy(alpha = 0.15f),
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 48.dp, end = 24.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Public, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(languageState.value.code, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                }
-
-                MaterialTheme(
-                    colorScheme = MaterialTheme.colorScheme.copy(surface = Color.White.copy(alpha = 0.9f))
-                ) {
-                    DropdownMenu(
-                        expanded = showLanguagePicker,
-                        onDismissRequest = { showLanguagePicker = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("English") },
-                            onClick = {
-                                languageState.value = AppLanguage.ENGLISH
-                                showLanguagePicker = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("हिन्दी") },
-                            onClick = {
-                                languageState.value = AppLanguage.HINDI
-                                showLanguagePicker = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("ଓଡ଼ିଆ") },
-                            onClick = {
-                                languageState.value = AppLanguage.ODIA
-                                showLanguagePicker = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            // Logo
-            Icon(
-                painterResource(R.drawable.ic_logo_custom),
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(240.dp)
-                    .offset(y = 20.dp)
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    0.0f to Color(0xFFFBF6E9).copy(alpha = 0.05f),
+                    0.42f to Color(0xFFFBF6E9).copy(alpha = 0.55f),
+                    0.70f to Color(0xFFF4EFDC).copy(alpha = 0.42f),
+                    1.0f to Color(0xFFF0F3DB).copy(alpha = 0.20f)
+                )
             )
-        }
-
-        // Login Card
-        Card(
+        )
+        // Fixed layout mapped from the 709x1536 spec (scale ~0.58 dp/px). No scroll.
+        Column(
             modifier = Modifier
-                .padding(horizontal = 24.dp)
-                .offset(y = (-40).dp)
-                .fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                .fillMaxSize()
+                .navigationBarsPadding()
+                .padding(horizontal = 50.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.padding(vertical = 32.dp, horizontal = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            Spacer(Modifier.height(110.dp))            // top padding 190px
+            AjahFiLogo()                               // logo 370x165px
+            if (step == 1) {
+                Spacer(Modifier.height(15.dp))         // gap logo -> Welcome
                 Text(
-                    languageState.value.getT("Welcome Back", "वापसी पर स्वागत है", "ପୁଣି ସ୍ଵାଗତ"),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
+                    lang.getT("Welcome Back!", "वापसी पर स्वागत है!", "ପୁଣି ସ୍ଵାଗତ!"),
+                    fontSize = 22.sp, fontWeight = FontWeight.Bold, color = LoginWelcomeGreen  // title
                 )
+                Spacer(Modifier.height(5.dp))          // gap from title
                 Text(
-                    languageState.value.getT("Login to your account to continue", "जारी रखने के लिए लॉगिन करें", "ଆଗକୁ ବଢିବା ପାଇଁ ଲଗଇନ୍ କରନ୍ତୁ"),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
+                    lang.getT("Sign in to continue", "जारी रखने के लिए साइन इन करें", "ଆଗକୁ ବଢିବା ପାଇଁ ସାଇନ୍ ଇନ୍ କରନ୍ତୁ"),
+                    fontSize = 14.sp, color = LoginNavy, fontWeight = FontWeight.Medium       // subtitle
                 )
-                Spacer(modifier = Modifier.height(32.dp))
-
-                if (step == 1) {
-                    OutlinedTextField(
-                        value = phone,
-                        onValueChange = { if (it.length <= 10) phone = it },
-                        placeholder = { Text(languageState.value.getT("Mobile Number", "मोबाइल नंबर", "ମୋବାଇଲ୍ ନମ୍ବର"), color = Color.Gray) },
-                        leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = Color.DarkGray) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black,
-                            unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),
-                            focusedBorderColor = PrimaryGreen
-                        )
+                Spacer(Modifier.height(14.dp))         // gap subtitle -> fields
+                LoginField(
+                    value = phone,
+                    onValueChange = { if (it.length <= 10 && it.all(Char::isDigit)) phone = it },
+                    placeholder = lang.getT("Enter mobile number", "मोबाइल नंबर दर्ज करें", "ମୋବାଇଲ୍ ନମ୍ବର ଲେଖନ୍ତୁ"),
+                    leading = Icons.Default.Phone,
+                    keyboardType = KeyboardType.Phone
+                )
+                if (isPasswordMode) {
+                    Spacer(Modifier.height(12.dp))     // gap between fields
+                    LoginField(
+                        value = password,
+                        onValueChange = { password = it },
+                        placeholder = lang.getT("Enter password", "पासवर्ड दर्ज करें", "ପାସୱାର୍ଡ ଲେଖନ୍ତୁ"),
+                        leading = Icons.Default.Lock,
+                        keyboardType = KeyboardType.Password,
+                        isPassword = true,
+                        passwordVisible = passwordVisible,
+                        onTogglePassword = { passwordVisible = !passwordVisible }
                     )
-                    if (isPasswordMode) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        OutlinedTextField(
-                            value = password,
-                            onValueChange = { password = it },
-                            placeholder = { Text(languageState.value.getT("Password", "पासवर्ड", "ପାସୱାର୍ଡ"), color = Color.Gray) },
-                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Color.DarkGray) },
-                            visualTransformation = PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = Color.Black,
-                                unfocusedTextColor = Color.Black,
-                                unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),
-                                focusedBorderColor = PrimaryGreen
-                            )
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = {
-                            if (selectedRole == null) {
-                                Toast.makeText(context, languageState.value.getT("Scroll down and choose a role", "नीचे स्क्रॉल करें और एक भूमिका चुनें", "ତଳକୁ ସ୍କ୍ରୋଲ୍ କରନ୍ତୁ ଏବଂ ଏକ ଭୂମିକା ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show()
-                            } else if (isPasswordMode) {
-                                authViewModel.passwordLogin(phone, password, selectedRole!!)
-                            } else {
-                                authViewModel.sendOtp(phone, selectedRole!!)
-                            }
-                        },
-                        enabled = phone.length == 10 && (!isPasswordMode || password.isNotBlank()) && !isAuthLoading,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = PrimaryGreen,
-                            disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f)
-                        )
-                    ) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         Text(
-                            if (isPasswordMode) languageState.value.getT("Login", "लॉगिन करें", "ଲଗଇନ୍")
-                            else languageState.value.getT("Send OTP", "ओटीपी भेजें", "ଓଟିପି ପଠାନ୍ତୁ"),
-                            fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White
+                            lang.getT("Forgot Password?", "पासवर्ड भूल गए?", "ପାସୱାର୍ଡ ଭୁଲିଗଲେ?"),
+                            color = LoginWelcomeGreen, fontWeight = FontWeight.SemiBold, fontSize = 11.sp,  // forgot password
+                            textDecoration = TextDecoration.Underline,
+                            modifier = Modifier.clickable { showForgotDialog = true }
                         )
                     }
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(Modifier.height(6.dp))      // gap forgot -> Sign In
+                } else {
+                    Spacer(Modifier.height(22.dp))
+                }
+                Button(
+                    onClick = {
+                        when {
+                            phone.length != 10 -> Toast.makeText(context, lang.getT("Enter a valid 10-digit mobile number", "मान्य 10 अंकों का मोबाइल नंबर दर्ज करें", "ଏକ ବୈଧ ୧୦ ଅଙ୍କ ମୋବାଇଲ୍ ନମ୍ବର ଲେଖନ୍ତୁ"), Toast.LENGTH_SHORT).show()
+                            isPasswordMode && password.isBlank() -> Toast.makeText(context, lang.getT("Enter your password", "अपना पासवर्ड दर्ज करें", "ଆପଣଙ୍କ ପାସୱାର୍ଡ ଲେଖନ୍ତୁ"), Toast.LENGTH_SHORT).show()
+                            selectedRole == null -> Toast.makeText(context, lang.getT("Choose a role", "एक भूमिका चुनें", "ଏକ ଭୂମିକା ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show()
+                            isPasswordMode -> authViewModel.passwordLogin(phone, password, selectedRole!!)
+                            else -> authViewModel.sendOtp(phone, selectedRole!!)
+                        }
+                    },
+                    enabled = !isAuthLoading,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),   // button 480x82px
+                    shape = RoundedCornerShape(12.dp),                  // radius 18px
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = LoginButtonGreen, contentColor = Color.White,
+                        disabledContainerColor = LoginButtonGreen, disabledContentColor = Color.White
+                    )
+                ) {
                     Text(
-                        text = languageState.value.getT("Don't have an account? Sign Up", "खाता नहीं है? साइन अप करें", "ଖାତା ନାହିଁ? ସାଇନ୍ ଅପ୍"),
-                        color = PrimaryGreen,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
+                        if (isPasswordMode) lang.getT("Sign In", "साइन इन करें", "ସାଇନ୍ ଇନ୍")
+                        else lang.getT("Send OTP", "ओटीपी भेजें", "ଓଟିପି ପଠାନ୍ତୁ"),
+                        fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White
+                    )
+                }
+                Spacer(Modifier.height(10.dp))         // gap Sign In -> signup
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(lang.getT("Don't have an account? ", "खाता नहीं है? ", "ଖାତା ନାହିଁ? "), color = LoginNavy, fontSize = 14.sp)
+                    Text(
+                        lang.getT("Sign Up", "साइन अप करें", "ସାଇନ୍ ଅପ୍"),
+                        color = LoginWelcomeGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                        textDecoration = TextDecoration.Underline,
                         modifier = Modifier.clickable { onNavigateToSignUp() }
                     )
-                } else {
-                    Text(languageState.value.getT("Enter 6-digit OTP sent to +91 $phone", "+91 $phone पर भेजा गया ओटीपी दर्ज करें", "+91 $phone କୁ ପଠାଯାଇଥିବା ଓଟିପି ଦିଅନ୍ତୁ"), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
-                    Spacer(modifier = Modifier.height(24.dp))
-                    OtpInput(otp, { otp = it }, onDone = { 
-                        if (otp.length == 6) {
-                            val allGranted = permissionsToRequest.all {
-                                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-                            }
-                            if (allGranted) {
-                                authViewModel.verifyOtp(phone, otp, selectedRole!!)
-                            } else {
-                                showPermissionDialog = true
-                            }
-                        }
-                    })
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = { 
-                            val allGranted = permissionsToRequest.all {
-                                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-                            }
-                            if (allGranted) {
-                                authViewModel.verifyOtp(phone, otp, selectedRole!!)
-                            } else {
-                                showPermissionDialog = true
-                            }
-                        },
-                        enabled = otp.length == 6,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
-                    ) { Text(languageState.value.getT("Verify & Login", "सत्यापित करें और लॉगिन", "ଯାଞ୍ଚ ଏବଂ ଲଗଇନ୍"), fontSize = 16.sp, fontWeight = FontWeight.Bold) }
-                    
-                    TextButton(onClick = { step = 1 }) { Text(languageState.value.getT("Change Number", "नंबर बदलें", "ନମ୍ବର ବଦଳାନ୍ତୁ"), color = PrimaryGreen) }
                 }
-            }
-        }
-
-        if (step == 1) {
-            // Divider
-            Row(
-                modifier = Modifier
-                    .padding(horizontal = 24.dp)
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.LightGray.copy(alpha = 0.5f))
+                Spacer(Modifier.height(13.dp))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    HorizontalDivider(modifier = Modifier.weight(1f), thickness = 2.dp, color = LoginGold)
+                    Text(
+                        lang.getT("Choose a Role", "एक भूमिका चुनें", "ଏକ ଭୂମିକା ବାଛନ୍ତୁ"),
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp
+                    )
+                    HorizontalDivider(modifier = Modifier.weight(1f), thickness = 2.dp, color = LoginGold)
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {   // gap 20px
+                    LoginRoleCard(UserRole.SURAKSHA_DIDI, lang.getT("Suraksha", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି"), R.drawable.avatar_didi, selectedRole == UserRole.SURAKSHA_DIDI, modifier = Modifier.weight(1f)) { selectedRole = it }
+                    LoginRoleCard(UserRole.FARMER, lang.getT("Farmer", "किसान", "କୃଷକ"), R.drawable.avatar_farmer, selectedRole == UserRole.FARMER, modifier = Modifier.weight(1f)) { selectedRole = it }
+                    LoginRoleCard(UserRole.COORDINATOR, lang.getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ"), R.drawable.avatar_coordinator, selectedRole == UserRole.COORDINATOR, modifier = Modifier.weight(1f)) { selectedRole = it }
+                }
+                Spacer(Modifier.weight(1f))            // pin version to the bottom
                 Text(
-                    languageState.value.getT("choose a role", "एक भूमिका चुनें", "ଗୋଟିଏ ଭୂମିକା ବାଛନ୍ତୁ"),
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = Color.Gray,
-                    fontSize = 14.sp
+                    lang.getT("Version 2.0.0", "संस्करण 2.0.0", "ସଂସ୍କରଣ ୨.୦.୦"),
+                    fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.White
                 )
-                HorizontalDivider(modifier = Modifier.weight(1f), color = Color.LightGray.copy(alpha = 0.5f))
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Role Selection
-            Row(
-                modifier = Modifier
-                    .padding(horizontal = 24.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                RoleCard(UserRole.SURAKSHA_DIDI, languageState.value.getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି"), Icons.Default.Person, selectedRole == UserRole.SURAKSHA_DIDI, modifier = Modifier.weight(1f)) { selectedRole = it }
-                RoleCard(UserRole.FARMER, languageState.value.getT("Farmer", "किसान", "କୃଷକ"), Icons.Default.Agriculture, selectedRole == UserRole.FARMER, modifier = Modifier.weight(1f)) { selectedRole = it }
-                RoleCard(UserRole.COORDINATOR, languageState.value.getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ"), Icons.Default.Badge, selectedRole == UserRole.COORDINATOR, modifier = Modifier.weight(1f)) { selectedRole = it }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-        }
-
-        // Footer
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 24.dp, vertical = 16.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(languageState.value.getT("Version 1.0.0", "संस्करण 1.0.0", "ସଂସ୍କରଣ ୧.୦.୦"), color = Color.Gray, fontSize = 12.sp)
-            Surface(
-                color = Color(0xFFE8F5E9),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF4CAF50)))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(languageState.value.getT("Online", "ऑनलाइन", "ଅନଲାଇନ୍"), color = Color(0xFF4CAF50), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(14.dp))
+            } else {
+                Spacer(Modifier.height(28.dp))
+                Surface(color = Color.White, shape = RoundedCornerShape(20.dp), shadowElevation = 4.dp, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(lang.getT("Enter 6-digit OTP sent to +91 $phone", "+91 $phone पर भेजा गया ओटीपी दर्ज करें", "+91 $phone କୁ ପଠାଯାଇଥିବା ଓଟିପି ଦିଅନ୍ତୁ"), fontSize = 14.sp, textAlign = TextAlign.Center, color = LoginNavy)
+                        Spacer(Modifier.height(18.dp))
+                        OtpInput(otp, { otp = it }, onDone = {
+                            if (otp.length == 6) {
+                                val allGranted = permissionsToRequest.all {
+                                    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                                }
+                                if (allGranted) authViewModel.verifyOtp(phone, otp, selectedRole!!) else showPermissionDialog = true
+                            }
+                        })
+                        Spacer(Modifier.height(18.dp))
+                        Button(
+                            onClick = {
+                                val allGranted = permissionsToRequest.all {
+                                    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                                }
+                                if (allGranted) authViewModel.verifyOtp(phone, otp, selectedRole!!) else showPermissionDialog = true
+                            },
+                            enabled = otp.length == 6,
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = LoginButtonGreen)
+                        ) { Text(lang.getT("Verify & Login", "सत्यापित करें और लॉगिन", "ଯାଞ୍ଚ ଏବଂ ଲଗଇନ୍"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White) }
+                        TextButton(onClick = { step = 1 }) { Text(lang.getT("Change Number", "नंबर बदलें", "ନମ୍ବର ବଦଳାନ୍ତୁ"), color = LoginWelcomeGreen) }
+                    }
                 }
             }
         }
     }
 }
 
+/** AjahFi brand lockup (shield + wordmark + tagline). */
+@Composable
+private fun AjahFiLogo() {
+    Image(
+        painter = painterResource(R.drawable.ic_ajahfi_logo),
+        contentDescription = "AjahFi",
+        contentScale = ContentScale.Fit,
+        modifier = Modifier.width(248.dp)
+    )
+}
+
+/** White rounded input field that floats over the landscape background. */
+@Composable
+private fun LoginField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    leading: ImageVector,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    isPassword: Boolean = false,
+    passwordVisible: Boolean = false,
+    onTogglePassword: (() -> Unit)? = null,
+) {
+    Surface(
+        color = Color.White,
+        shape = RoundedCornerShape(16.dp),
+        shadowElevation = 3.dp,
+        modifier = Modifier.fillMaxWidth().height(50.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(start = 18.dp, end = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(leading, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(14.dp))
+            Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                if (value.isEmpty()) {
+                    Text(placeholder, color = Color(0xFF9AA0A6), fontSize = 16.sp)
+                }
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    singleLine = true,
+                    textStyle = TextStyle(color = Color(0xFF1A1A1A), fontSize = 16.sp),
+                    cursorBrush = SolidColor(PrimaryGreen),
+                    visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
+                    keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            if (isPassword && onTogglePassword != null) {
+                IconButton(onClick = onTogglePassword) {
+                    Icon(
+                        if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        contentDescription = null,
+                        tint = Color(0xFF6D6D6D)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Cream role card with an illustrated avatar, used on the login screen. */
+@Composable
+private fun LoginRoleCard(
+    role: UserRole,
+    label: String,
+    avatar: Int,
+    isSelected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: (UserRole) -> Unit,
+) {
+    Card(
+        onClick = { onClick(role) },
+        colors = CardDefaults.cardColors(containerColor = RoleCardCream),
+        shape = RoundedCornerShape(18.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        modifier = modifier
+            .height(108.dp)
+            .border(
+                width = if (isSelected) 2.5.dp else 0.dp,
+                color = if (isSelected) LoginWelcomeGreen else Color.Transparent,
+                shape = RoundedCornerShape(18.dp)
+            )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(vertical = 8.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Image(
+                painter = painterResource(avatar),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxWidth().weight(1f)
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                label,
+                fontSize = 12.sp,
+                lineHeight = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = LoginWelcomeGreen,
+                textAlign = TextAlign.Center,
+                maxLines = 2
+            )
+        }
+    }
+}
+
 @Composable
 fun RoleCard(role: UserRole, label: String, icon: ImageVector, isSelected: Boolean, modifier: Modifier = Modifier, onClick: (UserRole) -> Unit) {
-    val roleColor = when(role) {
+    val roleColor = when (role) {
         UserRole.SURAKSHA_DIDI -> PrimaryGreen
         UserRole.FARMER -> PrimaryBlue
         UserRole.COORDINATOR -> CoordinatorOrange
     }
-    
-    val roleBgColor = when(role) {
+
+    val roleBgColor = when (role) {
         UserRole.SURAKSHA_DIDI -> Color(0xFFE8F5E9)
         UserRole.FARMER -> Color(0xFFE3F2FD)
         UserRole.COORDINATOR -> Color(0xFFFFF3E0)
@@ -1179,42 +1107,218 @@ fun RoleCard(role: UserRole, label: String, icon: ImageVector, isSelected: Boole
 
     Card(
         onClick = { onClick(role) },
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) roleBgColor else Color.White,
-        ),
+        colors = CardDefaults.cardColors(containerColor = if (isSelected) roleBgColor else Color.White),
         modifier = modifier
-            .height(110.dp)
+            .height(126.dp)
             .border(
-                width = 1.dp,
+                width = if (isSelected) 2.dp else 1.dp,
                 color = if (isSelected) roleColor else Color.LightGray.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(18.dp)
             ),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 2.dp else 0.dp)
+        shape = RoundedCornerShape(18.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 3.dp else 1.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().padding(8.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = if (isSelected) roleColor else Color.DarkGray,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
+            Box(
+                modifier = Modifier.size(56.dp).clip(CircleShape).background(roleBgColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = roleColor, modifier = Modifier.size(30.dp))
+            }
+            Spacer(Modifier.height(10.dp))
             Text(
                 label,
-                fontSize = 10.sp,
-                lineHeight = 12.sp,
+                fontSize = 11.sp,
+                lineHeight = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isSelected) roleColor else Color.DarkGray,
+                color = if (isSelected) roleColor else Color(0xFF37474F),
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 4.dp)
+                maxLines = 2,
+                modifier = Modifier.padding(horizontal = 2.dp)
             )
         }
     }
+}
+
+// ------------------------------------------------------------------ auth screen UI helpers
+
+/** Cream backdrop used by the login and sign-up screens (matches the AjahFi brand mock). */
+private val AuthCream = Color(0xFFFBF6EA)
+
+/** The AjahFi lockup (goat shield + wordmark + tagline) drawn in its natural colour. */
+@Composable
+private fun AuthLogo() {
+    Image(
+        painter = painterResource(R.drawable.ic_logo_custom),
+        contentDescription = "AjahFi",
+        contentScale = ContentScale.Fit,
+        modifier = Modifier.fillMaxWidth(0.72f).heightIn(max = 96.dp)
+    )
+}
+
+@Composable
+private fun LanguageSelector(languageState: MutableState<AppLanguage>) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        Surface(
+            onClick = { expanded = true },
+            color = Color.White,
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
+            shadowElevation = 1.dp
+        ) {
+            Row(
+                Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Public, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(languageState.value.label, color = DarkGreen, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = DarkGreen, modifier = Modifier.size(18.dp))
+            }
+        }
+        MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(surface = Color.White)) {
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                DropdownMenuItem(text = { Text("English") }, onClick = { languageState.value = AppLanguage.ENGLISH; expanded = false })
+                DropdownMenuItem(text = { Text("हिन्दी") }, onClick = { languageState.value = AppLanguage.HINDI; expanded = false })
+                DropdownMenuItem(text = { Text("ଓଡ଼ିଆ") }, onClick = { languageState.value = AppLanguage.ODIA; expanded = false })
+            }
+        }
+    }
+}
+
+/** Rounded, icon-led text field shared by both auth screens. */
+@Composable
+private fun AuthField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    leading: ImageVector,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    isPassword: Boolean = false,
+    passwordVisible: Boolean = false,
+    onTogglePassword: (() -> Unit)? = null,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = { Text(placeholder, color = Color(0xFF9E9E9E)) },
+        leadingIcon = { Icon(leading, contentDescription = null, tint = Color(0xFF6D6D6D)) },
+        trailingIcon = if (isPassword && onTogglePassword != null) {
+            {
+                IconButton(onClick = onTogglePassword) {
+                    Icon(
+                        if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        contentDescription = null,
+                        tint = Color(0xFF6D6D6D)
+                    )
+                }
+            }
+        } else null,
+        visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedTextColor = Color.Black,
+            unfocusedTextColor = Color.Black,
+            focusedContainerColor = Color.White,
+            unfocusedContainerColor = Color(0xFFF7F7F2),
+            unfocusedBorderColor = Color(0xFFE0E0E0),
+            focusedBorderColor = PrimaryGreen
+        )
+    )
+}
+
+@Composable
+private fun ChooseRoleHeader(lang: AppLanguage) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Box(Modifier.width(28.dp).height(2.dp).clip(RoundedCornerShape(1.dp)).background(PrimaryGreen.copy(alpha = 0.4f)))
+        Text(
+            lang.getT("Choose a Role", "एक भूमिका चुनें", "ଏକ ଭୂମିକା ବାଛନ୍ତୁ"),
+            modifier = Modifier.padding(horizontal = 12.dp),
+            color = DarkGreen, fontWeight = FontWeight.Bold, fontSize = 16.sp
+        )
+        Box(Modifier.width(28.dp).height(2.dp).clip(RoundedCornerShape(1.dp)).background(PrimaryGreen.copy(alpha = 0.4f)))
+    }
+}
+
+@Composable
+private fun FeatureBar(lang: AppLanguage) {
+    Surface(
+        color = Color.White,
+        shape = RoundedCornerShape(16.dp),
+        shadowElevation = 1.dp,
+        border = BorderStroke(1.dp, Color(0xFFEEEAD9)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(vertical = 14.dp, horizontal = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            FeatureItem(Icons.Default.Security, lang.getT("Secure &\nReliable", "सुरक्षित और\nविश्वसनीय", "ସୁରକ୍ଷିତ ଓ\nନିର୍ଭରଯୋଗ୍ୟ"), Modifier.weight(1f))
+            FeatureDivider()
+            FeatureItem(Icons.Default.Eco, lang.getT("Rural\nFocused", "ग्रामीण\nकेंद्रित", "ଗ୍ରାମୀଣ\nକେନ୍ଦ୍ରିତ"), Modifier.weight(1f))
+            FeatureDivider()
+            FeatureItem(Icons.Default.Pets, lang.getT("Livestock\nProtection", "पशुधन\nसुरक्षा", "ପଶୁଧନ\nସୁରକ୍ଷା"), Modifier.weight(1f))
+            FeatureDivider()
+            FeatureItem(Icons.Default.Groups, lang.getT("Empowering\nRural Wealth", "ग्रामीण\nसमृद्धि", "ଗ୍ରାମୀଣ\nସମୃଦ୍ଧି"), Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun FeatureItem(icon: ImageVector, label: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.padding(horizontal = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(icon, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.height(6.dp))
+        Text(label, fontSize = 9.sp, lineHeight = 11.sp, color = Color(0xFF5A5A5A), fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+private fun FeatureDivider() {
+    Box(Modifier.height(28.dp).width(1.dp).background(Color(0xFFE8E4D5)))
+}
+
+/**
+ * Guidance for password recovery. The app is password-only and SMS delivery is off
+ * in production, so a self-service reset can't deliver a code; recovery is handled by
+ * the Admin/Coordinator who manages the account.
+ */
+@Composable
+private fun ForgotPasswordDialog(lang: AppLanguage, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Default.Lock, contentDescription = null, tint = PrimaryGreen) },
+        title = { Text(lang.getT("Forgot Password?", "पासवर्ड भूल गए?", "ପାସୱାର୍ଡ ଭୁଲିଗଲେ?"), fontWeight = FontWeight.Bold, color = Color.Black) },
+        text = {
+            Text(
+                lang.getT(
+                    "To reset your password, please contact your Coordinator or the Admin who manages your account. They can set a new password for you.",
+                    "अपना पासवर्ड रीसेट करने के लिए, कृपया अपने समन्वयक या आपके खाते का प्रबंधन करने वाले एडमिन से संपर्क करें। वे आपके लिए नया पासवर्ड सेट कर सकते हैं।",
+                    "ଆପଣଙ୍କ ପାସୱାର୍ଡ ରିସେଟ୍ କରିବାକୁ, ଦଯାକରି ଆପଣଙ୍କ ସମନ୍ଵୟକାରୀ କିମ୍ବା ଆପଣଙ୍କ ଖାତା ପରିଚାଳନା କରୁଥିବା ଆଡମିନ୍‌ଙ୍କ ସହ ଯୋଗାଯୋଗ କରନ୍ତୁ। ସେମାନେ ଆପଣଙ୍କ ପାଇଁ ନୂଆ ପାସୱାର୍ଡ ସେଟ୍ କରିପାରିବେ।"
+                ),
+                color = Color.DarkGray
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(lang.getT("Got it", "समझ गया", "ବୁଝିଗଲି"), color = PrimaryGreen, fontWeight = FontWeight.Bold) }
+        },
+        shape = RoundedCornerShape(20.dp)
+    )
 }
 
 @Composable
@@ -4133,7 +4237,7 @@ fun FarmerBottomBar(navController: NavHostController) {
 @Composable
 fun LoginScreenPreview() {
     CommunityGoatTheme {
-        LoginScreen({}, {})
+        LoginScreen(onLoginSuccess = {}, onNavigateToSignUp = {})
     }
 }
 
