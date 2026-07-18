@@ -80,6 +80,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.LocationCity
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.material.icons.filled.ThumbUpOffAlt
 import androidx.compose.material.icons.filled.ThumbUpOffAlt
@@ -151,7 +159,8 @@ val LocalWindowSizeClass = staticCompositionLocalOf<WindowSizeClass?> { null }
 val LocalAppLanguage = compositionLocalOf { mutableStateOf(AppLanguage.ENGLISH) }
 val LocalProfileImage = compositionLocalOf { mutableStateOf<Uri?>(null) }
 val LocalNotificationsEnabled = compositionLocalOf { mutableStateOf(true) }
-private val PrimaryBlue = Color(0xFF1976D2)
+// Unified theme: farmer/coordinator dashboards use the same green as the rest.
+private val PrimaryBlue = PrimaryGreen
 
 @Composable
 fun AppNavigation(navController: NavHostController, sessionManager: SessionManager) {
@@ -3266,6 +3275,7 @@ fun EnrollmentPoliciesStep(farmer: String, results: List<EnrollGoatResponse>, go
 
 @Composable
 fun EnrollmentTextField(label: String, value: String, onValueChange: (String) -> Unit, placeholder: String = "", keyboardType: KeyboardType = KeyboardType.Text, prefix: String? = null, suffix: String? = null, leadingIcon: ImageVector? = null, trailingIcon: ImageVector? = null, onTrailingIconClick: (() -> Unit)? = null, readOnly: Boolean = false, borderColor: Color = PrimaryGreen, isPassword: Boolean = false) {
+    var passwordVisible by remember { mutableStateOf(false) }
     val styledLabel = buildAnnotatedString {
         label.forEach { char ->
             if (char == '*') {
@@ -3289,18 +3299,26 @@ fun EnrollmentTextField(label: String, value: String, onValueChange: (String) ->
                 keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
                 singleLine = true,
                 readOnly = readOnly,
-                visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
-                leadingIcon = leadingIcon?.let { { Icon(it, null, tint = Color.DarkGray) } },
-                trailingIcon = trailingIcon?.let { 
-                    { 
-                        if (onTrailingIconClick != null) {
-                            IconButton(onClick = onTrailingIconClick) {
-                                Icon(it, null, tint = Color.DarkGray)
+                visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
+                leadingIcon = leadingIcon?.let { { Icon(it, null, tint = borderColor) } },
+                trailingIcon = when {
+                    isPassword -> {
+                        {
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff, null, tint = Color(0xFF8A7A63))
                             }
-                        } else {
-                            Icon(it, null, tint = Color.DarkGray)
                         }
-                    } 
+                    }
+                    trailingIcon != null -> {
+                        {
+                            if (onTrailingIconClick != null) {
+                                IconButton(onClick = onTrailingIconClick) { Icon(trailingIcon, null, tint = Color.DarkGray) }
+                            } else {
+                                Icon(trailingIcon, null, tint = Color.DarkGray)
+                            }
+                        }
+                    }
+                    else -> null
                 },
                 prefix = prefix?.let { { Text(it, color = Color.Black) } },
                 suffix = suffix?.let { { Text(it, color = Color.Black) } },
@@ -3319,7 +3337,7 @@ fun EnrollmentTextField(label: String, value: String, onValueChange: (String) ->
 }
 
 @Composable
-fun EnrollmentDropdownField(label: String, selectedValue: String, options: List<String>, onValueChange: (String) -> Unit, borderColor: Color = PrimaryGreen, placeholder: String? = null) {
+fun EnrollmentDropdownField(label: String, selectedValue: String, options: List<String>, onValueChange: (String) -> Unit, borderColor: Color = PrimaryGreen, placeholder: String? = null, leadingIcon: ImageVector? = null) {
     var expanded by remember { mutableStateOf(false) }
     val styledLabel = buildAnnotatedString {
         label.forEach { char ->
@@ -3346,6 +3364,7 @@ fun EnrollmentDropdownField(label: String, selectedValue: String, options: List<
                 // Shown only while nothing is selected, so an empty field reads as a
                 // prompt rather than as a value.
                 placeholder = placeholder?.let { { Text(it, color = Color.Gray) } },
+                leadingIcon = leadingIcon?.let { { Icon(it, null, tint = borderColor) } },
                 trailingIcon = {
                     Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.DarkGray)
                 },
@@ -9291,7 +9310,7 @@ fun SetupProfileScreen(
     var name by remember { mutableStateOf(initialName) }
     val phone by remember { mutableStateOf(initialPhone) }
     var dob by remember { mutableStateOf("") }
-    var gender by remember { mutableStateOf("Female") }
+    var gender by remember { mutableStateOf("") }
     
     var state by remember { mutableStateOf("") }
     var district by remember { mutableStateOf("") }
@@ -9301,6 +9320,8 @@ fun SetupProfileScreen(
     
     var aadhaarNumber by remember { mutableStateOf("") }
     var aadhaarPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    // Which photo target the Camera/Gallery chooser is open for ("profile"/"aadhaar"), or null.
+    var photoChooserTarget by remember { mutableStateOf<String?>(null) }
 
     var signupPassword by remember { mutableStateOf("") }
     var signupPasswordConfirm by remember { mutableStateOf("") }
@@ -9378,239 +9399,269 @@ fun SetupProfileScreen(
 
     val calendar = Calendar.getInstance()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(languageState.value.getT("Setup Profile", "प्रोफ़ाइल सेटअप", "ପ୍ରୋଫାଇଲ୍ ସେଟଅପ୍"), color = Color.White, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+    if (photoChooserTarget != null) {
+        val target = photoChooserTarget!!
+        AlertDialog(
+            onDismissRequest = { photoChooserTarget = null },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(20.dp),
+            title = { Text(languageState.value.getT("Add Photo", "फोटो जोड़ें", "ଫଟୋ ଯୋଡନ୍ତୁ"), fontWeight = FontWeight.Bold, color = Color.Black) },
+            text = {
+                Column {
+                    Surface(color = Color.Transparent, onClick = { photoChooserTarget = null; launchCamera(target) }) {
+                        Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CameraAlt, null, tint = themeColor, modifier = Modifier.size(26.dp))
+                            Spacer(Modifier.width(16.dp))
+                            Text(languageState.value.getT("Take Photo", "फोटो लें", "ଫଟୋ ନିଅନ୍ତୁ"), fontSize = 16.sp, color = Color.Black)
+                        }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = themeColor)
-            )
-        }
-    ) { padding ->
+                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f))
+                    Surface(color = Color.Transparent, onClick = {
+                        photoChooserTarget = null
+                        if (target == "profile") imagePickerLauncher.launch("image/*") else aadhaarPickerLauncher.launch("image/*")
+                    }) {
+                        Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.PhotoLibrary, null, tint = themeColor, modifier = Modifier.size(26.dp))
+                            Spacer(Modifier.width(16.dp))
+                            Text(languageState.value.getT("Choose from Gallery", "गैलरी से चुनें", "ଗ୍ୟାଲେରୀରୁ ବାଛନ୍ତୁ"), fontSize = 16.sp, color = Color.Black)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { photoChooserTarget = null }) {
+                    Text(languageState.value.getT("Cancel", "रद्द करें", "ବାତିଲ୍"), color = Color.Gray)
+                }
+            }
+        )
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFFAF6EE))) {
         Column(
             modifier = Modifier
-                .padding(padding)
                 .fillMaxSize()
-                .background(Color(0xFFF8F9F5))
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .navigationBarsPadding()
         ) {
-            // Section 1: Basic Info
-            ProfileSetupSection(languageState.value.getT("Basic Info", "기본 정보", "ମୌଳିକ ସୂଚନା"), themeColor) {
-                // Profile Photo
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Box {
-                        Surface(
-                            modifier = Modifier.size(100.dp),
-                            shape = CircleShape,
-                            color = Color.LightGray.copy(alpha = 0.3f),
-                            onClick = { launchCamera("profile") }
-                        ) {
-                            if (profilePhotoUri != null) {
-                                AsyncImage(
-                                    model = profilePhotoUri,
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                                )
-                            } else {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.Person, null, modifier = Modifier.size(60.dp), tint = Color.Gray)
+            // Curved green header with a floating "Upload Photo" avatar.
+            Box(modifier = Modifier.fillMaxWidth().height(226.dp)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .drawBehind {
+                            val w = size.width
+                            val h = size.height
+                            val p = Path().apply {
+                                moveTo(0f, 0f)
+                                lineTo(w, 0f)
+                                lineTo(w, h * 0.54f)
+                                // asymmetric wave: left side rides higher, right side dips lower
+                                cubicTo(w * 0.90f, h * 0.38f, w * 0.78f, h * 0.42f, w * 0.66f, h * 0.62f)
+                                cubicTo(w * 0.56f, h * 0.70f, w * 0.44f, h * 0.70f, w * 0.34f, h * 0.56f)
+                                cubicTo(w * 0.22f, h * 0.30f, w * 0.10f, h * 0.26f, 0f, h * 0.42f)
+                                close()
+                            }
+                            drawPath(p, themeColor)
+                        }
+                ) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 4.dp, top = 4.dp)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                    Text(
+                        languageState.value.getT("Setup Profile", "प्रोफ़ाइल सेटअप", "ପ୍ରୋଫାଇଲ୍ ସେଟଅପ୍"),
+                        color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp,
+                        modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 14.dp)
+                    )
+                }
+                Surface(
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 104.dp).size(118.dp),
+                    shape = CircleShape,
+                    color = Color.White,
+                    shadowElevation = 5.dp,
+                    onClick = { photoChooserTarget = "profile" }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        if (profilePhotoUri != null) {
+                            AsyncImage(
+                                model = profilePhotoUri,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(104.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFF6F1E6))
+                                    .drawBehind {
+                                        drawCircle(
+                                            color = Color(0xFFB99C74),
+                                            style = Stroke(width = 2.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(15f, 12f), 0f))
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Default.AddAPhoto, null, tint = Color(0xFF8A7A63), modifier = Modifier.size(30.dp))
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(languageState.value.getT("Upload Photo", "फोटो अपलोड करें", "ଫଟୋ ଅପଲୋଡ୍"), fontSize = 12.sp, color = Color(0xFF8A7A63))
                                 }
                             }
                         }
-                        Surface(
-                            modifier = Modifier.size(32.dp).align(Alignment.BottomEnd),
-                            shape = CircleShape,
-                            color = themeColor,
-                            onClick = { imagePickerLauncher.launch("image/*") }
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(18.dp), tint = Color.White)
+                    }
+                }
+            }
+
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                ProfileSetupSection(languageState.value.getT("Basic Info", "मूल जानकारी", "ମୌଳିକ ସୂଚନା"), Icons.Default.Person, themeColor) {
+                    EnrollmentTextField(
+                        label = languageState.value.getT("Full Name *", "पूरा नाम *", "ପୁରା ନାମ *"),
+                        value = name,
+                        onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) name = it },
+                        placeholder = languageState.value.getT("Enter full name", "पूरा नाम दर्ज करें", "ପୁରା ନାମ ଲେଖନ୍ତୁ"),
+                        leadingIcon = Icons.Default.Person,
+                        borderColor = themeColor
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    EnrollmentTextField(
+                        label = languageState.value.getT("Phone Number *", "फोन नंबर *", "ଫୋନ୍ ନମ୍ବର *"),
+                        value = phone,
+                        onValueChange = {},
+                        placeholder = languageState.value.getT("Enter phone number", "फोन नंबर दर्ज करें", "ଫୋନ୍ ନମ୍ବର ଲେଖନ୍ତୁ"),
+                        leadingIcon = Icons.Default.Phone,
+                        readOnly = true,
+                        borderColor = themeColor
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    EnrollmentTextField(
+                        label = languageState.value.getT("Date of Birth *", "जन्म तिथि *", "ଜନ୍ମ ତାରିଖ *"),
+                        value = dob,
+                        onValueChange = { dob = it },
+                        placeholder = "DD/MM/YYYY",
+                        leadingIcon = Icons.Default.CalendarToday,
+                        readOnly = true,
+                        onTrailingIconClick = {
+                            DatePickerDialog(
+                                context,
+                                { _, year, month, dayOfMonth -> dob = "$dayOfMonth/${month + 1}/$year" },
+                                calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)
+                            ).show()
+                        },
+                        borderColor = themeColor
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    EnrollmentDropdownField(
+                        label = languageState.value.getT("Gender *", "लिंग *", "ଲିଙ୍ଗ *"),
+                        selectedValue = gender,
+                        options = listOf("Female", "Male", "Other"),
+                        onValueChange = { gender = it },
+                        placeholder = languageState.value.getT("Select Gender", "लिंग चुनें", "ଲିଙ୍ଗ ବାଛନ୍ତୁ"),
+                        leadingIcon = Icons.Default.Person,
+                        borderColor = themeColor
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                ProfileSetupSection(languageState.value.getT("Location", "स्थान", "ଅବସ୍ଥାନ"), Icons.Default.LocationOn, themeColor) {
+                    EnrollmentDropdownField(label = languageState.value.getT("State *", "राज्य *", "ରାଜ୍ୟ *"), selectedValue = state, options = stateOptions, onValueChange = { state = it }, placeholder = languageState.value.getT("Select State", "राज्य चुनें", "ରାଜ୍ୟ ବାଛନ୍ତୁ"), leadingIcon = Icons.Default.Map, borderColor = themeColor)
+                    Spacer(modifier = Modifier.height(14.dp))
+                    EnrollmentDropdownField(label = languageState.value.getT("District *", "जिला *", "ଜିଲ୍ଲା *"), selectedValue = district, options = districtOptions, onValueChange = { district = it }, placeholder = languageState.value.getT("Select District", "जिला चुनें", "ଜିଲ୍ଲା ବାଛନ୍ତୁ"), leadingIcon = Icons.Default.LocationCity, borderColor = themeColor)
+                    Spacer(modifier = Modifier.height(14.dp))
+                    EnrollmentDropdownField(label = languageState.value.getT("Block *", "ब्लॉक *", "ବ୍ଲକ *"), selectedValue = block, options = blockOptions, onValueChange = { block = it }, placeholder = languageState.value.getT("Select Block", "ब्लॉक चुनें", "ବ୍ଲକ ବାଛନ୍ତୁ"), leadingIcon = Icons.Default.GridView, borderColor = themeColor)
+                    Spacer(modifier = Modifier.height(14.dp))
+                    EnrollmentTextField(label = locationLabel, value = village, onValueChange = { village = it }, placeholder = languageState.value.getT("Enter Village", "गाँव दर्ज करें", "ଗ୍ରାମ ଲେଖନ୍ତୁ"), leadingIcon = Icons.Default.Home, borderColor = themeColor)
+                    Spacer(modifier = Modifier.height(14.dp))
+                    EnrollmentTextField(label = languageState.value.getT("Pincode *", "पिनकोड *", "ପିନକୋଡ୍ *"), value = pincode, onValueChange = { if(it.length <= 6) pincode = it }, placeholder = languageState.value.getT("Enter Pincode", "पिनकोड दर्ज करें", "ପିନକୋଡ୍ ଲେଖନ୍ତୁ"), leadingIcon = Icons.Default.LocationOn, keyboardType = KeyboardType.Number, borderColor = themeColor)
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                ProfileSetupSection(languageState.value.getT("Identity / KYC", "पहचान / केवाईसी", "ପରିଚୟ / KYC"), Icons.Default.Shield, themeColor) {
+                    EnrollmentTextField(label = languageState.value.getT("Aadhaar Number *", "आधार नंबर *", "ଆଧାର ନମ୍ବର *"), value = aadhaarNumber, onValueChange = { if(it.length <= 12) aadhaarNumber = it }, placeholder = languageState.value.getT("Enter Aadhaar Number", "आधार नंबर दर्ज करें", "ଆଧାର ନମ୍ବର ଲେଖନ୍ତୁ"), leadingIcon = Icons.Default.CreditCard, keyboardType = KeyboardType.Number, borderColor = themeColor)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(languageState.value.getT("Aadhaar Photo (Optional)", "आधार फोटो (वैकल्पिक)", "ଆଧାର ଫଟୋ (ବୈକଳ୍ପିକ)"), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().height(110.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFFFBF8F1),
+                        border = BorderStroke(1.dp, Color(0xFFE3DCCB)),
+                        onClick = { photoChooserTarget = "aadhaar" }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            if (aadhaarPhotoUri != null) {
+                                AsyncImage(model = aadhaarPhotoUri, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Fit)
+                            } else {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Default.CameraAlt, null, tint = Color(0xFF8A7A63), modifier = Modifier.size(26.dp))
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(languageState.value.getT("Tap to upload", "अपलोड करने के लिए टैप करें", "ଅପଲୋଡ୍ କରିବାକୁ ଟାପ୍ କରନ୍ତୁ"), fontSize = 12.sp, color = Color(0xFF8A7A63))
+                                }
                             }
                         }
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                EnrollmentTextField(
-                    label = languageState.value.getT("Full Name *", "पूरा नाम *", "ପୁରା ନାମ *"),
-                    value = name,
-                    onValueChange = { if (it.all { char -> char.isLetter() || char.isWhitespace() }) name = it },
-                    borderColor = themeColor
-                )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                EnrollmentTextField(
-                    label = languageState.value.getT("Phone Number", "फोन नंबर", "ଫୋନ୍ ନମ୍ବର"),
-                    value = phone,
-                    onValueChange = {},
-                    readOnly = true,
-                    borderColor = themeColor
-                )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                EnrollmentTextField(
-                    label = languageState.value.getT("Date of Birth *", "जन्म तिथि *", "ଜନ୍ମ ତାରିଖ *"),
-                    value = dob,
-                    onValueChange = { dob = it },
-                    placeholder = "DD/MM/YYYY",
-                    trailingIcon = Icons.Default.CalendarToday,
-                    readOnly = true,
-                    onTrailingIconClick = {
-                        DatePickerDialog(
-                            context,
-                            { _, year, month, dayOfMonth ->
-                                dob = "$dayOfMonth/${month + 1}/$year"
-                            },
-                            calendar.get(Calendar.YEAR),
-                            calendar.get(Calendar.MONTH),
-                            calendar.get(Calendar.DAY_OF_MONTH)
-                        ).show()
-                    },
-                    borderColor = themeColor
-                )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                EnrollmentDropdownField(
-                    label = languageState.value.getT("Gender *", "लिंग *", "ଲିଙ୍ଗ *"),
-                    selectedValue = gender,
-                    options = listOf("Female", "Male", "Other"),
-                    onValueChange = { gender = it },
-                    borderColor = themeColor
-                )
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-            // Section 2: Location (cascading dropdowns from backend)
-            ProfileSetupSection(languageState.value.getT("Location", "स्थान", "ଅବସ୍ଥାନ"), themeColor) {
-                EnrollmentDropdownField(
-                    label = languageState.value.getT("State *", "राज्य *", "ରାଜ୍ୟ *"),
-                    selectedValue = state,
-                    options = stateOptions,
-                    onValueChange = { state = it },
-                    borderColor = themeColor
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                EnrollmentDropdownField(
-                    label = languageState.value.getT("District *", "जिला *", "ଜିଲ୍ଲା *"),
-                    selectedValue = district,
-                    options = districtOptions,
-                    onValueChange = { district = it },
-                    borderColor = themeColor
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                EnrollmentDropdownField(
-                    label = languageState.value.getT("Block *", "ब्लॉक *", "ବ୍ଲକ *"),
-                    selectedValue = block,
-                    options = blockOptions,
-                    onValueChange = { block = it },
-                    borderColor = themeColor
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                EnrollmentTextField(
-                    label = locationLabel,
-                    value = village,
-                    onValueChange = { village = it },
-                    borderColor = themeColor
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                EnrollmentTextField(label = languageState.value.getT("Pincode *", "पिनकोड *", "ପିନକୋଡ୍ *"), value = pincode, onValueChange = { if(it.length <= 6) pincode = it }, keyboardType = KeyboardType.Number, borderColor = themeColor)
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Section 3: Identity/KYC
-            ProfileSetupSection(languageState.value.getT("Identity / KYC", "पहचान / केवाईसी", "ପରିଚୟ / KYC"), themeColor) {
-                EnrollmentTextField(label = languageState.value.getT("Aadhaar Number *", "आधार नंबर *", "ଆଧାର ନମ୍ବର *"), value = aadhaarNumber, onValueChange = { if(it.length <= 12) aadhaarNumber = it }, keyboardType = KeyboardType.Number, borderColor = themeColor)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(languageState.value.getT("Aadhaar Photo (Optional)", "आधार फोटो (वैकल्पिक)", "ଆଧାର ଫଟୋ (ବୈକଳ୍ପିକ)"), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                Spacer(modifier = Modifier.height(8.dp))
-                Surface(
-                    modifier = Modifier.fillMaxWidth().height(120.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color.White,
-                    border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f)),
-                    onClick = { launchCamera("aadhaar") }
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        if (aadhaarPhotoUri != null) {
-                            AsyncImage(model = aadhaarPhotoUri, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Fit)
-                        } else {
-                            Icon(Icons.Default.AddAPhoto, null, tint = Color.Gray)
-                        }
+                ProfileSetupSection(languageState.value.getT("Login Password", "लॉगिन पासवर्ड", "ଲଗଇନ୍ ପାସୱାର୍ଡ"), Icons.Default.Lock, themeColor) {
+                    Surface(color = Color(0xFFFBF4E6), shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            languageState.value.getT(
+                                "You will use this password to log in after your registration is approved.",
+                                "अनुमोदन के बाद लॉगिन करने के लिए आप इस पासवर्ड का उपयोग करेंगे।",
+                                "ଅନୁମୋଦନ ପରେ ଲଗଇନ୍ କରିବାକୁ ଆପଣ ଏହି ପାସୱାର୍ଡ ବ୍ୟବହାର କରିବେ |"
+                            ),
+                            fontSize = 12.sp, color = Color(0xFF7A6A52), modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    EnrollmentTextField(
+                        label = languageState.value.getT("Password (min 6 characters) *", "पासवर्ड (न्यूनतम 6 अक्षर) *", "ପାସୱାର୍ଡ (ସର୍ବନିମ୍ନ 6 ଅକ୍ଷର) *"),
+                        value = signupPassword, onValueChange = { signupPassword = it },
+                        placeholder = languageState.value.getT("Enter password", "पासवर्ड दर्ज करें", "ପାସୱାର୍ଡ ଲେଖନ୍ତୁ"),
+                        leadingIcon = Icons.Default.Lock, keyboardType = KeyboardType.Password, borderColor = themeColor, isPassword = true
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    EnrollmentTextField(
+                        label = languageState.value.getT("Confirm Password *", "पासवर्ड की पुष्टि करें *", "ପାସୱାର୍ଡ ନିଶ୍ଚିତ କରନ୍ତୁ *"),
+                        value = signupPasswordConfirm, onValueChange = { signupPasswordConfirm = it },
+                        placeholder = languageState.value.getT("Confirm password", "पासवर्ड की पुष्टि करें", "ପାସୱାର୍ଡ ନିଶ୍ଚିତ କରନ୍ତୁ"),
+                        leadingIcon = Icons.Default.Lock, keyboardType = KeyboardType.Password, borderColor = themeColor, isPassword = true
+                    )
+                    if (signupPasswordConfirm.isNotEmpty() && signupPassword != signupPasswordConfirm) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(languageState.value.getT("Passwords do not match", "पासवर्ड मेल नहीं खाते", "ପାସୱାର୍ଡ ମେଳ ଖାଉନାହିଁ"), fontSize = 12.sp, color = Color.Red)
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(28.dp))
 
-            // Section 4: Login credentials (used once the admin approves the registration)
-            ProfileSetupSection(languageState.value.getT("Login Password", "लॉगिन पासवर्ड", "ଲଗଇନ୍ ପାସୱାର୍ଡ"), themeColor) {
-                Text(
-                    languageState.value.getT(
-                        "You will use this password to log in after your registration is approved.",
-                        "अनुमोदन के बाद लॉगिन करने के लिए आप इस पासवर्ड का उपयोग करेंगे।",
-                        "ଅନୁମୋଦନ ପରେ ଲଗଇନ୍ କରିବାକୁ ଆପଣ ଏହି ପାସୱାର୍ଡ ବ୍ୟବହାର କରିବେ |"
-                    ),
-                    fontSize = 12.sp, color = Color.Gray
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                EnrollmentTextField(
-                    label = languageState.value.getT("Password (min 6 characters) *", "पासवर्ड (न्यूनतम 6 अक्षर) *", "ପାସୱାର୍ଡ (ସର୍ବନିମ୍ନ 6 ଅକ୍ଷର) *"),
-                    value = signupPassword,
-                    onValueChange = { signupPassword = it },
-                    keyboardType = KeyboardType.Password,
-                    borderColor = themeColor,
-                    isPassword = true
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                EnrollmentTextField(
-                    label = languageState.value.getT("Confirm Password *", "पासवर्ड की पुष्टि करें *", "ପାସୱାର୍ଡ ନିଶ୍ଚିତ କରନ୍ତୁ *"),
-                    value = signupPasswordConfirm,
-                    onValueChange = { signupPasswordConfirm = it },
-                    keyboardType = KeyboardType.Password,
-                    borderColor = themeColor,
-                    isPassword = true
-                )
-                if (signupPasswordConfirm.isNotEmpty() && signupPassword != signupPasswordConfirm) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        languageState.value.getT("Passwords do not match", "पासवर्ड मेल नहीं खाते", "ପାସୱାର୍ଡ ମେଳ ଖାଉନାହିଁ"),
-                        fontSize = 12.sp, color = Color.Red
-                    )
+                Button(
+                    onClick = {
+                        authViewModel.completeSignup(
+                            fullName = name, phone = phone, role = role, otp = otp,
+                            village = village, aadhaarId = aadhaarNumber,
+                            password = signupPassword,
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = themeColor, disabledContainerColor = themeColor.copy(alpha = 0.5f)),
+                    enabled = !isSubmitting && name.isNotBlank() && dob.isNotBlank() && state.isNotBlank() && district.isNotBlank() && block.isNotBlank() && village.isNotBlank() && pincode.length == 6 && aadhaarNumber.length == 12 && signupPassword.length >= 6 && signupPassword == signupPasswordConfirm
+                ) {
+                    Text(languageState.value.getT("Save & Continue", "सहेजें और जारी रखें", "ସଂରକ୍ଷଣ ଏବଂ ଜାରି ରଖନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
                 }
-            }
 
-            Spacer(modifier = Modifier.height(40.dp))
-
-            Button(
-                onClick = {
-                    authViewModel.completeSignup(
-                        fullName = name, phone = phone, role = role, otp = otp,
-                        village = village, aadhaarId = aadhaarNumber,
-                        password = signupPassword,
-                    )
-                },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = themeColor),
-                enabled = !isSubmitting && name.isNotBlank() && dob.isNotBlank() && state.isNotBlank() && district.isNotBlank() && block.isNotBlank() && village.isNotBlank() && pincode.length == 6 && aadhaarNumber.length == 12 && signupPassword.length >= 6 && signupPassword == signupPasswordConfirm
-            ) {
-                Text(languageState.value.getT("Save & Continue", "सहेजें और जारी रखें", "ସଂରକ୍ଷଣ ଏବଂ ଜାରି ରଖନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Spacer(modifier = Modifier.height(32.dp))
             }
-            
-            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
@@ -9659,22 +9710,29 @@ fun PendingApprovalScreen(onBackToLogin: () -> Unit) {
 }
 
 @Composable
-fun ProfileSetupSection(title: String, themeColor: Color, content: @Composable ColumnScope.() -> Unit) {
+fun ProfileSetupSection(title: String, icon: ImageVector, themeColor: Color, content: @Composable ColumnScope.() -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = themeColor)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = themeColor, modifier = Modifier.size(22.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = themeColor)
+        }
         Spacer(modifier = Modifier.height(12.dp))
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color.White),
             shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            border = BorderStroke(1.dp, Color(0xFFECE6D8)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 content()
             }
         }
     }
-}@OptIn(ExperimentalMaterial3Api::class)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EarningHistoryScreen(onBack: () -> Unit) {
     val languageState = LocalAppLanguage.current
