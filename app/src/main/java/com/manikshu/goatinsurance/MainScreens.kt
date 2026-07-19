@@ -244,23 +244,21 @@ fun AppNavigation(navController: NavHostController, sessionManager: SessionManag
         }
         composable("signup") {
             SignUpScreen(
-                onVerifyOtp = { role, name, phone, otp ->
-                    navController.navigate("setup_profile/$role/$name/$phone/$otp")
+                onContinue = { role, name, phone ->
+                    navController.navigate("setup_profile/$role/$name/$phone")
                 },
                 onNavigateToLogin = { navController.popBackStack() }
             )
         }
-        composable("setup_profile/{role}/{name}/{phone}/{otp}") { backStackEntry ->
+        composable("setup_profile/{role}/{name}/{phone}") { backStackEntry ->
             val roleStr = backStackEntry.arguments?.getString("role") ?: UserRole.FARMER.name
             val role = try { UserRole.valueOf(roleStr) } catch(e: Exception) { UserRole.FARMER }
             val name = backStackEntry.arguments?.getString("name") ?: ""
             val phone = backStackEntry.arguments?.getString("phone") ?: ""
-            val otp = backStackEntry.arguments?.getString("otp") ?: ""
             SetupProfileScreen(
                 role = role,
                 initialName = name,
                 initialPhone = phone,
-                otp = otp,
                 onComplete = { authedRole ->
                     if (authedRole != null) {
                         // Auto-approved and logged in: go straight to the dashboard.
@@ -551,11 +549,9 @@ fun ResponsiveLayout(
 }
 
 @Composable
-fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavigateToLogin: () -> Unit) {
+fun SignUpScreen(onContinue: (UserRole, String, String) -> Unit, onNavigateToLogin: () -> Unit) {
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
-    var otp by remember { mutableStateOf("") }
-    var step by remember { mutableIntStateOf(1) }
     var selectedRole by remember { mutableStateOf<UserRole?>(null) }
 
     val context = LocalContext.current
@@ -564,14 +560,9 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
 
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.authState.collectAsState()
-    val loginMethod by authViewModel.loginMethod.collectAsState()
-    // Password mode: no OTP round-trip at signup - the button becomes "Sign Up"
-    // and leads straight to the profile form (which collects the password).
-    val isPasswordMode = loginMethod == "password"
     val isAuthLoading = authState is AuthState.Loading
     LaunchedEffect(authState) {
         when (val s = authState) {
-            is AuthState.OtpSent -> { step = 2; authViewModel.reset() }
             is AuthState.Error -> {
                 Toast.makeText(context, s.message, Toast.LENGTH_LONG).show()
                 authViewModel.reset()
@@ -640,7 +631,7 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
         ) {
             Spacer(Modifier.height(110.dp))
             AjahFiLogo()
-            if (step == 1) {
+            run {
                 Spacer(Modifier.height(18.dp))
                 Text(
                     lang.getT("Create Account", "खाता बनाएं", "ଖାତା ତିଆରି କରନ୍ତୁ"),
@@ -673,8 +664,14 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
                             name.isBlank() -> Toast.makeText(context, lang.getT("Enter your name", "अपना नाम दर्ज करें", "ଆପଣଙ୍କ ନାମ ଲେଖନ୍ତୁ"), Toast.LENGTH_SHORT).show()
                             phone.length != 10 -> Toast.makeText(context, lang.getT("Enter a valid 10-digit mobile number", "मान्य 10 अंकों का मोबाइल नंबर दर्ज करें", "ଏକ ବୈଧ ୧୦ ଅଙ୍କ ମୋବାଇଲ୍ ନମ୍ବର ଲେଖନ୍ତୁ"), Toast.LENGTH_SHORT).show()
                             selectedRole == null -> Toast.makeText(context, lang.getT("Choose a role", "एक भूमिका चुनें", "ଏକ ଭୂମିକା ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show()
-                            isPasswordMode -> onVerifyOtp(selectedRole!!, name, phone, "NA")
-                            else -> authViewModel.sendSignupOtp(name, phone, selectedRole!!)
+                            else -> {
+                                // The profile step needs camera/location, so ask here.
+                                val allGranted = permissionsToRequest.all {
+                                    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                                }
+                                if (allGranted) onContinue(selectedRole!!, name, phone)
+                                else showPermissionDialog = true
+                            }
                         }
                     },
                     enabled = !isAuthLoading,
@@ -686,8 +683,7 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
                     )
                 ) {
                     Text(
-                        if (isPasswordMode) lang.getT("Sign Up", "साइन अप करें", "ସାଇନ୍ ଅପ୍")
-                        else lang.getT("Send OTP", "ओटीपी भेजें", "ଓଟିପି ପଠାନ୍ତୁ"),
+                        lang.getT("Sign Up", "साइन अप करें", "ସାଇନ୍ ଅପ୍"),
                         fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White
                     )
                 }
@@ -723,36 +719,6 @@ fun SignUpScreen(onVerifyOtp: (UserRole, String, String, String) -> Unit, onNavi
                     fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.White
                 )
                 Spacer(Modifier.height(14.dp))
-            } else {
-                Spacer(Modifier.height(28.dp))
-                Surface(color = Color.White, shape = RoundedCornerShape(20.dp), shadowElevation = 4.dp, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(lang.getT("Enter the OTP sent to +91 $phone", "+91 $phone पर भेजा गया ओटीपी दर्ज करें", "+91 $phone କୁ ପଠାଯାଇଥିବା ଓଟିପି ଦିଅନ୍ତୁ"), fontSize = 14.sp, textAlign = TextAlign.Center, color = LoginNavy)
-                        Spacer(Modifier.height(18.dp))
-                        OtpInput(otp, { otp = it }, onDone = {
-                            if (otp.length == 6) {
-                                val allGranted = permissionsToRequest.all {
-                                    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-                                }
-                                if (allGranted) onVerifyOtp(selectedRole!!, name, phone, otp) else showPermissionDialog = true
-                            }
-                        })
-                        Spacer(Modifier.height(18.dp))
-                        Button(
-                            onClick = {
-                                val allGranted = permissionsToRequest.all {
-                                    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-                                }
-                                if (allGranted) onVerifyOtp(selectedRole!!, name, phone, otp) else showPermissionDialog = true
-                            },
-                            enabled = otp.length == 6,
-                            modifier = Modifier.fillMaxWidth().height(52.dp),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = LoginButtonGreen)
-                        ) { Text(stringResource(R.string.verify_next), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White) }
-                        TextButton(onClick = { step = 1 }) { Text(stringResource(R.string.go_back), color = LoginWelcomeGreen) }
-                    }
-                }
             }
         }
     }
@@ -770,11 +736,9 @@ private val RoleCardCream = Color(0xFFF7F0DD)
 @Composable
 fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Unit) {
     var phone by remember { mutableStateOf("") }
-    var otp by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var showForgotDialog by remember { mutableStateOf(false) }
-    var step by remember { mutableIntStateOf(1) }
     var selectedRole by remember { mutableStateOf<UserRole?>(null) }
 
     val context = LocalContext.current
@@ -783,12 +747,9 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
 
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.authState.collectAsState()
-    val loginMethod by authViewModel.loginMethod.collectAsState()
-    val isPasswordMode = loginMethod == "password"
     val isAuthLoading = authState is AuthState.Loading
     LaunchedEffect(authState) {
         when (val s = authState) {
-            is AuthState.OtpSent -> { step = 2; authViewModel.reset() }
             is AuthState.Authenticated -> { onLoginSuccess(s.role); authViewModel.reset() }
             is AuthState.Error -> {
                 Toast.makeText(context, s.message, Toast.LENGTH_LONG).show()
@@ -836,7 +797,14 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
         )
     }
 
-    if (showForgotDialog) ForgotPasswordDialog(lang) { showForgotDialog = false }
+    if (showForgotDialog) {
+        ForgotPasswordDialog(
+            lang = lang,
+            initialPhone = phone,
+            authViewModel = authViewModel,
+            onDismiss = { showForgotDialog = false; authViewModel.resetForgot() },
+        )
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8F4E7))) {
         Image(
@@ -867,7 +835,7 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
         ) {
             Spacer(Modifier.height(110.dp))            // top padding 190px
             AjahFiLogo()                               // logo 370x165px
-            if (step == 1) {
+            run {
                 Spacer(Modifier.height(15.dp))         // gap logo -> Welcome
                 Text(
                     lang.getT("Welcome Back!", "वापसी पर स्वागत है!", "ପୁଣି ସ୍ଵାଗତ!"),
@@ -886,39 +854,34 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                     leading = Icons.Default.Phone,
                     keyboardType = KeyboardType.Phone
                 )
-                if (isPasswordMode) {
-                    Spacer(Modifier.height(12.dp))     // gap between fields
-                    LoginField(
-                        value = password,
-                        onValueChange = { password = it },
-                        placeholder = lang.getT("Enter password", "पासवर्ड दर्ज करें", "ପାସୱାର୍ଡ ଲେଖନ୍ତୁ"),
-                        leading = Icons.Default.Lock,
-                        keyboardType = KeyboardType.Password,
-                        isPassword = true,
-                        passwordVisible = passwordVisible,
-                        onTogglePassword = { passwordVisible = !passwordVisible }
+                Spacer(Modifier.height(12.dp))     // gap between fields
+                LoginField(
+                    value = password,
+                    onValueChange = { password = it },
+                    placeholder = lang.getT("Enter password", "पासवर्ड दर्ज करें", "ପାସୱାର୍ଡ ଲେଖନ୍ତୁ"),
+                    leading = Icons.Default.Lock,
+                    keyboardType = KeyboardType.Password,
+                    isPassword = true,
+                    passwordVisible = passwordVisible,
+                    onTogglePassword = { passwordVisible = !passwordVisible }
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    Text(
+                        lang.getT("Forgot Password?", "पासवर्ड भूल गए?", "ପାସୱାର୍ଡ ଭୁଲିଗଲେ?"),
+                        color = LoginWelcomeGreen, fontWeight = FontWeight.SemiBold, fontSize = 11.sp,  // forgot password
+                        textDecoration = TextDecoration.Underline,
+                        modifier = Modifier.clickable { showForgotDialog = true }
                     )
-                    Spacer(Modifier.height(8.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        Text(
-                            lang.getT("Forgot Password?", "पासवर्ड भूल गए?", "ପାସୱାର୍ଡ ଭୁଲିଗଲେ?"),
-                            color = LoginWelcomeGreen, fontWeight = FontWeight.SemiBold, fontSize = 11.sp,  // forgot password
-                            textDecoration = TextDecoration.Underline,
-                            modifier = Modifier.clickable { showForgotDialog = true }
-                        )
-                    }
-                    Spacer(Modifier.height(6.dp))      // gap forgot -> Sign In
-                } else {
-                    Spacer(Modifier.height(22.dp))
                 }
+                Spacer(Modifier.height(6.dp))      // gap forgot -> Sign In
                 Button(
                     onClick = {
                         when {
                             phone.length != 10 -> Toast.makeText(context, lang.getT("Enter a valid 10-digit mobile number", "मान्य 10 अंकों का मोबाइल नंबर दर्ज करें", "ଏକ ବୈଧ ୧୦ ଅଙ୍କ ମୋବାଇଲ୍ ନମ୍ବର ଲେଖନ୍ତୁ"), Toast.LENGTH_SHORT).show()
-                            isPasswordMode && password.isBlank() -> Toast.makeText(context, lang.getT("Enter your password", "अपना पासवर्ड दर्ज करें", "ଆପଣଙ୍କ ପାସୱାର୍ଡ ଲେଖନ୍ତୁ"), Toast.LENGTH_SHORT).show()
+                            password.isBlank() -> Toast.makeText(context, lang.getT("Enter your password", "अपना पासवर्ड दर्ज करें", "ଆପଣଙ୍କ ପାସୱାର୍ଡ ଲେଖନ୍ତୁ"), Toast.LENGTH_SHORT).show()
                             selectedRole == null -> Toast.makeText(context, lang.getT("Choose a role", "एक भूमिका चुनें", "ଏକ ଭୂମିକା ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show()
-                            isPasswordMode -> authViewModel.passwordLogin(phone, password, selectedRole!!)
-                            else -> authViewModel.sendOtp(phone, selectedRole!!)
+                            else -> authViewModel.passwordLogin(phone, password, selectedRole!!)
                         }
                     },
                     enabled = !isAuthLoading,
@@ -930,8 +893,7 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                     )
                 ) {
                     Text(
-                        if (isPasswordMode) lang.getT("Sign In", "साइन इन करें", "ସାଇନ୍ ଇନ୍")
-                        else lang.getT("Send OTP", "ओटीपी भेजें", "ଓଟିପି ପଠାନ୍ତୁ"),
+                        lang.getT("Sign In", "साइन इन करें", "ସାଇନ୍ ଇନ୍"),
                         fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White
                     )
                 }
@@ -967,36 +929,6 @@ fun LoginScreen(onLoginSuccess: (UserRole) -> Unit, onNavigateToSignUp: () -> Un
                     fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.White
                 )
                 Spacer(Modifier.height(14.dp))
-            } else {
-                Spacer(Modifier.height(28.dp))
-                Surface(color = Color.White, shape = RoundedCornerShape(20.dp), shadowElevation = 4.dp, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(lang.getT("Enter 6-digit OTP sent to +91 $phone", "+91 $phone पर भेजा गया ओटीपी दर्ज करें", "+91 $phone କୁ ପଠାଯାଇଥିବା ଓଟିପି ଦିଅନ୍ତୁ"), fontSize = 14.sp, textAlign = TextAlign.Center, color = LoginNavy)
-                        Spacer(Modifier.height(18.dp))
-                        OtpInput(otp, { otp = it }, onDone = {
-                            if (otp.length == 6) {
-                                val allGranted = permissionsToRequest.all {
-                                    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-                                }
-                                if (allGranted) authViewModel.verifyOtp(phone, otp, selectedRole!!) else showPermissionDialog = true
-                            }
-                        })
-                        Spacer(Modifier.height(18.dp))
-                        Button(
-                            onClick = {
-                                val allGranted = permissionsToRequest.all {
-                                    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-                                }
-                                if (allGranted) authViewModel.verifyOtp(phone, otp, selectedRole!!) else showPermissionDialog = true
-                            },
-                            enabled = otp.length == 6,
-                            modifier = Modifier.fillMaxWidth().height(52.dp),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = LoginButtonGreen)
-                        ) { Text(lang.getT("Verify & Login", "सत्यापित करें और लॉगिन", "ଯାଞ୍ଚ ଏବଂ ଲଗଇନ୍"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White) }
-                        TextButton(onClick = { step = 1 }) { Text(lang.getT("Change Number", "नंबर बदलें", "ନମ୍ବର ବଦଳାନ୍ତୁ"), color = LoginWelcomeGreen) }
-                    }
-                }
             }
         }
     }
@@ -1321,23 +1253,93 @@ private fun FeatureDivider() {
  * the Admin/Coordinator who manages the account.
  */
 @Composable
-private fun ForgotPasswordDialog(lang: AppLanguage, onDismiss: () -> Unit) {
+private fun ForgotPasswordDialog(
+    lang: AppLanguage,
+    initialPhone: String,
+    authViewModel: AuthViewModel,
+    onDismiss: () -> Unit,
+) {
+    var phone by remember { mutableStateOf(initialPhone) }
+    val state by authViewModel.forgotState.collectAsState()
+    val submitting = state is SubmitState.Submitting
+    val sent = state is SubmitState.Success
+
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!submitting) onDismiss() },
         icon = { Icon(Icons.Default.Lock, contentDescription = null, tint = PrimaryGreen) },
-        title = { Text(lang.getT("Forgot Password?", "पासवर्ड भूल गए?", "ପାସୱାର୍ଡ ଭୁଲିଗଲେ?"), fontWeight = FontWeight.Bold, color = Color.Black) },
-        text = {
+        title = {
             Text(
-                lang.getT(
-                    "To reset your password, please contact your Coordinator or the Admin who manages your account. They can set a new password for you.",
-                    "अपना पासवर्ड रीसेट करने के लिए, कृपया अपने समन्वयक या आपके खाते का प्रबंधन करने वाले एडमिन से संपर्क करें। वे आपके लिए नया पासवर्ड सेट कर सकते हैं।",
-                    "ଆପଣଙ୍କ ପାସୱାର୍ଡ ରିସେଟ୍ କରିବାକୁ, ଦଯାକରି ଆପଣଙ୍କ ସମନ୍ଵୟକାରୀ କିମ୍ବା ଆପଣଙ୍କ ଖାତା ପରିଚାଳନା କରୁଥିବା ଆଡମିନ୍‌ଙ୍କ ସହ ଯୋଗାଯୋଗ କରନ୍ତୁ। ସେମାନେ ଆପଣଙ୍କ ପାଇଁ ନୂଆ ପାସୱାର୍ଡ ସେଟ୍ କରିପାରିବେ।"
-                ),
-                color = Color.DarkGray
+                if (sent) lang.getT("Request Sent", "अनुरोध भेजा गया", "ଅନୁରୋଧ ପଠାଗଲା")
+                else lang.getT("Forgot Password?", "पासवर्ड भूल गए?", "ପାସୱାର୍ଡ ଭୁଲିଗଲେ?"),
+                fontWeight = FontWeight.Bold, color = Color.Black
             )
         },
+        text = {
+            Column {
+                if (sent) {
+                    // The backend answers identically for registered and unregistered
+                    // numbers, so the wording must not imply the account exists.
+                    Text(
+                        lang.getT(
+                            "If this number is registered, an admin will contact you and set a new password.",
+                            "यदि यह नंबर पंजीकृत है, तो एडमिन आपसे संपर्क करेंगे और नया पासवर्ड सेट करेंगे।",
+                            "ଯଦି ଏହି ନମ୍ବର ପଞ୍ଜିକୃତ ଅଛି, ଆଡମିନ୍ ଆପଣଙ୍କ ସହ ଯୋଗାଯୋଗ କରି ନୂଆ ପାସୱାର୍ଡ ସେଟ୍ କରିବେ।"
+                        ),
+                        color = Color.DarkGray
+                    )
+                } else {
+                    Text(
+                        lang.getT(
+                            "Enter your mobile number. An admin will verify you and set a new password.",
+                            "अपना मोबाइल नंबर दर्ज करें। एडमिन आपकी पुष्टि करके नया पासवर्ड सेट करेंगे।",
+                            "ଆପଣଙ୍କ ମୋବାଇଲ୍ ନମ୍ବର ଲେଖନ୍ତୁ। ଆଡମିନ୍ ଆପଣଙ୍କୁ ଯାଞ୍ଚ କରି ନୂଆ ପାସୱାର୍ଡ ସେଟ୍ କରିବେ।"
+                        ),
+                        color = Color.DarkGray
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    OutlinedTextField(
+                        value = phone,
+                        onValueChange = { if (it.length <= 10 && it.all(Char::isDigit)) phone = it },
+                        singleLine = true,
+                        enabled = !submitting,
+                        leadingIcon = { Icon(Icons.Default.Phone, null, tint = Color.Gray) },
+                        placeholder = { Text(lang.getT("Mobile number", "मोबाइल नंबर", "ମୋବାଇଲ୍ ନମ୍ବର")) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PrimaryGreen)
+                    )
+                    (state as? SubmitState.Error)?.let {
+                        Spacer(Modifier.height(8.dp))
+                        Text(it.message ?: "", color = Color.Red, fontSize = 12.sp)
+                    }
+                }
+            }
+        },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(lang.getT("Got it", "समझ गया", "ବୁଝିଗଲି"), color = PrimaryGreen, fontWeight = FontWeight.Bold) }
+            if (sent) {
+                TextButton(onClick = onDismiss) {
+                    Text(lang.getT("Got it", "समझ गया", "ବୁଝିଗଲି"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                }
+            } else {
+                TextButton(
+                    onClick = { authViewModel.requestPasswordReset(phone) },
+                    enabled = phone.length == 10 && !submitting,
+                ) {
+                    Text(
+                        if (submitting) lang.getT("Sending…", "भेजा जा रहा…", "ପଠାଉଛି…")
+                        else lang.getT("Send Request", "अनुरोध भेजें", "ଅନୁରୋଧ ପଠାନ୍ତୁ"),
+                        color = PrimaryGreen, fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        },
+        dismissButton = {
+            if (!sent) {
+                TextButton(onClick = onDismiss, enabled = !submitting) {
+                    Text(lang.getT("Cancel", "रद्द करें", "ବାତିଲ୍"), color = Color.Gray)
+                }
+            }
         },
         shape = RoundedCornerShape(20.dp)
     )
@@ -4196,59 +4198,6 @@ fun PolicyCard(id: String, status: String, expiry: String) {
             Spacer(modifier = Modifier.height(4.dp))
             Text("Expires: $expiry", style = MaterialTheme.typography.bodySmall)
         }
-    }
-}
-
-@Composable
-fun OtpInput(value: String, onValueChange: (String) -> Unit, onDone: () -> Unit = {}) {
-    val focusRequester = remember { FocusRequester() }
-    
-    // Auto-focus the field when displayed
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
-
-    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth().clickable { focusRequester.requestFocus() }) {
-        // Hidden text field to capture input
-        BasicTextField(
-            value = value,
-            onValueChange = { input -> if ((input.length <= 6) && input.all { it.isDigit() }) onValueChange(input) },
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.NumberPassword,
-                imeAction = ImeAction.Done
-            ),
-            keyboardActions = KeyboardActions(
-                onDone = { onDone() }
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .focusRequester(focusRequester),
-            decorationBox = {
-                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    repeat(6) { i ->
-                        val char = value.getOrNull(i)?.toString() ?: ""
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .border(
-                                    width = 1.dp,
-                                    color = if (value.length == i) PrimaryGreen else Color.LightGray,
-                                    shape = RoundedCornerShape(8.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = char,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black
-                            )
-                        }
-                    }
-                }
-            }
-        )
     }
 }
 
@@ -9397,7 +9346,6 @@ fun SetupProfileScreen(
     role: UserRole,
     initialName: String,
     initialPhone: String,
-    otp: String,
     onComplete: (UserRole?) -> Unit,   // role -> go to dashboard; null -> pending approval
     onBack: () -> Unit
 ) {
@@ -9810,7 +9758,7 @@ fun SetupProfileScreen(
                 Button(
                     onClick = {
                         authViewModel.completeSignup(
-                            fullName = name, phone = phone, role = role, otp = otp,
+                            fullName = name, phone = phone, role = role,
                             village = village, aadhaarId = aadhaarNumber,
                             password = signupPassword,
                         )

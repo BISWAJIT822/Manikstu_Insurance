@@ -48,10 +48,7 @@ class Repository @Inject constructor(
     }
 
     // ---------------- auth ----------------
-    suspend fun requestOtp(mobile: String, role: String) = api.requestOtp(mobile, role)
-    suspend fun verifyLogin(mobile: String, role: String, otp: String) = api.verifyLogin(mobile, role, otp)
-    suspend fun requestOtpSignup(fullName: String, mobile: String, role: String) =
-        api.requestOtpSignup(fullName, mobile, role)
+    suspend fun forgotPassword(body: ForgotPasswordRequest) = api.forgotPassword(body)
     suspend fun verifySignup(body: VerifySignupRequest) = api.verifySignup(body)
     suspend fun profile() = api.profile()
     suspend fun logout() = api.logout()
