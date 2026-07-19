@@ -47,7 +47,8 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 
-val CoordinatorOrange = Color(0xFFFF7043)
+// Unified theme: coordinator dashboard uses the same green as the rest (no longer orange).
+val CoordinatorOrange = PrimaryGreen
 val CoordinatorLightOrange = Color(0xFFFFF3E0)
 
 @Composable
