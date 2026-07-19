@@ -176,6 +176,7 @@ data class SdDashboard(
     @SerialName("pending_queries") val pendingQueries: Int,
     @SerialName("policies_issued") val policiesIssued: Int,
     @SerialName("premium_collected") val premiumCollected: Double,
+    @SerialName("assigned_farmers") val assignedFarmers: Int = 0,
 )
 
 @Serializable

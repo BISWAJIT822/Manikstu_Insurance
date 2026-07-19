@@ -86,6 +86,19 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Vaccines
+import androidx.compose.material.icons.filled.PendingActions
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.SupportAgent
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.text.style.TextDecoration
@@ -1347,15 +1360,16 @@ fun DidiDashboard(navController: NavHostController, sessionManager: SessionManag
     val dashVm: DidiDashboardViewModel = hiltViewModel()
     val dashState by dashVm.state.collectAsState()
     val stats = (dashState as? UiState.Success)?.data
+    val activities by dashVm.activities.collectAsState()
 
     ResponsiveLayout(
         compact = {
-            Scaffold(
-                modifier = Modifier.fillMaxSize().navigationBarsPadding(),
-                bottomBar = { DidiBottomBar(navController) },
-                contentWindowInsets = WindowInsets(0, 0, 0, 0)
-            ) { padding ->
-                DidiContent(padding, navController, userName, stats) { showNotifications = true }
+            val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF6F7F3))) {
+                DidiContent(PaddingValues(bottom = 74.dp + navInset), navController, userName, stats, activities) { showNotifications = true }
+                Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+                    DidiBottomBar(navController)
+                }
             }
         },
         expanded = {
@@ -1425,106 +1439,279 @@ fun DidiDashboard(navController: NavHostController, sessionManager: SessionManag
                         )
                     )
                 }
-                DidiContent(PaddingValues(0.dp), navController, userName, stats) { showNotifications = true }
+                DidiContent(PaddingValues(0.dp), navController, userName, stats, activities) { showNotifications = true }
             }
         }
     )
 }
 
 @Composable
-fun DidiContent(padding: PaddingValues, navController: NavHostController, userName: String, stats: SdDashboard?, onNotificationClick: () -> Unit) {
+fun DidiContent(padding: PaddingValues, navController: NavHostController, userName: String, stats: SdDashboard?, activities: List<ActivityItem>, onNotificationClick: () -> Unit) {
     val languageState = LocalAppLanguage.current
     val context = LocalContext.current
     val notifVm: NotificationsViewModel = androidx.hilt.navigation.compose.hiltViewModel()
     val unread by notifVm.unread.collectAsState()
     LaunchedEffect(Unit) { notifVm.refreshUnread() }
+
+    val inr = remember { java.text.NumberFormat.getInstance(java.util.Locale("en", "IN")) }
+
     Column(
         modifier = Modifier
             .padding(bottom = padding.calculateBottomPadding())
             .fillMaxSize()
-            .background(Color(0xFFF8F9F5))
+            .background(Color(0xFFF6F7F3))
+            .verticalScroll(rememberScrollState())
     ) {
-        DashboardHeader(
-            navController,
-            userName,
-            languageState.value.getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି"),
-            onNotificationClick,
-            hasNotifications = unread > 0,
-            onProfileClick = { navController.navigate("profile") }
-        )
-        
-        val window = LocalWindowSizeClass.current
-        val isCompact = window?.widthSizeClass == WindowWidthSizeClass.Compact
-        val gridColumns = if (isCompact) 6 else 12
+        DidiHomeHeader(userName, unread, onProfileClick = { navController.navigate("profile") }, onNotificationClick = onNotificationClick)
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(gridColumns),
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            contentPadding = PaddingValues(bottom = 32.dp, start = 20.dp, end = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item(span = { GridItemSpan(gridColumns) }) {
-                Column {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Text(
-                        languageState.value.getT("This Month Overview", "इस महीने का अवलोकन", "ଏହି ମାସର ସମୀକ୍ଷା"),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.Black,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-            
-            // Stats (2 columns on mobile, 4 on tablet)
-            val statSpan = if (isCompact) 3 else 3
-            items(4, span = { GridItemSpan(statSpan) }) { index ->
-                val dash = if (stats == null) "…" else null
-                when(index) {
-                    0 -> StatCard(languageState.value.getT("Goats Enrolled", "पंजीकृत बकरियां", "ପଞ୍ଜିକୃତ ଛେଳି"), dash ?: "${stats!!.totalEnrolled}", painterResource(R.drawable.ic_ewe_custom), PrimaryGreen, CardLightGreen)
-                    1 -> StatCard(languageState.value.getT("Pending Claims", "लंबित दावे", "ବାକି ରହିଥିବା ଦାବି"), dash ?: "${stats!!.pendingQueries}", Icons.AutoMirrored.Filled.Assignment, AccentOrange, CardLightOrange)
-                    2 -> StatCard(languageState.value.getT("Policies Issued", "जारी नीतियां", "ଜାରି ପଲିସି"), dash ?: "${stats!!.policiesIssued}", Icons.Default.CalendarToday, InfoBlue, CardLightBlue)
-                    3 -> StatCard(
-                        label = languageState.value.getT("Earnings", "आय", "ଉପାର୍ଜନ"),
-                        value = dash ?: "₹${stats!!.premiumCollected.toInt()}",
-                        icon = Icons.Default.Payments,
-                        iconColor = Color(0xFF9C27B0),
-                        iconBgColor = CardLightPurple,
-                        modifier = Modifier.clickable { navController.navigate("earning_history") }
-                    )
-                }
+        Column(modifier = Modifier.padding(horizontal = 18.dp)) {
+            // ---- Hero: My Assigned Farmers ----
+            HeroAssignedFarmersCard(
+                count = stats?.assignedFarmers,
+                onViewAll = { navController.navigate("goat_list") }
+            )
+
+            Spacer(Modifier.height(22.dp))
+            SectionTitle(languageState.value.getT("Overview", "अवलोकन", "ସମୀକ୍ଷା"))
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                OverviewInfoCard(
+                    modifier = Modifier.weight(1f),
+                    label = languageState.value.getT("TOTAL GOATS", "कुल बकरियां", "ମୋଟ ଛେଳି"),
+                    value = stats?.totalEnrolled?.toString() ?: "…",
+                    subtitle = languageState.value.getT("All goats under your care", "आपकी देखरेख में सभी बकरियां", "ଆପଣଙ୍କ ଯତ୍ନରେ ଥିବା ସମସ୍ତ ଛେଳି"),
+                    icon = painterResource(R.drawable.ic_ewe_custom),
+                    accent = PrimaryGreen,
+                    onClick = { navController.navigate("goat_list") }
+                )
+                OverviewInfoCard(
+                    modifier = Modifier.weight(1f),
+                    label = languageState.value.getT("EARNINGS", "आय", "ଉପାର୍ଜନ"),
+                    value = "₹ " + (stats?.premiumCollected?.let { inr.format(it.toLong()) } ?: "…"),
+                    subtitle = languageState.value.getT("Total earnings till date", "आज तक की कुल आय", "ଆଜି ପର୍ଯ୍ୟନ୍ତ ମୋଟ ଉପାର୍ଜନ"),
+                    icon = Icons.Default.AccountBalanceWallet,
+                    accent = PrimaryGreen,
+                    onClick = { navController.navigate("earning_history") }
+                )
             }
 
-            item(span = { GridItemSpan(gridColumns) }) {
-                Column {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        languageState.value.getT("Quick Actions", "त्वरित कार्रवाइयां", "ତ୍ୱରିତ କାର୍ଯ୍ୟାନୁଷ୍ଠାନ"),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.Black,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+            Spacer(Modifier.height(22.dp))
+            SectionTitle(languageState.value.getT("Quick Actions", "त्वरित कार्रवाइयां", "ତ୍ୱରିତ କାର୍ଯ୍ୟାନୁଷ୍ଠାନ"))
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                DidiQuickAction(Modifier.weight(1f), languageState.value.getT("Report Death", "मृत्यु रिपोर्ट", "ମୃତ୍ୟୁ ରିପୋର୍ଟ"), Icons.Default.Description) { navController.navigate("mortality_queue") }
+                DidiQuickAction(Modifier.weight(1f), languageState.value.getT("New Enrollment", "नया नामांकन", "ନୂଆ ପଞ୍ଜିକରଣ"), Icons.Default.PersonAdd) { navController.navigate("enrollment") }
+            }
+            Spacer(Modifier.height(14.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                DidiQuickAction(Modifier.weight(1f), languageState.value.getT("Vaccination Register", "टीकाकरण रजिस्टर", "ଟୀକାକରଣ ରେଜିଷ୍ଟର"), Icons.Default.Vaccines) { navController.navigate("vaccine_list") }
+                DidiQuickAction(Modifier.weight(1f), languageState.value.getT("Pending Claims", "लंबित दावे", "ବାକି ଦାବି"), Icons.Default.PendingActions) { navController.navigate("claim_list") }
             }
 
-            // Quick Actions (3 columns on mobile, 6 on tablet)
-            val actionSpan = if (isCompact) 2 else 2
-            items(6, span = { GridItemSpan(actionSpan) }) { index ->
-                when(index) {
-                    0 -> QuickActionGridCard(languageState.value.getT("Enroll Goat", "बकरी का नामांकन", "ଛେଳି ପଞ୍ଜିକରଣ"), painterResource(R.drawable.ic_ewe_custom), PrimaryGreen, CardLightGreen) { navController.navigate("enrollment") }
-                    1 -> QuickActionGridCard(languageState.value.getT("Vaccination", "टीकाकरण", "ଟୀକାକରଣ"), Icons.Default.MedicalServices, InfoBlue, CardLightBlue) { navController.navigate("vaccine_list") }
-                    2 -> QuickActionGridCard(languageState.value.getT("Mortality Report", "मृत्यु रिपोर्ट", "ମୃତ୍ୟୁ ରିପୋର୍ଟ"), Icons.Default.LocationOn, Color(0xFFD32F2F), CardLightRed) { navController.navigate("mortality_queue") }
-                    3 -> QuickActionGridCard(languageState.value.getT("Claims", "दावे", "ଦାବି"), Icons.AutoMirrored.Filled.Assignment, AccentOrange, CardLightOrange) { navController.navigate("claim_list") }
-                    4 -> QuickActionGridCard(languageState.value.getT("Goat List", "बकरियों की सूची", "ଛେଳି ତାଲିକା"), Icons.AutoMirrored.Filled.FactCheck, Color(0xFF2E7D32), CardLightGreen) { navController.navigate("goat_list") }
-                    5 -> {
-                        val comingSoonMsg = languageState.value.getT("Coming Soon", "जल्द ही आ रहा है", "ଖୁବ୍ ଶୀଘ୍ର ଆସୁଛି")
-                        QuickActionGridCard(languageState.value.getT("AI Assistant", "AI सहायक", "AI ସହାୟକ"), Icons.Default.AccountBox, Color(0xFF7B1FA2), CardLightPurple) {
-                            Toast.makeText(context, comingSoonMsg, Toast.LENGTH_SHORT).show()
+            Spacer(Modifier.height(22.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                SectionTitle(languageState.value.getT("Recent Activities", "हाल की गतिविधियां", "ସାମ୍ପ୍ରତିକ କାର୍ଯ୍ୟକଳାପ"))
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { navController.navigate("activity_report") }) {
+                    Text(languageState.value.getT("View All", "सभी देखें", "ସବୁ ଦେଖନ୍ତୁ"), color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Icon(Icons.Default.ChevronRight, null, tint = PrimaryGreen, modifier = Modifier.size(18.dp))
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(Modifier.padding(vertical = 6.dp)) {
+                    if (activities.isEmpty()) {
+                        Text(
+                            languageState.value.getT("No recent activity yet.", "अभी कोई गतिविधि नहीं।", "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି କାର୍ଯ୍ୟକଳାପ ନାହିଁ।"),
+                            color = Color.Gray, fontSize = 13.sp,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    } else {
+                        val shown = activities.take(4)
+                        shown.forEachIndexed { i, act ->
+                            DidiActivityRow(act, languageState.value)
+                            if (i < shown.size - 1) HorizontalDivider(color = Color(0xFFF0F0EC))
                         }
                     }
                 }
             }
 
+            Spacer(Modifier.height(22.dp))
+            MakingDifferenceBanner(languageState.value)
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String) {
+    Text(text, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A))
+}
+
+@Composable
+fun DidiHomeHeader(userName: String, unread: Int, onProfileClick: () -> Unit, onNotificationClick: () -> Unit) {
+    val languageState = LocalAppLanguage.current
+    val profileImageState = LocalProfileImage.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(onClick = onProfileClick, color = Color(0xFFF0EAD6), shape = CircleShape, modifier = Modifier.size(52.dp)) {
+            Box(contentAlignment = Alignment.Center) {
+                if (profileImageState.value != null) {
+                    AsyncImage(model = profileImageState.value, contentDescription = null, modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                } else {
+                    Image(painterResource(R.drawable.avatar_didi), null, modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                }
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(languageState.value.getT("Hello,", "नमस्ते,", "ନମସ୍କାର,"), fontSize = 15.sp, color = Color(0xFF5B6660))
+            Text(userName.ifBlank { languageState.value.getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି") }, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen)
+        }
+        Box {
+            Surface(onClick = onNotificationClick, color = Color.White, shape = CircleShape, shadowElevation = 2.dp, modifier = Modifier.size(46.dp)) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Notifications, null, tint = Color(0xFF2A2A2A))
+                }
+            }
+            if (unread > 0) {
+                Box(modifier = Modifier.align(Alignment.TopEnd).offset(x = 2.dp, y = (-2).dp).size(20.dp).clip(CircleShape).background(Color(0xFFE53935)), contentAlignment = Alignment.Center) {
+                    Text(if (unread > 9) "9+" else "$unread", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun HeroAssignedFarmersCard(count: Int?, onViewAll: () -> Unit) {
+    val languageState = LocalAppLanguage.current
+    Card(shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth().height(172.dp), elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
+        Box(Modifier.fillMaxSize()) {
+            Image(painterResource(R.drawable.ic_bg_login), null, modifier = Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+            Box(Modifier.fillMaxSize().background(
+                Brush.horizontalGradient(0.0f to Color(0xE61B5230), 0.45f to Color(0xB31B5230), 1.0f to Color(0x111B5230))
+            ))
+            Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                Text(languageState.value.getT("My Assigned Farmers", "मेरे सौंपे गए किसान", "ମୋର ନ୍ୟସ୍ତ କୃଷକ"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text(count?.toString() ?: "…", color = Color.White, fontSize = 46.sp, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onViewAll() }) {
+                    Text(languageState.value.getT("View all", "सभी देखें", "ସବୁ ଦେଖନ୍ତୁ"), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    Icon(Icons.Default.ChevronRight, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun OverviewInfoCard(modifier: Modifier, label: String, value: String, subtitle: String, icon: Any, accent: Color, onClick: () -> Unit) {
+    val lang = LocalAppLanguage.current.value
+    Card(modifier = modifier, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp), onClick = onClick) {
+        Column(Modifier.padding(16.dp)) {
+            Box(Modifier.size(48.dp).clip(CircleShape).background(accent.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+                when (icon) {
+                    is ImageVector -> Icon(icon, null, tint = accent, modifier = Modifier.size(26.dp))
+                    is Painter -> Icon(icon, null, tint = accent, modifier = Modifier.size(26.dp))
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = accent, letterSpacing = 0.5.sp)
+            Spacer(Modifier.height(2.dp))
+            Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), maxLines = 1)
+            Spacer(Modifier.height(4.dp))
+            Text(subtitle, fontSize = 12.sp, color = Color(0xFF7A8078), lineHeight = 15.sp)
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(lang.getT("View Details", "विवरण देखें", "ବିବରଣୀ ଦେଖନ୍ତୁ"), color = accent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Icon(Icons.Default.ChevronRight, null, tint = accent, modifier = Modifier.size(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun DidiQuickAction(modifier: Modifier, label: String, icon: ImageVector, onClick: () -> Unit) {
+    Card(modifier = modifier, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp), onClick = onClick) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = PrimaryGreen, modifier = Modifier.size(26.dp))
+            Spacer(Modifier.width(10.dp))
+            Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF14231A), lineHeight = 16.sp, modifier = Modifier.weight(1f))
+            Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFB0B7B0), modifier = Modifier.size(18.dp))
+        }
+    }
+}
+
+@Composable
+fun DidiActivityRow(act: ActivityItem, lang: AppLanguage) {
+    val type = act.type.lowercase()
+    val detail = act.detail.lowercase()
+    data class Badge(val text: String, val color: Color)
+    val badge = when {
+        type == "claim" && (detail.contains("approved") || detail.contains("verified") || detail.contains("claimed")) -> Badge(lang.getT("Verified", "सत्यापित", "ଯାଞ୍ଚିତ"), PrimaryGreen)
+        type == "claim" && detail.contains("rejected") -> Badge(lang.getT("Rejected", "अस्वीकृत", "ପ୍ରତ୍ୟାଖ୍ୟାତ"), Color(0xFFD32F2F))
+        type == "mortality" || type == "death" || (type == "claim" && detail.contains("pending")) -> Badge(lang.getT("Pending", "लंबित", "ବିଚାରାଧୀନ"), Color(0xFFB07A16))
+        else -> Badge(lang.getT("Completed", "पूर्ण", "ସମ୍ପୂର୍ଣ୍ଣ"), PrimaryGreen)
+    }
+    val icon: ImageVector = when (type) {
+        "enrollment" -> Icons.Default.PersonAdd
+        "vaccination" -> Icons.Default.Vaccines
+        "claim" -> Icons.Default.Shield
+        "mortality", "death" -> Icons.Default.Description
+        else -> Icons.Default.Notifications
+    }
+    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(badge.color.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = badge.color, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(act.detail.replaceFirstChar { it.uppercase() }, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF14231A), maxLines = 2, lineHeight = 16.sp)
+            if (act.actor.isNotBlank() && act.actor != "you" && act.actor != "claim") {
+                Text(act.actor, fontSize = 11.sp, color = Color(0xFF8A908A), maxLines = 1)
+            }
+        }
+        Spacer(Modifier.width(8.dp))
+        Column(horizontalAlignment = Alignment.End) {
+            Text(formatActivityDate(act.time), fontSize = 11.sp, color = Color(0xFF8A908A))
+            Spacer(Modifier.height(4.dp))
+            Surface(color = badge.color.copy(alpha = 0.12f), shape = RoundedCornerShape(8.dp)) {
+                Text(badge.text, color = badge.color, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+            }
+        }
+    }
+}
+
+fun formatActivityDate(iso: String): String {
+    val parts = iso.take(10).split("-")
+    if (parts.size < 3) return iso.take(10)
+    val months = arrayOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    val m = parts[1].toIntOrNull() ?: return iso.take(10)
+    return "${parts[2]} ${months.getOrElse(m - 1) { parts[1] }} ${parts[0]}"
+}
+
+@Composable
+fun MakingDifferenceBanner(lang: AppLanguage) {
+    Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF4EA)), modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Color.White), contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Favorite, null, tint = PrimaryGreen, modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(lang.getT("You are making a difference!", "आप बदलाव ला रहे हैं!", "ଆପଣ ପରିବର୍ତ୍ତନ ଆଣୁଛନ୍ତି!"), color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(lang.getT("Thank you for protecting farmers and their goats.", "किसानों और उनकी बकरियों की रक्षा के लिए धन्यवाद।", "କୃଷକ ଏବଂ ସେମାନଙ୍କ ଛେଳିଙ୍କୁ ସୁରକ୍ଷା ଦେବା ପାଇଁ ଧନ୍ୟବାଦ।"), color = Color(0xFF5B6660), fontSize = 12.sp, lineHeight = 16.sp)
+            }
+            Image(painterResource(R.drawable.avatar_didi), null, modifier = Modifier.size(56.dp).clip(CircleShape), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
         }
     }
 }
@@ -4071,89 +4258,65 @@ fun DidiBottomBar(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    NavigationBar(
-        containerColor = Color.White,
-        tonalElevation = 8.dp
+    fun go(route: String) {
+        if (currentRoute != route) {
+            navController.navigate(route) {
+                popUpTo(navController.graph.startDestinationId)
+                launchSingleTop = true
+            }
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+      Box(modifier = Modifier.fillMaxWidth().height(84.dp)) {
+        Surface(
+            color = Color.White,
+            shadowElevation = 10.dp,
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(68.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                DidiNavItem(Modifier.weight(1f), Icons.Default.Home, languageState.value.getT("Home", "होम", "ମୁଖ୍ୟ ପୃଷ୍ଠା"), currentRoute == "didi_dashboard") { go("didi_dashboard") }
+                DidiNavItem(Modifier.weight(1f), Icons.Default.Groups, languageState.value.getT("Farmers", "किसान", "କୃଷକ"), currentRoute == "goat_list" || currentRoute?.startsWith("goat_details") == true) { go("goat_list") }
+                Spacer(Modifier.weight(1f))
+                DidiNavItem(Modifier.weight(1f), Icons.Default.Assessment, languageState.value.getT("Activity", "गतिविधि", "କାର୍ଯ୍ୟକଳାପ"), currentRoute == "activity_report") { go("activity_report") }
+                DidiNavItem(Modifier.weight(1f), Icons.Default.SupportAgent, languageState.value.getT("Help Center", "सहायता", "ସହାୟତା"), currentRoute == "help_support") { go("help_support") }
+            }
+        }
+        // Center raised FAB -> enrollment
+        Surface(
+            onClick = { go("enrollment") },
+            shape = CircleShape,
+            color = Color(0xFFB98A34),
+            shadowElevation = 8.dp,
+            border = BorderStroke(4.dp, Color.White),
+            modifier = Modifier.align(Alignment.TopCenter).size(64.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(30.dp))
+            }
+        }
+      }
+        Spacer(modifier = Modifier.fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars).background(Color.White))
+    }
+}
+
+@Composable
+private fun DidiNavItem(modifier: Modifier, icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
+    val c = if (selected) PrimaryGreen else Color(0xFF8A908A)
+    Column(
+        modifier = modifier.clickable { onClick() }.padding(vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        NavigationBarItem(
-            selected = currentRoute == "didi_dashboard",
-            onClick = {
-                if (currentRoute != "didi_dashboard") {
-                    navController.navigate("didi_dashboard") {
-                        popUpTo(navController.graph.startDestinationId)
-                        launchSingleTop = true
-                    }
-                }
-            },
-            icon = { Icon(Icons.Default.Home, null) },
-            label = { Text(languageState.value.getT("Home", "होम", "ମୁଖ୍ୟ ପୃଷ୍ଠା"), fontSize = 9.sp) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = PrimaryGreen,
-                selectedTextColor = PrimaryGreen,
-                unselectedIconColor = Color.Gray,
-                unselectedTextColor = Color.Gray,
-                indicatorColor = Color.Transparent
-            )
-        )
-        NavigationBarItem(
-            selected = currentRoute == "goat_list" || currentRoute?.startsWith("goat_details") == true,
-            onClick = {
-                if (currentRoute != "goat_list") {
-                    navController.navigate("goat_list") {
-                        popUpTo(navController.graph.startDestinationId)
-                        launchSingleTop = true
-                    }
-                }
-            },
-            icon = { Icon(painterResource(R.drawable.ic_ewe_custom), null, modifier = Modifier.size(24.dp)) },
-            label = { Text(languageState.value.getT("Goats", "बकरियां", "ଛେଳି"), fontSize = 9.sp) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = PrimaryGreen,
-                selectedTextColor = PrimaryGreen,
-                unselectedIconColor = Color.Gray,
-                unselectedTextColor = Color.Gray,
-                indicatorColor = Color.Transparent
-            )
-        )
-        NavigationBarItem(
-            selected = currentRoute == "vaccine_list",
-            onClick = {
-                if (currentRoute != "vaccine_list") {
-                    navController.navigate("vaccine_list") {
-                        popUpTo(navController.graph.startDestinationId)
-                        launchSingleTop = true
-                    }
-                }
-            },
-            icon = { Icon(Icons.Default.MedicalServices, null) },
-            label = { Text(languageState.value.getT("Vaccines", "टीकाकरण", "ଟୀକା"), fontSize = 9.sp) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = PrimaryGreen,
-                selectedTextColor = PrimaryGreen,
-                unselectedIconColor = Color.Gray,
-                unselectedTextColor = Color.Gray,
-                indicatorColor = Color.Transparent
-            )
-        )
-        NavigationBarItem(
-            selected = currentRoute == "claim_list" || currentRoute?.startsWith("claim_review") == true,
-            onClick = {
-                if (currentRoute != "claim_list") {
-                    navController.navigate("claim_list") {
-                        popUpTo(navController.graph.startDestinationId)
-                        launchSingleTop = true
-                    }
-                }
-            },
-            icon = { Icon(Icons.AutoMirrored.Filled.Assignment, null) },
-            label = { Text(languageState.value.getT("Claims", "दावे", "ଦାବି"), fontSize = 9.sp) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = PrimaryGreen,
-                selectedTextColor = PrimaryGreen,
-                unselectedIconColor = Color.Gray,
-                unselectedTextColor = Color.Gray,
-                indicatorColor = Color.Transparent
-            )
+        Icon(icon, null, tint = c, modifier = Modifier.size(24.dp))
+        Spacer(Modifier.height(3.dp))
+        Text(label, color = c, fontSize = 11.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal, maxLines = 1)
+        Spacer(Modifier.height(3.dp))
+        Box(
+            Modifier.width(18.dp).height(3.dp).clip(RoundedCornerShape(2.dp))
+                .background(if (selected) PrimaryGreen else Color.Transparent)
         )
     }
 }

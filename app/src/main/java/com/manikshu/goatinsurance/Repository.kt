@@ -96,6 +96,7 @@ class Repository @Inject constructor(
     suspend fun aiAssistant(topic: String, message: String) = api.aiAssistant(AiAssistantRequest(topic, message))
     suspend fun sdEarnings() = api.sdEarnings()
     suspend fun sdClaims() = api.sdClaims()
+    suspend fun sdLiveActivity() = api.sdLiveActivity()
 
     // ---------------- farmer ----------------
     suspend fun farmerProfile() = api.farmerProfile()
