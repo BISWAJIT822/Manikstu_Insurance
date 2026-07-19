@@ -46,12 +46,10 @@ fun AppLanguage.getT(en: String, hi: String, or: String): String {
 //  Auth
 // =====================================================================================
 
+/** Asks an admin to reset this number's password (see AuthViewModel.requestPasswordReset). */
 @Serializable
-data class OtpResponse(val response: String)   // "sent" or "duplicate"
-
-@Serializable
-data class AuthConfigResponse(
-    @SerialName("login_method") val loginMethod: String,   // "otp" or "password"
+data class ForgotPasswordRequest(
+    @SerialName("mobile_number") val mobileNumber: String,
 )
 
 @Serializable
@@ -82,7 +80,6 @@ data class VerifySignupRequest(
     @SerialName("full_name") val fullName: String,
     @SerialName("mobile_number") val mobileNumber: String,
     val role: String,
-    val otp: String,
     val village: String? = null,
     @SerialName("aadhaar_id") val aadhaarId: String? = null,
     val photo: String? = null,

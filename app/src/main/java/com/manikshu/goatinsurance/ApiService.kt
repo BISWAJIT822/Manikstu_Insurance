@@ -40,31 +40,14 @@ interface ApiService {
     suspend fun mortalityComplete(@Path("id") id: Int): MortalityCompleteResp
 
     // ----------------- AUTH -----------------
-    @GET("auth/config")
-    suspend fun authConfig(): AuthConfigResponse
-
+    // Login is password-only; the server's OTP endpoints stay dormant behind its
+    // password-mode gate and are no longer called from the app.
     @POST("auth/login_password")
     suspend fun loginPassword(@Body body: LoginPasswordRequest): LoginResponse
 
-    @GET("auth/request_otp")
-    suspend fun requestOtp(
-        @Query("mobile_number") mobile: String,
-        @Query("role") role: String,
-    ): OtpResponse
-
-    @GET("auth/verify_login")
-    suspend fun verifyLogin(
-        @Query("mobile_number") mobile: String,
-        @Query("role") role: String,
-        @Query("otp") otp: String,
-    ): LoginResponse
-
-    @GET("auth/request_otp_signup")
-    suspend fun requestOtpSignup(
-        @Query("full_name") fullName: String,
-        @Query("mobile_number") mobile: String,
-        @Query("role") role: String,
-    ): OtpResponse
+    /** Raises a reset request for an admin to action - never resets a password directly. */
+    @POST("auth/forgot_password")
+    suspend fun forgotPassword(@Body body: ForgotPasswordRequest): StatusResponse
 
     @POST("auth/verify_signup")
     suspend fun verifySignup(@Body body: VerifySignupRequest): StatusResponse
