@@ -4768,11 +4768,11 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
                             fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A),
                             modifier = Modifier.padding(start = 16.dp, top = 13.dp, bottom = 2.dp)
                         )
-                        ProfileInfoRow(Icons.Default.Person, lang.getT("Name", "नाम", "ନାମ"), userName, accent = IconBlue)
+                        ProfileInfoRow(Icons.Default.Person, lang.getT("Name", "नाम", "ନାମ"), userName)
                         ProfileRowDivider()
-                        ProfileInfoRow(Icons.Default.Phone, lang.getT("Mobile Number", "मोबाइल नंबर", "ମୋବାଇଲ୍ ନମ୍ବର"), userMobile, accent = IconTeal)
+                        ProfileInfoRow(Icons.Default.Phone, lang.getT("Mobile Number", "मोबाइल नंबर", "ମୋବାଇଲ୍ ନମ୍ବର"), userMobile)
                         ProfileRowDivider()
-                        ProfileInfoRow(Icons.Default.Shield, lang.getT("Role", "भूमिका", "ଭୂମିକା"), roleLabel, accent = IconPurple)
+                        ProfileInfoRow(Icons.Default.Shield, lang.getT("Role", "भूमिका", "ଭୂମିକା"), roleLabel)
                         Spacer(Modifier.height(8.dp))
                     }
 
@@ -4780,15 +4780,15 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
 
                     // Settings
                     ProfileSectionCard {
-                        ProfileSettingRow(Icons.Default.Lock, lang.getT("Change Password", "पासवर्ड बदलें", "ପାସୱାର୍ଡ ବଦଳାନ୍ତୁ"), accent = IconRose) { showChangePassword = true }
+                        ProfileSettingRow(Icons.Default.Lock, lang.getT("Change Password", "पासवर्ड बदलें", "ପାସୱାର୍ଡ ବଦଳାନ୍ତୁ")) { showChangePassword = true }
                         ProfileRowDivider()
-                        ProfileSettingRow(Icons.Default.Language, lang.getT("Language", "भाषा", "ଭାଷା"), trailing = lang.label, accent = IconIndigo) { showLanguagePicker = true }
+                        ProfileSettingRow(Icons.Default.Language, lang.getT("Language", "भाषा", "ଭାଷା"), trailing = lang.label) { showLanguagePicker = true }
                         ProfileRowDivider()
-                        ProfileSettingRow(Icons.Default.SupportAgent, lang.getT("Help & Support", "सहायता और समर्थन", "ସହାୟତା"), accent = IconOrange) { navController.navigate("help_support") }
+                        ProfileSettingRow(Icons.Default.SupportAgent, lang.getT("Help & Support", "सहायता और समर्थन", "ସହାୟତା")) { navController.navigate("help_support") }
                         ProfileRowDivider()
-                        ProfileSettingRow(Icons.Default.Shield, lang.getT("Privacy Policy", "गोपनीयता नीति", "ଗୋପନୀୟତା ନୀତି"), accent = IconCyan) { navController.navigate("privacy_policy") }
+                        ProfileSettingRow(Icons.Default.Shield, lang.getT("Privacy Policy", "गोपनीयता नीति", "ଗୋପନୀୟତା ନୀତି")) { navController.navigate("privacy_policy") }
                         ProfileRowDivider()
-                        ProfileSettingRow(Icons.Default.Description, lang.getT("Terms & Conditions", "नियम और शर्तें", "ନିୟମ ଏବଂ ସର୍ତ୍ତ"), accent = IconOlive) { navController.navigate("terms_of_service") }
+                        ProfileSettingRow(Icons.Default.Description, lang.getT("Terms & Conditions", "नियम और शर्तें", "ନିୟମ ଏବଂ ସର୍ତ୍ତ")) { navController.navigate("terms_of_service") }
                     }
 
                     Spacer(Modifier.height(20.dp))
@@ -4876,10 +4876,10 @@ private fun ProfileRowDivider() {
 }
 
 @Composable
-private fun ProfileInfoRow(icon: ImageVector, label: String, value: String, accent: Color = PrimaryGreen) {
+private fun ProfileInfoRow(icon: ImageVector, label: String, value: String) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(38.dp).clip(RoundedCornerShape(11.dp)).background(accent.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
+        Box(Modifier.size(38.dp).clip(RoundedCornerShape(11.dp)).background(PrimaryGreen.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(12.dp))
         Column {
@@ -4890,13 +4890,13 @@ private fun ProfileInfoRow(icon: ImageVector, label: String, value: String, acce
 }
 
 @Composable
-private fun ProfileSettingRow(icon: ImageVector, label: String, trailing: String? = null, accent: Color = PrimaryGreen, onClick: () -> Unit) {
+private fun ProfileSettingRow(icon: ImageVector, label: String, trailing: String? = null, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(Modifier.size(38.dp).clip(RoundedCornerShape(11.dp)).background(accent.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
+        Box(Modifier.size(38.dp).clip(RoundedCornerShape(11.dp)).background(PrimaryGreen.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(12.dp))
         Text(label, fontSize = 15.sp, color = Color(0xFF14231A), modifier = Modifier.weight(1f))
@@ -10255,9 +10255,9 @@ fun PrivacyPolicyScreen(userRole: UserRole?, onBack: () -> Unit) {
                     ) {
                         Text(
                             lang.getT(
-                                "At AJAFI, we value your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, store, and protect your data.",
-                                "AJAFI में, हम आपकी गोपनीयता को महत्व देते हैं और आपकी व्यक्तिगत जानकारी की सुरक्षा के लिए प्रतिबद्ध हैं। यह गोपनीयता नीति बताती है कि हम आपका डेटा कैसे एकत्र, उपयोग, संग्रहीत और सुरक्षित करते हैं।",
-                                "AJAFI ରେ, ଆମେ ଆପଣଙ୍କ ଗୋପନୀୟତାକୁ ମୂଲ୍ୟ ଦେଉ ଏବଂ ଆପଣଙ୍କ ବ୍ୟକ୍ତିଗତ ସୂଚନା ସୁରକ୍ଷା ପାଇଁ ପ୍ରତିବଦ୍ଧ। ଏହି ଗୋପନୀୟତା ନୀତି ବର୍ଣ୍ଣନା କରେ ଯେ ଆମେ ଆପଣଙ୍କ ତଥ୍ୟ କିପରି ସଂଗ୍ରହ, ବ୍ୟବହାର, ସଂରକ୍ଷଣ ଏବଂ ସୁରକ୍ଷା କରୁ।",
+                                "At AjahFi, we value your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, store, and protect your data.",
+                                "AjahFi में, हम आपकी गोपनीयता को महत्व देते हैं और आपकी व्यक्तिगत जानकारी की सुरक्षा के लिए प्रतिबद्ध हैं। यह गोपनीयता नीति बताती है कि हम आपका डेटा कैसे एकत्र, उपयोग, संग्रहीत और सुरक्षित करते हैं।",
+                                "AjahFi ରେ, ଆମେ ଆପଣଙ୍କ ଗୋପନୀୟତାକୁ ମୂଲ୍ୟ ଦେଉ ଏବଂ ଆପଣଙ୍କ ବ୍ୟକ୍ତିଗତ ସୂଚନା ସୁରକ୍ଷା ପାଇଁ ପ୍ରତିବଦ୍ଧ। ଏହି ଗୋପନୀୟତା ନୀତି ବର୍ଣ୍ଣନା କରେ ଯେ ଆମେ ଆପଣଙ୍କ ତଥ୍ୟ କିପରି ସଂଗ୍ରହ, ବ୍ୟବହାର, ସଂରକ୍ଷଣ ଏବଂ ସୁରକ୍ଷା କରୁ।",
                             ),
                             fontSize = 15.sp, color = Color(0xFF3E4A42), lineHeight = 24.sp,
                             textAlign = TextAlign.Justify,
