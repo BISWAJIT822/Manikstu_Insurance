@@ -38,6 +38,12 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Scale
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -443,8 +449,7 @@ fun AppNavigation(navController: NavHostController, sessionManager: SessionManag
             GoatListScreen(
                 navController = navController,
                 userRole = userRole,
-                onBack = { navController.popBackStack() },
-                onAddGoat = { navController.navigate("enrollment") }
+                onBack = { navController.popBackStack() }
             ) 
         }
         composable("goat_details/{tag}") { backStackEntry ->
@@ -5454,7 +5459,7 @@ fun SettingsClickItem(label: String, value: String, onClick: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack: () -> Unit, onAddGoat: () -> Unit) {
+fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack: () -> Unit) {
     val languageState = LocalAppLanguage.current
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -5528,39 +5533,42 @@ fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack
         compact = {
             Scaffold(
                 topBar = {
-                    TopAppBar(
-                        title = { Text(languageState.value.getT("Goat List", "बकरियों की सूची", "ଛେଳି ତାଲିକା"), fontWeight = FontWeight.Bold) },
+                    CenterAlignedTopAppBar(
+                        title = {
+                            val titleText = if (isFarmer) languageState.value.getT("Goat List", "बकरियों की सूची", "ଛେଳି ତାଲିକା")
+                            else languageState.value.getT("Farmers List", "किसानों की सूची", "କୃଷକ ତାଲିକା")
+                            Text(titleText, fontWeight = FontWeight.Bold)
+                        },
                         navigationIcon = {
                             IconButton(onClick = onBack) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                             }
                         },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = themeColor,
-                            titleContentColor = Color.White,
-                            navigationIconContentColor = Color.White
-                        )
+                        colors = if (isFarmer) {
+                            TopAppBarDefaults.topAppBarColors(
+                                containerColor = themeColor,
+                                titleContentColor = Color.White,
+                                navigationIconContentColor = Color.White
+                            )
+                        } else {
+                            TopAppBarDefaults.topAppBarColors(
+                                containerColor = Color.White,
+                                titleContentColor = Color.Black,
+                                navigationIconContentColor = Color.Black
+                            )
+                        }
                     )
                 },
-                bottomBar = { 
-                    if (isFarmer) FarmerBottomBar(navController) else DidiBottomBar(navController) 
-                },
-                floatingActionButton = {
-                    if (!isFarmer) {
-                        FloatingActionButton(
-                            onClick = onAddGoat,
-                            containerColor = themeColor,
-                            contentColor = Color.White,
-                            shape = CircleShape
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = "Add Goat")
-                        }
-                    }
-                },
-                containerColor = Color(0xFFF8F9F5)
+                containerColor = Color(0xFFF6F7F3)
             ) { padding ->
-                GoatListContent(padding, tabs, searchQuery, { searchQuery = it }, selectedTab, { selectedTab = it }, themeColor, isFarmer, goats, statusByTag, clickIdByTag, isLoading, errorMsg, onReportDeath = { navController.navigate("farmer_report_death") }) { id ->
-                    navController.navigate("goat_details/$id")
+                Box(Modifier.fillMaxSize()) {
+                    val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                    GoatListContent(PaddingValues(top = padding.calculateTopPadding(), bottom = 74.dp + navInset), tabs, searchQuery, { searchQuery = it }, selectedTab, { selectedTab = it }, themeColor, isFarmer, goats, statusByTag, clickIdByTag, isLoading, errorMsg, onReportDeath = { navController.navigate("farmer_report_death") }) { id ->
+                        navController.navigate("goat_details/$id")
+                    }
+                    Box(Modifier.align(Alignment.BottomCenter)) {
+                        if (isFarmer) FarmerBottomBar(navController) else DidiBottomBar(navController)
+                    }
                 }
             }
         },
@@ -5594,21 +5602,25 @@ fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack
                 Scaffold(
                     topBar = {
                         TopAppBar(
-                            title = { Text(languageState.value.getT("Goat List", "बकरियों की सूची", "ଛେଳି ତାଲିକା"), fontWeight = FontWeight.Bold) },
-                            colors = TopAppBarDefaults.topAppBarColors(
-                                containerColor = themeColor,
-                                titleContentColor = Color.White
-                            )
+                            title = {
+                                val titleText = if (isFarmer) languageState.value.getT("Goat List", "बकरियों की सूची", "ଛେଳି ତାଲିକା")
+                                else languageState.value.getT("Farmers List", "किसानों की सूची", "କୃଷକ ତାଲିକା")
+                                Text(titleText, fontWeight = FontWeight.Bold)
+                            },
+                            colors = if (isFarmer) {
+                                TopAppBarDefaults.topAppBarColors(
+                                    containerColor = themeColor,
+                                    titleContentColor = Color.White
+                                )
+                            } else {
+                                TopAppBarDefaults.topAppBarColors(
+                                    containerColor = Color.White,
+                                    titleContentColor = Color.Black
+                                )
+                            }
                         )
                     },
-                    floatingActionButton = {
-                        if (!isFarmer) {
-                            FloatingActionButton(onClick = onAddGoat, containerColor = themeColor, contentColor = Color.White, shape = CircleShape) {
-                                Icon(Icons.Default.Add, contentDescription = "Add Goat")
-                            }
-                        }
-                    },
-                    containerColor = Color(0xFFF8F9F5)
+                    containerColor = Color(0xFFF6F7F3)
                 ) { padding ->
                     GoatListContent(padding, tabs, searchQuery, { searchQuery = it }, selectedTab, { selectedTab = it }, themeColor, isFarmer, goats, statusByTag, clickIdByTag, isLoading, errorMsg, onReportDeath = { navController.navigate("farmer_report_death") }) { id ->
                         navController.navigate("goat_details/$id")
@@ -5645,8 +5657,12 @@ fun GoatListContent(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearchChange,
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            placeholder = { Text(languageState.value.getT("Search by ear tag or farmer name", "कान के टैग या किसान के नाम से खोजें", "କାନ ଟ୍ୟାଗ୍ କିମ୍ବା କୃଷକଙ୍କ ନାମ ଅନୁସାରେ ଖୋଜନ୍ତୁ")) },
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
+            placeholder = {
+                val placeholderText = if (isFarmer) languageState.value.getT("Search by ear tag or breed", "कान के टैग या नस्ल से खोजें", "କାନ ଟ୍ୟାଗ୍ କିମ୍ବା ପ୍ରଜାତି ଅନୁସାରେ ଖୋଜନ୍ତୁ")
+                else languageState.value.getT("Search by Farmer Name", "किसान का नाम से खोजें", "କୃଷକଙ୍କ ନାମ ଅନୁସାରେ ଖୋଜନ୍ତୁ")
+                Text(placeholderText)
+            },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
             shape = RoundedCornerShape(24.dp),
             singleLine = true,
@@ -5654,17 +5670,19 @@ fun GoatListContent(
         )
 
         // Tabs
-        ScrollableTabRow(selectedTabIndex = selectedTab, containerColor = Color.Transparent, edgePadding = 16.dp, divider = {}, indicator = {}) {
-            tabs.forEachIndexed { index, title ->
-                val isSelected = selectedTab == index
-                Tab(selected = isSelected, onClick = { onTabChange(index) }, modifier = Modifier.padding(horizontal = 4.dp)) {
-                    Surface(
-                        color = if (isSelected) themeColor else Color.White,
-                        shape = RoundedCornerShape(20.dp),
-                        border = BorderStroke(1.dp, if (isSelected) themeColor else Color.LightGray.copy(alpha = 0.5f)),
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    ) {
-                        Text(text = title, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp), color = if (isSelected) Color.White else Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        if (isFarmer) {
+            ScrollableTabRow(selectedTabIndex = selectedTab, containerColor = Color.Transparent, edgePadding = 16.dp, divider = {}, indicator = {}) {
+                tabs.forEachIndexed { index, title ->
+                    val isSelected = selectedTab == index
+                    Tab(selected = isSelected, onClick = { onTabChange(index) }, modifier = Modifier.padding(horizontal = 4.dp)) {
+                        Surface(
+                            color = if (isSelected) themeColor else Color.White,
+                            shape = RoundedCornerShape(20.dp),
+                            border = BorderStroke(1.dp, if (isSelected) themeColor else Color.LightGray.copy(alpha = 0.5f)),
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        ) {
+                            Text(text = title, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp), color = if (isSelected) Color.White else Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        }
                     }
                 }
             }
@@ -5680,6 +5698,7 @@ fun GoatListContent(
         val filteredGoats = goats.filter {
             it.first.contains(searchQuery, ignoreCase = true) || it.second.contains(searchQuery, ignoreCase = true)
         }.filter { goat ->
+            if (!isFarmer) return@filter true
             when (selectedTab) {
                 1 -> statusByTag[goat.first] == "active"
                 2 -> statusByTag[goat.first] == "expired"
@@ -5693,7 +5712,7 @@ fun GoatListContent(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (isFarmer) {
@@ -5800,33 +5819,52 @@ fun GoatListContent(
                                         .clickable { expandedFarmers[farmerName] = !isExpanded },
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    // Farmer avatar
                                     Surface(
-                                        modifier = Modifier.size(52.dp),
-                                        shape = CircleShape,
-                                        color = themeColor.copy(alpha = 0.1f)
+                                        modifier = Modifier.size(80.dp),
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = Color(0xFFF5F5F5)
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
-                                            Icon(Icons.Default.Person, null, tint = themeColor, modifier = Modifier.size(28.dp))
+                                            Image(
+                                                painter = painterResource(R.drawable.avatar_farmer),
+                                                contentDescription = null,
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Crop
+                                            )
                                         }
                                     }
+                                    
                                     Spacer(modifier = Modifier.width(16.dp))
+                                    
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = farmerName,
-                                            style = MaterialTheme.typography.titleLarge,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = Color.Black
-                                        )
-                                        Text(
-                                            text = village,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = Color.Gray
-                                        )
+                                        Text(farmerName, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.Black)
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Phone, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+                                            Spacer(Modifier.width(4.dp))
+                                            Text("+91 98765 43210", color = Color.Gray, fontSize = 13.sp) // Mock phone
+                                        }
+                                        Row(verticalAlignment = Alignment.Top) {
+                                            Icon(Icons.Default.LocationOn, null, tint = Color.Gray, modifier = Modifier.size(14.dp).padding(top = 2.dp))
+                                            Spacer(Modifier.width(4.dp))
+                                            Text(village.ifBlank { "Jamdihi Village, Block: Jamdihi, Dist: Giridih" }, color = Color.Gray, fontSize = 12.sp, lineHeight = 16.sp)
+                                        }
                                     }
+                                    
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.background(Color(0xFFF1F8E9), RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(languageState.value.getT("Total Goats", "कुल बकरियां", "ମୋଟ ଛେଳି"), fontSize = 10.sp, color = Color.Gray)
+                                        Text("${goats.size}", color = SuccessGreen, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+                                        Text(languageState.value.getT("Goats", "बकरियां", "ଛେଳି"), fontSize = 10.sp, color = Color.Gray)
+                                    }
+                                    
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Icon(
-                                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.ChevronRight,
                                         contentDescription = null,
-                                        tint = Color.Gray
+                                        tint = if (isExpanded) PrimaryGreen else Color.Gray
                                     )
                                 }
                                 
@@ -5886,15 +5924,6 @@ fun GoatListContent(
                                             )
                                         }
                                     }
-                                } else {
-                                    // Show summary when collapsed
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = "${goats.size} " + languageState.value.getT("Goats Registered", "बकरियां पंजीकृत", "ଛେଳି ପଞ୍ଜିକୃତ"),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = themeColor,
-                                        fontWeight = FontWeight.Medium
-                                    )
                                 }
                             }
                         }
@@ -5908,13 +5937,10 @@ fun GoatListContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: UserRole?, onBack: () -> Unit) {
-    val backgroundColor = Color(0xFFF8F9F5)
-    val languageState = LocalAppLanguage.current
-    
+    val lang = LocalAppLanguage.current.value
     val isFarmer = userRole == UserRole.FARMER
-    val themeColor = if (isFarmer) PrimaryBlue else PrimaryGreen
 
-    // Load real data. For SD/Coordinator `tag` carries the goat id; for Farmer it carries the policy number.
+    // For SD/Coordinator `tag` carries the goat id; for Farmer it carries the policy number.
     var detail by remember { mutableStateOf<GoatDetail?>(null) }
     var policy by remember { mutableStateOf<PolicyDetail?>(null) }
     if (isFarmer) {
@@ -5930,185 +5956,414 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
     }
 
     val displayTag = detail?.earTagNumber ?: policy?.goat?.earTagNumber ?: tag
+    val breed = detail?.breed ?: policy?.goat?.breed
+    val gender = detail?.gender ?: policy?.goat?.gender
+    val ageMonths = detail?.ageMonths ?: policy?.goat?.ageMonths
     val statusStr = detail?.status ?: policy?.status ?: ""
-    val isExpired = statusStr == "expired"
-    val farmerName = detail?.farmer?.name ?: "—"
-    val farmerVillage = detail?.farmer?.village ?: "—"
+    val photoUrls = detail?.photos.orEmpty().map { it.url }
+
+    val policyNumber = detail?.policy?.policyNumber ?: policy?.policyNumber
+    val validFrom = detail?.policy?.validFrom ?: policy?.validFrom
+    val validTo = detail?.policy?.validTo ?: policy?.validTo
+    val sumInsured = detail?.policy?.sumInsured ?: policy?.sumInsured
+    val premium = policy?.annualPremium
+
+    val inr = remember { java.text.NumberFormat.getInstance(java.util.Locale("en", "IN")) }
+    fun money(v: Double?) = v?.let { "₹ " + inr.format(it.toLong()) } ?: "—"
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        containerColor = Color(0xFFF6F7F3),
         bottomBar = { if (isFarmer) FarmerBottomBar(navController) else DidiBottomBar(navController) },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .background(backgroundColor)
-        ) {
-            // Header (FIXED)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp))
-                    .background(themeColor)
-                    .padding(top = 48.dp, bottom = 32.dp, start = 20.dp, end = 20.dp)
+        Column(Modifier.padding(padding).fillMaxSize()) {
+
+            // ---- header ----
+            Row(
+                Modifier.fillMaxWidth().background(Color.White).statusBarsPadding()
+                    .padding(start = 6.dp, end = 16.dp, top = 8.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
-                        }
-                        Text(
-                            languageState.value.getT("Goat Details", "बकरी का विवरण", "ଛେଳି ବିବରଣୀ"),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color(0xFF14231A))
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        lang.getT("Goat Details", "बकरी का विवरण", "ଛେଳି ବିବରଣୀ"),
+                        fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A)
+                    )
+                    Text(
+                        lang.getT("View your insured goat information", "अपनी बीमित बकरी की जानकारी देखें", "ଆପଣଙ୍କ ବୀମାଭୁକ୍ତ ଛେଳିର ସୂଚନା ଦେଖନ୍ତୁ"),
+                        fontSize = 12.sp, color = Color(0xFF8A908A)
+                    )
+                }
+                var menuOpen by remember { mutableStateOf(false) }
+                Box {
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "More", tint = Color(0xFF14231A))
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text(lang.getT("View Policy Details", "पॉलिसी विवरण देखें", "ପଲିସି ବିବରଣୀ ଦେଖନ୍ତୁ")) },
+                            leadingIcon = { Icon(Icons.Default.Description, null, tint = PrimaryGreen) },
+                            onClick = { menuOpen = false; navController.navigate("claim_tracker") }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(lang.getT("Report Death", "मृत्यु रिपोर्ट", "ମୃତ୍ୟୁ ରିପୋର୍ଟ")) },
+                            leadingIcon = { Icon(Icons.Default.NotificationsActive, null, tint = IconRose) },
+                            onClick = {
+                                menuOpen = false
+                                navController.navigate(if (isFarmer) "farmer_report_death" else "mortality_queue")
+                            }
                         )
                     }
+                }
+            }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+            Column(
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp)
+            ) {
+                Spacer(Modifier.height(12.dp))
 
-                    // Goat Profile Image
-                    Surface(
-                        color = Color.White.copy(alpha = 0.2f),
-                        shape = CircleShape,
-                        modifier = Modifier.size(100.dp),
-                        border = BorderStroke(4.dp, Color.White.copy(alpha = 0.2f))
+                // ---- hero: id, breed, status, photo, with the policy strip overlapping ----
+                Box(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 44.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFEDF4E4)),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                painterResource(R.drawable.ic_ewe_custom),
-                                contentDescription = null,
-                                modifier = Modifier.size(60.dp),
-                                tint = Color.White
+                        Row(Modifier.fillMaxWidth().height(150.dp)) {
+                            Column(Modifier.weight(1f).padding(start = 16.dp, top = 16.dp, bottom = 16.dp)) {
+                                Icon(
+                                    Icons.Default.VerifiedUser, null,
+                                    tint = PrimaryGreen, modifier = Modifier.size(30.dp)
+                                )
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    lang.getT("GOAT ID", "बकरी आईडी", "ଛେଳି ID"),
+                                    fontSize = 11.sp, color = Color(0xFF7A8078), letterSpacing = 0.8.sp
+                                )
+                                Text(displayTag, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), maxLines = 1)
+                                Spacer(Modifier.height(6.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (!breed.isNullOrBlank()) {
+                                        Surface(color = Color.White.copy(alpha = 0.7f), shape = RoundedCornerShape(8.dp)) {
+                                            Text(
+                                                breed, fontSize = 11.sp, color = Color(0xFF5B6660),
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp), maxLines = 1
+                                            )
+                                        }
+                                        Spacer(Modifier.width(6.dp))
+                                    }
+                                    GoatStatusChip(statusStr, lang)
+                                }
+                            }
+                            GoatHeroPhoto(photoUrls.firstOrNull(), Modifier.width(150.dp).fillMaxHeight())
+                        }
+                    }
+
+                    // policy strip, straddling the hero's bottom edge
+                    Card(
+                        modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 8.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            GoatPolicyStat(Icons.Default.CalendarToday, lang.getT("Valid Till", "मान्यता तक", "ବୈଧତା ପର୍ଯ୍ୟନ୍ତ"), validTo ?: "—", IconBlue, Modifier.weight(1f))
+                            GoatStatDivider()
+                            GoatPolicyStat(Icons.Default.Shield, lang.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), money(sumInsured), IconTeal, Modifier.weight(1f))
+                            GoatStatDivider()
+                            GoatPolicyStat(Icons.Default.Description, lang.getT("Policy No.", "पॉलिसी संख्या", "ପଲିସି ନମ୍ବର"), policyNumber ?: "—", IconIndigo, Modifier.weight(1f))
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                // ---- goat information ----
+                GoatSectionCard(Icons.Default.Pets, lang.getT("Goat Information", "बकरी की जानकारी", "ଛେଳି ସୂଚନା"), IconGreen) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
+                        GoatInfoCell(Icons.Default.Label, lang.getT("Ear Tag", "कान का टैग", "କାନ ଟ୍ୟାଗ୍"), displayTag, IconBlue, Modifier.weight(1f))
+                        GoatCellDivider()
+                        GoatInfoCell(Icons.Default.Person, lang.getT("Gender", "लिंग", "ଲିଙ୍ଗ"), gender?.replaceFirstChar { it.uppercase() } ?: "—", IconPurple, Modifier.weight(1f))
+                    }
+                    GoatRowDivider()
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
+                        GoatInfoCell(Icons.Default.CalendarToday, lang.getT("Age", "आयु", "ବୟସ"), ageMonths?.let { goatAgeLabel(it, lang) } ?: "—", IconAmber, Modifier.weight(1f))
+                        GoatCellDivider()
+                        GoatInfoCell(Icons.Default.Scale, lang.getT("Weight", "वज़न", "ଓଜନ"), detail?.weightKg?.let { "${it.toInt()} kg" } ?: "—", IconTeal, Modifier.weight(1f))
+                    }
+                    GoatRowDivider()
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
+                        GoatInfoCell(Icons.Default.Pets, lang.getT("Breed", "नस्ल", "ଜାତି"), breed ?: "—", IconRose, Modifier.weight(1f))
+                        GoatCellDivider()
+                        GoatInfoCell(Icons.Default.CalendarToday, lang.getT("Date of Birth", "जन्म तिथि", "ଜନ୍ମ ତାରିଖ"), ageMonths?.let { goatBirthDateLabel(it) } ?: "—", IconIndigo, Modifier.weight(1f))
+                    }
+                    GoatRowDivider()
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
+                        GoatInfoCell(
+                            Icons.AutoMirrored.Filled.List,
+                            lang.getT("Description", "विवरण", "ବିବରଣୀ"),
+                            detail?.identificationMark?.takeIf { it.isNotBlank() } ?: "—",
+                            IconGreen, Modifier.weight(1f)
+                        )
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                // ---- policy & insurance ----
+                GoatSectionCard(Icons.Default.VerifiedUser, lang.getT("Policy & Insurance Details", "पॉलिसी और बीमा विवरण", "ପଲିସି ଓ ବୀମା ବିବରଣୀ"), IconIndigo) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
+                        GoatStackedStat(lang.getT("Policy Start", "पॉलिसी प्रारंभ", "ପଲିସି ଆରମ୍ଭ"), validFrom ?: "—", Modifier.weight(1f))
+                        GoatCellDivider()
+                        GoatStackedStat(lang.getT("Policy End", "पॉलिसी समाप्ति", "ପଲିସି ଶେଷ"), validTo ?: "—", Modifier.weight(1f))
+                        GoatCellDivider()
+                        GoatStackedStat(lang.getT("Premium Paid", "भुगतान प्रीमियम", "ଦିଆଯାଇଥିବା ପ୍ରିମିୟମ"), money(premium), Modifier.weight(1f))
+                    }
+                    GoatRowDivider()
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
+                        GoatInfoCell(Icons.Default.VerifiedUser, lang.getT("Insured By", "बीमाकृत", "ବୀମାଭୁକ୍ତ"), detail?.farmer?.name ?: "—", IconGreen, Modifier.weight(1f))
+                        GoatCellDivider()
+                        GoatInfoCell(Icons.Default.Business, lang.getT("Issued By", "जारीकर्ता", "ଜାରିକର୍ତ୍ତା"), "AjahFi Goat Insurance", IconBlue, Modifier.weight(1f))
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
+
+                // ---- goat images ----
+                if (photoUrls.isNotEmpty()) {
+                    Spacer(Modifier.height(14.dp))
+                    var showAllPhotos by rememberSaveable { mutableStateOf(false) }
+                    GoatSectionCard(
+                        Icons.Default.Image,
+                        lang.getT("Goat Images", "बकरी की तस्वीरें", "ଛେଳି ଛବି"),
+                        IconAmber,
+                        action = {
+                            Text(
+                                if (showAllPhotos) lang.getT("Show Less", "कम दिखाएं", "କମ୍ ଦେଖାନ୍ତୁ")
+                                else lang.getT("View All", "सभी देखें", "ସବୁ ଦେଖନ୍ତୁ"),
+                                color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                                modifier = Modifier.clickable { showAllPhotos = !showAllPhotos }
                             )
                         }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        displayTag,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        if (isExpired) languageState.value.getT("Policy Expired", "पॉलिसी समाप्त", "ନୀତି ସମାପ୍ତ")
-                        else languageState.value.getT("Policy Active", "पॉलिसी सक्रिय", "ନୀତି ସକ୍ରିୟ"),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (isExpired) Color(0xFFFFCDD2) else Color.White.copy(alpha = 0.8f)
-                    )
-                }
-            }
-
-            // Information (SCROLLABLE)
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Goat / policy source values
-                val g = detail
-                val pGoat = policy?.goat
-                val breedVal = g?.breed ?: pGoat?.breed ?: "—"
-                val genderVal = g?.gender ?: pGoat?.gender ?: "—"
-                val ageVal = (g?.ageMonths ?: pGoat?.ageMonths)?.let { "$it " + languageState.value.getT("Months", "महीने", "ମାସ") } ?: "—"
-
-                // Farmer Information (SD/Coordinator view has the farmer block)
-                if (!isFarmer) {
-                    ProfileInfoSection(languageState.value.getT("Farmer Information", "किसान जानकारी", "କୃଷକ ସୂଚନା"), themeColor) {
-                        ProfileInfoItem(languageState.value.getT("Farmer Name", "किसान का नाम", "କୃଷକଙ୍କ ନାମ"), farmerName)
-                        ProfileInfoItem(languageState.value.getT("Village", "गाँव", "ଗ୍ରାମ"), farmerVillage)
-                        ProfileInfoItem(languageState.value.getT("Mobile", "मोबाइल", "ମୋବାଇଲ୍"), g?.farmer?.mobile ?: "—")
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
-
-                // Goat Details
-                ProfileInfoSection(languageState.value.getT("Goat Details", "बकरी का विवरण", "ଛେଳି ବିବରଣୀ"), themeColor) {
-                    ProfileInfoItem(languageState.value.getT("Breed", "नस्ल", "ପ୍ରଜାତି"), breedVal)
-                    ProfileInfoItem(languageState.value.getT("Gender", "लिंग", "ଲିଙ୍ଗ"), genderVal)
-                    ProfileInfoItem(languageState.value.getT("Age", "आयु", "ବୟସ"), ageVal)
-                    g?.weightKg?.let { ProfileInfoItem(languageState.value.getT("Weight", "वजन", "ଓଜନ"), "${it} KG") }
-                    (g?.color ?: g?.identificationMark)?.let { ProfileInfoItem(languageState.value.getT("Color / Marks", "रंग / निशान", "ରଙ୍ଗ / ଚିହ୍ନ"), it) }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Policy Details
-                val pol = g?.policy
-                ProfileInfoSection(languageState.value.getT("Policy Information", "पॉलिसी जानकारी", "ନୀତି ସୂଚନା"), themeColor) {
-                    ProfileInfoItem(languageState.value.getT("Policy Number", "पॉलिसी नंबर", "ନୀତି ନମ୍ବର"), pol?.policyNumber ?: policy?.policyNumber ?: "—")
-                    ProfileInfoItem(languageState.value.getT("Issue Date", "जारी करने की तारीख", "ପ୍ରଦାନ ତାରିଖ"), pol?.validFrom ?: policy?.validFrom ?: "—")
-                    ProfileInfoItem(languageState.value.getT("End Date", "समाप्ति तिथि", "ଶେଷ ତାରିଖ"), pol?.validTo ?: policy?.validTo ?: "—")
-                    ProfileInfoItem(languageState.value.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), (pol?.sumInsured ?: policy?.sumInsured)?.let { "₹ ${it.toInt()}" } ?: "—")
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Vaccination History
-                ProfileInfoSection(languageState.value.getT("Vaccination History", "टीकाकरण इतिहास", "ଟୀକାକରଣ ଇତିହାସ"), themeColor) {
-                    // SD/coordinator view goes through GoatDetail; the farmer view through PolicyDetail.
-                    val vaccList = g?.vaccinations ?: policy?.vaccinations ?: emptyList()
-                    val vaccByType = vaccList.associateBy { it.type }
-                    fun done(t: String) = vaccByType[t]?.status == "done"
-                    VaccineStatusItem("PPR Vaccine", done("ppr"), themeColor) {}
-                    VaccineStatusItem("ET + TT Vaccine", done("et_tt"), themeColor) {}
-                    VaccineStatusItem("FMD Vaccine", done("fmd"), themeColor) {}
-                    VaccineStatusItem("Goat Pox Vaccine", done("goat_pox"), themeColor) {}
-                }
-
-                if (isFarmer) {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    val certVm: PolicyDetailViewModel = hiltViewModel()
-                    val certState by certVm.certificate.collectAsState()
-                    val certContext = LocalContext.current
-                    LaunchedEffect(certState) {
-                        when (val s = certState) {
-                            is SubmitState.Success -> {
-                                s.message?.let { path ->
-                                    val uri = FileProvider.getUriForFile(
-                                        certContext, "${certContext.packageName}.fileprovider", File(path)
-                                    )
-                                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                                        setDataAndType(uri, "application/pdf")
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    ) {
+                        if (showAllPhotos) {
+                            photoUrls.chunked(3).forEach { rowUrls ->
+                                Row(
+                                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    rowUrls.forEach { url ->
+                                        AsyncImage(
+                                            model = absoluteMediaUrl(url),
+                                            contentDescription = null,
+                                            modifier = Modifier.weight(1f).height(96.dp).clip(RoundedCornerShape(12.dp)),
+                                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                        )
                                     }
-                                    try {
-                                        certContext.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        Toast.makeText(certContext, languageState.value.getT("No PDF viewer installed", "कोई पीडीएफ व्यूअर नहीं मिला", "କୌଣସି PDF ଭ୍ୟୁଅର୍ ନାହିଁ"), Toast.LENGTH_LONG).show()
-                                    }
+                                    repeat(3 - rowUrls.size) { Spacer(Modifier.weight(1f)) }
                                 }
-                                certVm.resetCertificate()
                             }
-                            is SubmitState.Error -> {
-                                Toast.makeText(certContext, s.message, Toast.LENGTH_LONG).show()
-                                certVm.resetCertificate()
+                        } else {
+                            Row(
+                                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                                    .padding(horizontal = 14.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                photoUrls.forEach { url ->
+                                    AsyncImage(
+                                        model = absoluteMediaUrl(url),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(84.dp).clip(RoundedCornerShape(12.dp)),
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                    )
+                                }
                             }
-                            else -> {}
                         }
+                        Spacer(Modifier.height(10.dp))
+                    }
+                }
+
+                Spacer(Modifier.height(18.dp))
+
+                // ---- actions ----
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedButton(
+                        onClick = { navController.navigate("claim_tracker") },
+                        modifier = Modifier.weight(1f).height(52.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.4f)),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = Color(0xFFEDF4E9))
+                    ) {
+                        Icon(Icons.Default.Description, null, tint = PrimaryGreen, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(lang.getT("View Policy Details", "पॉलिसी विवरण देखें", "ପଲିସି ବିବରଣୀ"), color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
                     }
                     Button(
-                        onClick = { certVm.downloadCertificate(displayTag, certContext.cacheDir) },
-                        enabled = certState !is SubmitState.Submitting,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = themeColor)
+                        onClick = { navController.navigate(if (isFarmer) "farmer_report_death" else "mortality_queue") },
+                        modifier = Modifier.weight(1f).height(52.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
                     ) {
-                        Icon(Icons.Default.FileDownload, null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.download_policy), fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.NotificationsActive, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(lang.getT("Report Death", "मृत्यु रिपोर्ट", "ମୃତ୍ୟୁ ରିପୋର୍ଟ"), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
                     }
                 }
+
+                Spacer(Modifier.height(20.dp))
             }
         }
+    }
+}
+
+/** Approximate birth date. The record stores age in months, not a date. */
+private fun goatBirthDateLabel(months: Int): String {
+    val cal = java.util.Calendar.getInstance()
+    cal.add(java.util.Calendar.MONTH, -months)
+    return java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.ENGLISH).format(cal.time)
+}
+
+/** "2 years 3 months" from a month count, in the active language. */
+private fun goatAgeLabel(months: Int, lang: AppLanguage): String {
+    val y = months / 12
+    val m = months % 12
+    val yearWord = lang.getT("yr", "वर्ष", "ବର୍ଷ")
+    val monthWord = lang.getT("mo", "माह", "ମାସ")
+    return when {
+        y > 0 && m > 0 -> "$y $yearWord $m $monthWord"
+        y > 0 -> "$y $yearWord"
+        else -> "$m $monthWord"
+    }
+}
+
+@Composable
+private fun GoatStatusChip(status: String, lang: AppLanguage) {
+    val (label, colour) = when (status) {
+        "active" -> lang.getT("Active", "सक्रिय", "ସକ୍ରିୟ") to PrimaryGreen
+        "expired" -> lang.getT("Expired", "समाप्त", "ସମାପ୍ତ") to IconRose
+        "claimed" -> lang.getT("Claimed", "दावा किया", "ଦାବି ହୋଇଛି") to IconIndigo
+        "dead" -> lang.getT("Dead", "मृत", "ମୃତ") to IconRose
+        else -> (status.takeIf { it.isNotBlank() } ?: "—") to Color(0xFF7A8078)
+    }
+    Surface(color = Color.White, shape = RoundedCornerShape(10.dp)) {
+        Row(
+            Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(Modifier.size(6.dp).clip(CircleShape).background(colour))
+            Spacer(Modifier.width(5.dp))
+            Text(label, color = colour, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        }
+    }
+}
+
+/** The goat photo on the hero card, falling back to the house illustration. */
+@Composable
+private fun GoatHeroPhoto(url: String?, modifier: Modifier) {
+    Box(modifier, contentAlignment = Alignment.Center) {
+        if (url != null) {
+            AsyncImage(
+                model = absoluteMediaUrl(url),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+            )
+        } else {
+            Icon(
+                painterResource(R.drawable.ic_ewe_custom), null,
+                tint = PrimaryGreen.copy(alpha = 0.25f), modifier = Modifier.size(84.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun GoatPolicyStat(icon: ImageVector, label: String, value: String, accent: Color, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icon, null, tint = accent, modifier = Modifier.size(17.dp))
+        Spacer(Modifier.height(3.dp))
+        Text(label, fontSize = 10.sp, color = Color(0xFF8A908A), maxLines = 1)
+        Text(value, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = accent, maxLines = 1)
+    }
+}
+
+@Composable
+private fun GoatStatDivider() {
+    Box(Modifier.height(34.dp).width(1.dp).background(Color(0xFFEFEBE3)))
+}
+
+@Composable
+private fun GoatCellDivider() {
+    Box(Modifier.height(38.dp).width(1.dp).background(Color(0xFFF1EEE7)))
+}
+
+@Composable
+private fun GoatRowDivider() {
+    HorizontalDivider(color = Color(0xFFF1EEE7), modifier = Modifier.padding(horizontal = 14.dp))
+}
+
+/** White card with a tinted icon, a title, and stacked rows underneath. */
+@Composable
+private fun GoatSectionCard(
+    icon: ImageVector,
+    title: String,
+    accent: Color,
+    action: (@Composable () -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, Color(0xFFEFEBE3)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column {
+            Row(
+                Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    Modifier.size(30.dp).clip(RoundedCornerShape(9.dp)).background(accent.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, null, tint = accent, modifier = Modifier.size(17.dp))
+                }
+                Spacer(Modifier.width(10.dp))
+                Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), modifier = Modifier.weight(1f))
+                action?.invoke()
+            }
+            HorizontalDivider(color = Color(0xFFF1EEE7))
+            Spacer(Modifier.height(10.dp))
+            content()
+        }
+    }
+}
+
+@Composable
+private fun GoatInfoCell(icon: ImageVector, label: String, value: String, accent: Color, modifier: Modifier) {
+    Row(modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = accent, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(8.dp))
+        Column {
+            Text(label, fontSize = 11.sp, color = Color(0xFF8A908A), maxLines = 1)
+            Text(value, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), maxLines = 2)
+        }
+    }
+}
+
+@Composable
+private fun GoatStackedStat(label: String, value: String, modifier: Modifier) {
+    Column(modifier.padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, fontSize = 10.sp, color = Color(0xFF8A908A), maxLines = 1)
+        Spacer(Modifier.height(2.dp))
+        Text(value, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen, maxLines = 1)
     }
 }
 
@@ -6715,24 +6970,24 @@ fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBac
                         )
                     )
                 },
-                bottomBar = { 
-                    if (isCoordinator) {
-                        CoordinatorBottomBar(navController)
-                    } else if (isFarmer) {
-                        FarmerBottomBar(navController)
-                    } else {
-                        DidiBottomBar(navController)
-                    }
-                },
-                containerColor = Color(0xFFF8F9F5)
+                containerColor = Color(0xFFF6F7F3)
             ) { padding ->
-                if (isCoordinator) {
-                    CoordinatorClaimListContent(padding, searchQuery, { searchQuery = it }, themeColor, coClaims, coCounts) { claimId ->
-                        navController.navigate("claim_review/$claimId")
+                Box(Modifier.fillMaxSize()) {
+                    val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                    val contentPad = PaddingValues(top = padding.calculateTopPadding(), bottom = 74.dp + navInset)
+                    if (isCoordinator) {
+                        CoordinatorClaimListContent(contentPad, searchQuery, { searchQuery = it }, themeColor, coClaims, coCounts) { claimId ->
+                            navController.navigate("claim_review/$claimId")
+                        }
+                    } else {
+                        DidiClaimListContent(contentPad, searchQuery, { searchQuery = it }, themeColor, isFarmer, didiClaims) { claimId ->
+                            navController.navigate("claim_review/$claimId")
+                        }
                     }
-                } else {
-                    DidiClaimListContent(padding, searchQuery, { searchQuery = it }, themeColor, isFarmer, didiClaims) { claimId ->
-                        navController.navigate("claim_review/$claimId")
+                    Box(Modifier.align(Alignment.BottomCenter)) {
+                        if (isCoordinator) CoordinatorBottomBar(navController)
+                        else if (isFarmer) FarmerBottomBar(navController)
+                        else DidiBottomBar(navController)
                     }
                 }
             }
@@ -6830,7 +7085,7 @@ fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBac
                             )
                         )
                     },
-                    containerColor = Color(0xFFF8F9F5)
+                    containerColor = Color(0xFFF6F7F3)
                 ) { padding ->
                     if (isCoordinator) {
                         CoordinatorClaimListContent(padding, searchQuery, { searchQuery = it }, themeColor, coClaims, coCounts) { claimId ->

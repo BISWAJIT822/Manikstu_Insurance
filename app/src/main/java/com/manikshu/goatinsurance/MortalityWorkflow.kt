@@ -79,6 +79,8 @@ fun MortalityQueueScreen(navController: androidx.navigation.NavHostController, o
     val vm: MortalityQueueViewModel = hiltViewModel()
     val state by vm.list.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
+    // Which farmer's goat list is open. Only one at a time so the list stays short.
+    var expandedFarmerId by rememberSaveable { mutableStateOf<Int?>(null) }
     val languageState = LocalAppLanguage.current
 
     LaunchedEffect(Unit) { vm.loadList() }
@@ -152,7 +154,8 @@ fun MortalityQueueScreen(navController: androidx.navigation.NavHostController, o
 
             Text(
                 text = languageState.value.getT("Farmers List", "किसानों की सूची", "କୃଷକ ତାଲିକା"),
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.Black
             )
 
@@ -185,16 +188,17 @@ fun MortalityQueueScreen(navController: androidx.navigation.NavHostController, o
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 items(filteredFarmers.values.toList()) { reports ->
-                                    FarmerMortalitySummaryCard(reports) {
-                                        // Navigate to a details view for this farmer's deaths.
-                                        // For now, if there's only one, go straight to it.
-                                        if (reports.size == 1) {
-                                            navController.navigate("mortality_detail/${reports.first().id}")
-                                        } else {
-                                            // TODO: specific farmer mortality sub-list
-                                            navController.navigate("mortality_detail/${reports.first().id}")
+                                    val farmerId = reports.first().farmerId ?: 0
+                                    FarmerMortalitySummaryCard(
+                                        reports = reports,
+                                        expanded = expandedFarmerId == farmerId,
+                                        onToggle = {
+                                            expandedFarmerId = if (expandedFarmerId == farmerId) null else farmerId
+                                        },
+                                        onGoatClick = { report ->
+                                            navController.navigate("mortality_detail/${report.id}")
                                         }
-                                    }
+                                    )
                                 }
                             }
                         }
@@ -206,18 +210,24 @@ fun MortalityQueueScreen(navController: androidx.navigation.NavHostController, o
 }
 
 @Composable
-private fun FarmerMortalitySummaryCard(reports: List<MortalityReportItem>, onClick: () -> Unit) {
+private fun FarmerMortalitySummaryCard(
+    reports: List<MortalityReportItem>,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onGoatClick: (MortalityReportItem) -> Unit,
+) {
     val languageState = LocalAppLanguage.current
     val f = reports.first()
     
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))
     ) {
-        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column {
+        Row(modifier = Modifier.clickable { onToggle() }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             // Farmer avatar
             Surface(
                 modifier = Modifier.size(52.dp),
@@ -253,8 +263,53 @@ private fun FarmerMortalitySummaryCard(reports: List<MortalityReportItem>, onCli
                 Text(languageState.value.getT("Goats", "बकरियां", "ଛେଳି"), fontSize = 9.sp, color = Color.Gray)
             }
             
-            Icon(Icons.Default.ChevronRight, null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
+            Icon(
+                if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.ChevronRight,
+                null, tint = PrimaryGreen, modifier = Modifier.size(20.dp)
+            )
         }
+
+        if (expanded) {
+            HorizontalDivider(color = Color(0xFFF0F0F0))
+            reports.forEachIndexed { index, report ->
+                if (index > 0) HorizontalDivider(color = Color(0xFFF5F5F5), modifier = Modifier.padding(start = 48.dp))
+                ReportedGoatRow(report) { onGoatClick(report) }
+            }
+        }
+        }
+    }
+}
+
+/** One reported-death goat inside an expanded farmer card. Opens Report Goat Death. */
+@Composable
+private fun ReportedGoatRow(report: MortalityReportItem, onClick: () -> Unit) {
+    val languageState = LocalAppLanguage.current
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier.size(30.dp).clip(RoundedCornerShape(9.dp)).background(IconRose.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(painterResource(R.drawable.ic_ewe_custom), null, tint = IconRose, modifier = Modifier.size(16.dp))
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(report.earTagNumber, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.Black, maxLines = 1)
+            Text(
+                listOfNotNull(report.breed, report.dateOfDeath.take(10)).joinToString(" · "),
+                fontSize = 11.sp, color = Color.Gray, maxLines = 1
+            )
+        }
+        if (report.status == "claim_initiated") {
+            Text(
+                languageState.value.getT("Claimed", "दावा किया", "ଦାବି ହୋଇଛି"),
+                fontSize = 10.sp, color = PrimaryGreen, fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.width(6.dp))
+        }
+        Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFB0B7B0), modifier = Modifier.size(16.dp))
     }
 }
 
