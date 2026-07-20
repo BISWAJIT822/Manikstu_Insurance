@@ -90,6 +90,8 @@ data class VerifySignupRequest(
 @Serializable
 data class SetPasswordRequest(
     val password: String,
+    /** The existing password. The server rejects the change without it. */
+    @SerialName("current_password") val currentPassword: String? = null,
 )
 
 @Serializable

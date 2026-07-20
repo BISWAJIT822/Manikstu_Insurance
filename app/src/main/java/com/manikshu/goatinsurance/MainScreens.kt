@@ -439,6 +439,13 @@ fun AppNavigation(navController: NavHostController, sessionManager: SessionManag
                 onBack = { navController.popBackStack() }
             ) 
         }
+        composable("change_password") {
+            ChangePasswordScreen(
+                navController = navController,
+                userRole = userRole,
+                onBack = { navController.popBackStack() }
+            )
+        }
         composable("privacy_policy") {
             PrivacyPolicyScreen(
                 userRole = userRole,
@@ -4642,46 +4649,6 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
         )
     }
 
-    if (showChangePassword) {
-        var pwd by remember { mutableStateOf("") }
-        var pwd2 by remember { mutableStateOf("") }
-        val busy = passwordState is SubmitState.Submitting
-        AlertDialog(
-            onDismissRequest = { if (!busy) showChangePassword = false },
-            containerColor = Color.White,
-            shape = RoundedCornerShape(20.dp),
-            title = { Text(lang.getT("Change Password", "पासवर्ड बदलें", "ପାସୱାର୍ଡ ବଦଳାନ୍ତୁ"), fontWeight = FontWeight.Bold, color = Color.Black) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = pwd, onValueChange = { pwd = it },
-                        label = { Text(lang.getT("New password (min 6)", "नया पासवर्ड (न्यूनतम 6)", "ନୂଆ ପାସୱାର୍ଡ (ସର୍ବନିମ୍ନ 6)")) },
-                        singleLine = true, visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, focusedBorderColor = PrimaryGreen)
-                    )
-                    OutlinedTextField(
-                        value = pwd2, onValueChange = { pwd2 = it },
-                        label = { Text(lang.getT("Confirm password", "पासवर्ड की पुष्टि करें", "ପାସୱାର୍ଡ ନିଶ୍ଚିତ କରନ୍ତୁ")) },
-                        singleLine = true, visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, focusedBorderColor = PrimaryGreen)
-                    )
-                    if (pwd2.isNotEmpty() && pwd != pwd2) {
-                        Text(lang.getT("Passwords do not match", "पासवर्ड मेल नहीं खाते", "ପାସୱାର୍ଡ ମେଳ ଖାଉନାହିଁ"), color = Color.Red, fontSize = 12.sp)
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = !busy && pwd.length >= 6 && pwd == pwd2,
-                    onClick = { profileVm.changePassword(pwd) }
-                ) { Text(lang.getT("Update", "अपडेट करें", "ଅପଡେଟ୍"), color = PrimaryGreen, fontWeight = FontWeight.Bold) }
-            },
-            dismissButton = { TextButton(onClick = { if (!busy) showChangePassword = false }) { Text(lang.getT("Cancel", "रद्द करें", "ବାତିଲ୍"), color = Color.Gray) } }
-        )
-    }
-
     if (showLanguagePicker) {
         AlertDialog(
             onDismissRequest = { showLanguagePicker = false },
@@ -4780,7 +4747,7 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
 
                     // Settings
                     ProfileSectionCard {
-                        ProfileSettingRow(Icons.Default.Lock, lang.getT("Change Password", "पासवर्ड बदलें", "ପାସୱାର୍ଡ ବଦଳାନ୍ତୁ")) { showChangePassword = true }
+                        ProfileSettingRow(Icons.Default.Lock, lang.getT("Change Password", "पासवर्ड बदलें", "ପାସୱାର୍ଡ ବଦଳାନ୍ତୁ")) { navController.navigate("change_password") }
                         ProfileRowDivider()
                         ProfileSettingRow(Icons.Default.Language, lang.getT("Language", "भाषा", "ଭାଷା"), trailing = lang.label) { showLanguagePicker = true }
                         ProfileRowDivider()
@@ -4990,21 +4957,22 @@ fun HelpSupportScreen(navController: NavHostController, userRole: UserRole?, onB
                     SupportSectionTitle(lang.getT("Still need help?", "अभी भी मदद चाहिए?", "ଏବେ ବି ସାହାଯ୍ୟ ଦରକାର?"))
                     Spacer(Modifier.height(10.dp))
 
-                    // Contact Us
+                    // Contact Us - soft blue, so it reads as the call to action among
+                    // the green cards around it.
                     Card(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
                         shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = softGreen),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE9F0FD)),
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
                         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(52.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.SupportAgent, null, tint = PrimaryGreen, modifier = Modifier.size(28.dp))
+                                Icon(Icons.Default.SupportAgent, null, tint = IconBlue, modifier = Modifier.size(28.dp))
                             }
                             Spacer(Modifier.width(14.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(lang.getT("Contact Us", "हमसे संपर्क करें", "ଆମ ସହ ଯୋଗାଯୋଗ କରନ୍ତୁ"), color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                Text(lang.getT("Our support team is ready to help you.", "हमारी सहायता टीम आपकी मदद के लिए तैयार है।", "ଆମର ସହାୟତା ଦଳ ଆପଣଙ୍କୁ ସାହାଯ୍ୟ କରିବାକୁ ପ୍ରସ୍ତୁତ।"), color = Color(0xFF6C7570), fontSize = 13.sp, lineHeight = 18.sp)
+                                Text(lang.getT("Contact Us", "हमसे संपर्क करें", "ଆମ ସହ ଯୋଗାଯୋଗ କରନ୍ତୁ"), color = IconBlue, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text(lang.getT("Our support team is ready to help you.", "हमारी सहायता टीम आपकी मदद के लिए तैयार है।", "ଆମର ସହାୟତା ଦଳ ଆପଣଙ୍କୁ ସାହାଯ୍ୟ କରିବାକୁ ପ୍ରସ୍ତୁତ।"), color = Color(0xFF63707E), fontSize = 13.sp, lineHeight = 18.sp)
                             }
                         }
                     }
@@ -5054,11 +5022,8 @@ fun HelpSupportScreen(navController: NavHostController, userRole: UserRole?, onB
                 }
 
                 // headset badge straddling the panel edge
-                Box(
-                    Modifier.align(Alignment.TopCenter).size(104.dp).clip(CircleShape).background(Color(0xFFF3F7F0)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.SupportAgent, null, tint = PrimaryGreen, modifier = Modifier.size(50.dp))
+                ScreenHeaderBadge {
+                    Icon(Icons.Default.SupportAgent, null, tint = PrimaryGreen, modifier = Modifier.size(44.dp))
                 }
             }
         }
@@ -5068,6 +5033,27 @@ fun HelpSupportScreen(navController: NavHostController, userRole: UserRole?, onB
 @Composable
 private fun SupportSectionTitle(text: String) {
     Text(text, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), modifier = Modifier.padding(start = 18.dp))
+}
+
+/**
+ * The circular badge that straddles the top edge of the rounded panel on
+ * Help & Support, Privacy Policy and Terms & Conditions. The white outer ring
+ * separates it from the farm banner behind it; the inner circle carries the
+ * green outline. Call it as the last child of the Box holding the panel.
+ */
+@Composable
+private fun BoxScope.ScreenHeaderBadge(icon: @Composable () -> Unit) {
+    Box(
+        Modifier.align(Alignment.TopCenter).size(104.dp).clip(CircleShape).background(Color.White).padding(8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            Modifier.fillMaxSize().clip(CircleShape).background(Color(0xFFF3F7F0)).border(2.dp, PrimaryGreen, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            icon()
+        }
+    }
 }
 
 @Composable
@@ -10246,23 +10232,34 @@ fun PrivacyPolicyScreen(userRole: UserRole?, onBack: () -> Unit) {
                 ) {
                     Spacer(Modifier.height(64.dp))
 
+                    // Intro - same treatment as the Terms & Conditions intro card
                     Card(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
                         shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        border = BorderStroke(1.dp, Color(0xFFEFEBE3)),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFEDF4E9)),
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
-                        Text(
-                            lang.getT(
-                                "At AjahFi, we value your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, store, and protect your data.",
-                                "AjahFi में, हम आपकी गोपनीयता को महत्व देते हैं और आपकी व्यक्तिगत जानकारी की सुरक्षा के लिए प्रतिबद्ध हैं। यह गोपनीयता नीति बताती है कि हम आपका डेटा कैसे एकत्र, उपयोग, संग्रहीत और सुरक्षित करते हैं।",
-                                "AjahFi ରେ, ଆମେ ଆପଣଙ୍କ ଗୋପନୀୟତାକୁ ମୂଲ୍ୟ ଦେଉ ଏବଂ ଆପଣଙ୍କ ବ୍ୟକ୍ତିଗତ ସୂଚନା ସୁରକ୍ଷା ପାଇଁ ପ୍ରତିବଦ୍ଧ। ଏହି ଗୋପନୀୟତା ନୀତି ବର୍ଣ୍ଣନା କରେ ଯେ ଆମେ ଆପଣଙ୍କ ତଥ୍ୟ କିପରି ସଂଗ୍ରହ, ବ୍ୟବହାର, ସଂରକ୍ଷଣ ଏବଂ ସୁରକ୍ଷା କରୁ।",
-                            ),
-                            fontSize = 15.sp, color = Color(0xFF3E4A42), lineHeight = 24.sp,
-                            textAlign = TextAlign.Justify,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp)
-                        )
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(48.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Lock, null, tint = PrimaryGreen, modifier = Modifier.size(26.dp))
+                            }
+                            Spacer(Modifier.width(14.dp))
+                            Column {
+                                Text(
+                                    lang.getT("Your privacy matters to us", "आपकी गोपनीयता हमारे लिए महत्वपूर्ण है", "ଆପଣଙ୍କ ଗୋପନୀୟତା ଆମ ପାଇଁ ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ"),
+                                    fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF14231A)
+                                )
+                                Text(
+                                    lang.getT(
+                                        "At AjahFi, we value your privacy and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, store, and protect your data.",
+                                        "AjahFi में, हम आपकी गोपनीयता को महत्व देते हैं और आपकी व्यक्तिगत जानकारी की सुरक्षा के लिए प्रतिबद्ध हैं। यह गोपनीयता नीति बताती है कि हम आपका डेटा कैसे एकत्र, उपयोग, संग्रहीत और सुरक्षित करते हैं।",
+                                        "AjahFi ରେ, ଆମେ ଆପଣଙ୍କ ଗୋପନୀୟତାକୁ ମୂଲ୍ୟ ଦେଉ ଏବଂ ଆପଣଙ୍କ ବ୍ୟକ୍ତିଗତ ସୂଚନା ସୁରକ୍ଷା ପାଇଁ ପ୍ରତିବଦ୍ଧ। ଏହି ଗୋପନୀୟତା ନୀତି ବର୍ଣ୍ଣନା କରେ ଯେ ଆମେ ଆପଣଙ୍କ ତଥ୍ୟ କିପରି ସଂଗ୍ରହ, ବ୍ୟବହାର, ସଂରକ୍ଷଣ ଏବଂ ସୁରକ୍ଷା କରୁ।",
+                                    ),
+                                    fontSize = 13.sp, color = Color(0xFF4A544C), lineHeight = 18.sp,
+                                    textAlign = TextAlign.Justify
+                                )
+                            }
+                        }
                     }
 
                     Spacer(Modifier.height(22.dp))
@@ -10304,15 +10301,12 @@ fun PrivacyPolicyScreen(userRole: UserRole?, onBack: () -> Unit) {
                 }
 
                 // policy badge straddling the panel edge
-                Box(
-                    Modifier.align(Alignment.TopCenter).size(104.dp).clip(CircleShape).background(Color(0xFFF3F7F0)),
-                    contentAlignment = Alignment.Center
-                ) {
+                ScreenHeaderBadge {
                     Icon(
                         painter = painterResource(R.drawable.privacy_policy),
                         contentDescription = null,
                         tint = PrimaryGreen,
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(44.dp)
                     )
                 }
             }
@@ -10408,79 +10402,22 @@ private fun PrivacySectionRow(index: Int, section: PrivacySection) {
         verticalAlignment = Alignment.Top
     ) {
         Box(
-            Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(section.accent.copy(alpha = 0.12f)),
+            Modifier.size(40.dp).clip(CircleShape).background(section.accent.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(section.icon, null, tint = section.accent, modifier = Modifier.size(24.dp))
+            Icon(section.icon, null, tint = section.accent, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(
                 "$index. ${section.title}",
-                fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A)
+                fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A)
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 section.body,
-                fontSize = 14.sp, color = Color(0xFF5B6660), lineHeight = 21.sp,
+                fontSize = 14.sp, color = Color(0xFF5B6660), lineHeight = 20.sp,
                 textAlign = TextAlign.Justify, modifier = Modifier.fillMaxWidth()
-            )
-        }
-    }
-}
-
-data class PolicySection(val title: String, val content: String, val icon: ImageVector)
-
-@Composable
-fun PolicySectionItem(icon: ImageVector, title: String, content: String, themeColor: Color) {
-    var expanded by remember { mutableStateOf(false) }
-    
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { expanded = !expanded }
-            .padding(vertical = 12.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                modifier = Modifier.size(36.dp),
-                shape = RoundedCornerShape(8.dp),
-                color = themeColor.copy(alpha = 0.1f)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = themeColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = title,
-                modifier = Modifier.weight(1f),
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp,
-                color = Color.Black
-            )
-            Icon(
-                imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = Color.LightGray,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-        
-        if (expanded) {
-            Text(
-                text = content,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.DarkGray,
-                modifier = Modifier.padding(start = 52.dp, top = 8.dp),
-                lineHeight = 18.sp
             )
         }
     }
@@ -10490,255 +10427,465 @@ fun PolicySectionItem(icon: ImageVector, title: String, content: String, themeCo
 @Composable
 fun TermsOfServiceScreen(userRole: UserRole?, onBack: () -> Unit) {
     val languageState = LocalAppLanguage.current
+    val lang = languageState.value
+    val sections = termsOfServiceSections(lang)
+    val softGreen = Color(0xFFEDF4E9)
+
+    Box(Modifier.fillMaxSize().background(Color(0xFFF3F4DD))) {
+        Image(
+            painter = painterResource(R.drawable.profile_banner),
+            contentDescription = null,
+            modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter),
+            contentScale = androidx.compose.ui.layout.ContentScale.FillWidth
+        )
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            Box(Modifier.fillMaxWidth().statusBarsPadding().padding(vertical = 8.dp)) {
+                IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart).padding(start = 6.dp)) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color(0xFF14231A))
+                }
+                Text(
+                    lang.getT("Terms & Conditions", "नियम और शर्तें", "ନିୟମ ଓ ସର୍ତ୍ତାବଳୀ"),
+                    modifier = Modifier.align(Alignment.Center),
+                    fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A)
+                )
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            Box(Modifier.fillMaxWidth()) {
+                Column(
+                    Modifier.fillMaxWidth()
+                        .padding(top = 54.dp)
+                        .clip(RoundedCornerShape(topStart = 46.dp, topEnd = 46.dp))
+                        .background(Color(0xFFFCFAF6))
+                        .navigationBarsPadding()
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
+                        Spacer(Modifier.height(64.dp))
+
+                        // Warning Box
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = CardDefaults.cardColors(containerColor = softGreen),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                        ) {
+                            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.size(48.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.Security, null, tint = PrimaryGreen, modifier = Modifier.size(26.dp))
+                                }
+                                Spacer(Modifier.width(14.dp))
+                                Column {
+                                    Text(lang.getT("Please read these terms carefully", "कृपया इन शर्तों को ध्यान से पढ़ें", "ଦୟାକରି ଏହି ସର୍ତ୍ତାବଳୀକୁ ଧ୍ୟାନର ସହିତ ପଢନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF14231A))
+                                    Text(lang.getT("By using AjahFi, you agree to comply with and be bound by the following terms and conditions.", "AjahFi का उपयोग करके, आप निम्नलिखित नियमों और शर्तों का पालन करने और उनसे बंधे रहने के लिए सहमत हैं।", "AjahFi ବ୍ୟବହାର କରି, ଆପଣ ନିମ୍ନଲିଖିତ ନିୟମ ଓ ସର୍ତ୍ତାବଳୀ ଅନୁଯାୟୀ କାର୍ଯ୍ୟ କରିବାକୁ ସମ୍ମତ ହୁଅନ୍ତି।"), fontSize = 13.sp, color = Color(0xFF4A544C), lineHeight = 18.sp)
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(24.dp))
+
+                        sections.forEachIndexed { index, section ->
+                            TermsSectionRow(index = index + 1, section = section)
+                            if (index < sections.size - 1) {
+                                HorizontalDivider(color = Color(0xFFF1EEE7), modifier = Modifier.padding(vertical = 12.dp))
+                            }
+                        }
+
+                        Spacer(Modifier.height(24.dp))
+
+                        // Last Updated Box
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(containerColor = softGreen),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                        ) {
+                            Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.CalendarToday, null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text(lang.getT("Last Updated: 20 July 2026", "अंतिम अद्यतन: 20 जुलाई 2026", "ଶେଷ ଅପଡେଟ୍: ୨୦ ଜୁଲାଇ ୨୦୨୬"), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF14231A))
+                                    Text(lang.getT("We recommend reviewing these terms periodically.", "हम इन शर्तों की समय-समय पर समीक्षा करने की सलाह देते हैं।", "ଆମେ ସମୟ ସମୟରେ ଏହି ସର୍ତ୍ତାବଳୀର ସମୀକ୍ଷା କରିବାକୁ ପରାମର୍ଶ ଦେଉ।"), fontSize = 12.sp, color = Color(0xFF5B6660))
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(14.dp))
+                    }
+
+                    Button(
+                        onClick = onBack,
+                        // no top padding: the spacer above already sets the gap
+                        modifier = Modifier.fillMaxWidth()
+                            .padding(start = 18.dp, end = 18.dp, bottom = 18.dp)
+                            .height(56.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B5E20))
+                    ) {
+                        Text(lang.getT("I Agree", "मैं सहमत हूँ", "ମୁଁ ସମ୍ମତ"), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    }
+                }
+
+                ScreenHeaderBadge {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Assignment,
+                        contentDescription = null,
+                        tint = PrimaryGreen,
+                        modifier = Modifier.size(44.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+private data class TermsSection(val icon: ImageVector, val accent: Color, val title: String, val body: String)
+
+private fun termsOfServiceSections(lang: AppLanguage): List<TermsSection> = listOf(
+    TermsSection(
+        icon = Icons.Default.Groups,
+        accent = IconBlue,
+        title = lang.getT("Acceptance of Terms", "शर्तों की स्वीकृति", "ସର୍ତ୍ତାବଳୀର ଗ୍ରହଣ"),
+        body = lang.getT(
+            "By accessing or using the AjahFi app, you agree to be bound by these Terms & Conditions and our Privacy Policy. If you do not agree, please do not use the app.",
+            "AjahFi ऐप का उपयोग करके, आप इन नियमों और शर्तों और हमारी गोपनीयता नीति से बंधे रहने के लिए सहमत हैं। यदि आप सहमत नहीं हैं, तो कृपया ऐप का उपयोग न करें।",
+            "AjahFi ଆପ୍ ବ୍ୟବହାର କରି, ଆପଣ ଏହି ନିୟମ ଓ ସର୍ତ୍ତାବଳୀ ଏବଂ ଆମର ଗୋପନୀୟତା ନୀତି ଦ୍ୱାରା ବାଧ୍ୟ ହେବାକୁ ସମ୍ମତ ହୁଅନ୍ତି। ଯଦି ଆପଣ ସମ୍ମତ ନୁହଁନ୍ତି, ଦୟାକରି ଆପ୍ ବ୍ୟବହାର କରନ୍ତୁ ନାହିଁ।",
+        ),
+    ),
+    TermsSection(
+        icon = Icons.Default.Phone,
+        accent = IconTeal,
+        title = lang.getT("Use of the App", "ऐप का उपयोग", "ଆପ୍ ର ବ୍ୟବହାର"),
+        body = lang.getT(
+            "AjahFi is intended to help users manage and insure their goats. You agree to use the app only for lawful purposes and in accordance with these terms.",
+            "AjahFi का उद्देश्य उपयोगकर्ताओं को उनकी बकरियों का प्रबंधन और बीमा करने में मदद करना है। आप केवल वैध उद्देश्यों के लिए और इन शर्तों के अनुसार ऐप का उपयोग करने के लिए सहमत हैं।",
+            "AjahFi ର ଉଦ୍ଦେଶ୍ୟ ହେଉଛି ବ୍ୟବହାରକାରୀଙ୍କୁ ସେମାନଙ୍କ ଛେଳିର ପରିଚାଳନା ଏବଂ ବୀମା କରିବାରେ ସାହାଯ୍ୟ କରିବା। ଆପଣ କେବଳ ବୈଧ ଉଦ୍ଦେଶ୍ୟରେ ଏବଂ ଏହି ସର୍ତ୍ତାବଳୀ ଅନୁଯାୟୀ ଆପ୍ ବ୍ୟବହାର କରିବାକୁ ସମ୍ମତ ହୁଅନ୍ତି।",
+        ),
+    ),
+    TermsSection(
+        icon = Icons.Default.Person,
+        accent = IconPurple,
+        title = lang.getT("User Responsibilities", "उपयोगकर्ता की जिम्मेदारियां", "ବ୍ୟବହାରକାରୀଙ୍କ ଦାୟିତ୍ୱ"),
+        body = lang.getT(
+            "You agree to provide accurate information and keep your account secure. You are responsible for all activities under your account.",
+            "आप सटीक जानकारी प्रदान करने और अपने खाते को सुरक्षित रखने के लिए सहमत हैं। आप अपने खाते के तहत सभी गतिविधियों के लिए जिम्मेदार हैं।",
+            "ଆପଣ ସଠିକ୍ ସୂଚନା ପ୍ରଦାନ କରିବାକୁ ଏବଂ ଆପଣଙ୍କ ଆକାଉଣ୍ଟକୁ ସୁରକ୍ଷିତ ରଖିବାକୁ ସମ୍ମତ ହୁଅନ୍ତି। ଆପଣଙ୍କ ଆକାଉଣ୍ଟ ଅଧୀନରେ ଥିବା ସମସ୍ତ କାର୍ଯ୍ୟକଳାପ ପାଇଁ ଆପଣ ଦାୟୀ।",
+        ),
+    ),
+    TermsSection(
+        icon = Icons.Default.Lock,
+        accent = IconGreen,
+        title = lang.getT("Data & Privacy", "डेटा और गोपनीयता", "ତଥ୍ୟ ଓ ଗୋପନୀୟତା"),
+        body = lang.getT(
+            "Your privacy is important to us. Please review our Privacy Policy to understand how we collect, use, and protect your information.",
+            "आपकी गोपनीयता हमारे लिए महत्वपूर्ण है। कृपया यह समझने के लिए हमारी गोपनीयता नीति की समीक्षा करें कि हम आपकी जानकारी कैसे एकत्र करते हैं, उपयोग करते हैं और सुरक्षित रखते हैं।",
+            "ଆପଣଙ୍କ ଗୋପନୀୟତା ଆମ ପାଇଁ ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ। ଆମେ କିପରି ଆପଣଙ୍କ ସୂଚନା ସଂଗ୍ରହ, ବ୍ୟବହାର ଏବଂ ସୁରକ୍ଷିତ କରୁ ତାହା ବୁଝିବା ପାଇଁ ଦୟାକରି ଆମର ଗୋପନୀୟତା ନୀତି ସମୀକ୍ଷା କରନ୍ତୁ।",
+        ),
+    ),
+    TermsSection(
+        icon = Icons.Default.Error,
+        accent = IconRose,
+        title = lang.getT("Limitation of Liability", "दायित्व की सीमा", "ଦାୟିତ୍ୱର ସୀମା"),
+        body = lang.getT(
+            "AjahFi is not liable for any indirect, incidental, or consequential damages resulting from the use of the app.",
+            "AjahFi ऐप के उपयोग के परिणामस्वरूप किसी भी अप्रत्यक्ष, आकस्मिक या परिणामी नुकसान के लिए उत्तरदायी नहीं है।",
+            "ଆପ୍ ର ବ୍ୟବହାର ଯୋଗୁଁ ହେଉଥିବା କୌଣସି ପରୋକ୍ଷ, ଆନୁସଙ୍ଗିକ କିମ୍ବା ପରିଣାମସ୍ୱରୂପ କ୍ଷତି ପାଇଁ AjahFi ଦାୟୀ ନୁହେଁ।",
+        ),
+    ),
+    TermsSection(
+        icon = Icons.Default.History,
+        accent = IconIndigo,
+        title = lang.getT("Changes to Terms", "शर्तों में बदलाव", "ସର୍ତ୍ତାବଳୀରେ ପରିବର୍ତ୍ତନ"),
+        body = lang.getT(
+            "We may update these Terms & Conditions from time to time. Continued use of the app after changes means you accept the revised terms.",
+            "हम समय-समय पर इन नियमों और शर्तों को अपडेट कर सकते हैं। बदलावों के बाद ऐप का निरंतर उपयोग करने का मतलब है कि आप संशोधित शर्तों को स्वीकार करते हैं।",
+            "ଆମେ ସମୟ ସମୟରେ ଏହି ନିୟମ ଓ ସର୍ତ୍ତାବଳୀକୁ ଅପଡେଟ୍ କରିପାରୁ। ପରିବର୍ତ୍ତନ ପରେ ଆପ୍ ର ନିରନ୍ତର ବ୍ୟବହାରର ଅର୍ଥ ହେଉଛି ଆପଣ ସଂଶୋଧିତ ସର୍ତ୍ତାବଳୀକୁ ଗ୍ରହଣ କରନ୍ତି।",
+        ),
+    ),
+)
+
+@Composable
+private fun TermsSectionRow(index: Int, section: TermsSection) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            Modifier.size(40.dp).clip(CircleShape).background(section.accent.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(section.icon, null, tint = section.accent, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                "$index. ${section.title}",
+                fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A)
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                section.body,
+                fontSize = 14.sp, color = Color(0xFF5B6660), lineHeight = 20.sp,
+                textAlign = TextAlign.Justify
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ChangePasswordScreen(
+    navController: NavHostController,
+    userRole: UserRole?,
+    onBack: () -> Unit
+) {
+    val languageState = LocalAppLanguage.current
+    val lang = languageState.value
+    val context = LocalContext.current
+    val profileImageState = LocalProfileImage.current
+
+    val profileVm: ProfileViewModel = hiltViewModel()
+    val dbProfile by profileVm.profile.collectAsState()
+    val passwordState by profileVm.password.collectAsState()
+
+    val userName = dbProfile?.fullName ?: ""
+    val userMobile = dbProfile?.mobileNumber ?: ""
+
+    var currentPassword by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var currentVisible by remember { mutableStateOf(false) }
+    var newVisible by remember { mutableStateOf(false) }
+    var confirmVisible by remember { mutableStateOf(false) }
+
+    val busy = passwordState is SubmitState.Submitting
+
+    LaunchedEffect(passwordState) {
+        when (val s = passwordState) {
+            is SubmitState.Success -> {
+                Toast.makeText(context, lang.getT("Password updated", "पासवर्ड अपडेट हुआ", "ପାସୱାର୍ଡ ଅପଡେଟ୍ ହୋଇଛି"), Toast.LENGTH_SHORT).show()
+                profileVm.resetPassword()
+                onBack()
+            }
+            is SubmitState.Error -> {
+                Toast.makeText(context, s.message, Toast.LENGTH_LONG).show()
+                profileVm.resetPassword()
+            }
+            else -> {}
+        }
+    }
+
     val themeColor = when (userRole) {
         UserRole.FARMER -> PrimaryBlue
         UserRole.COORDINATOR -> CoordinatorOrange
         else -> PrimaryGreen
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = languageState.value.getT("Terms of Service", "सेवा की शर्तें", "ସେବା ସର୍ତ୍ତାବଳୀ"),
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = themeColor,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
+    Box(Modifier.fillMaxSize().background(Color(0xFFF3F4DD))) {
+        Image(
+            painter = painterResource(R.drawable.profile_banner),
+            contentDescription = null,
+            modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter),
+            contentScale = androidx.compose.ui.layout.ContentScale.FillWidth
+        )
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            Box(Modifier.fillMaxWidth().statusBarsPadding().padding(vertical = 8.dp)) {
+                IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart).padding(start = 6.dp)) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color(0xFF14231A))
+                }
+                Text(
+                    lang.getT("Change Password", "पासवर्ड बदलें", "ପାସୱାର୍ଡ ବଦଳାନ୍ତୁ"),
+                    modifier = Modifier.align(Alignment.Center),
+                    fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A)
                 )
-            )
-        },
-        containerColor = Color.White
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(24.dp))
+            }
 
-            // Illustration Header
-            Box(contentAlignment = Alignment.Center) {
+            Spacer(Modifier.height(14.dp))
+
+            Box(Modifier.fillMaxWidth()) {
+                Column(
+                    Modifier.fillMaxWidth()
+                        .padding(top = 64.dp)
+                        .clip(RoundedCornerShape(topStart = 46.dp, topEnd = 46.dp))
+                        .background(Color(0xFFFCFAF6))
+                        .navigationBarsPadding()
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+                        Spacer(Modifier.height(74.dp))
+                        Text(userName, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(4.dp))
+                        Text(userMobile, fontSize = 16.sp, color = Color(0xFF8A908A), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+
+                        Spacer(Modifier.height(22.dp))
+
+                        // Current Password
+                        Text(lang.getT("Current Password", "वर्तमान पासवर्ड", "ବର୍ତ୍ତମାନର ପାସୱାର୍ଡ"), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A))
+                        Spacer(Modifier.height(8.dp))
+                        PasswordField(
+                            value = currentPassword,
+                            onValueChange = { currentPassword = it },
+                            placeholder = lang.getT("Enter current password", "वर्तमान पासवर्ड दर्ज करें", "ବର୍ତ୍ତମାନର ପାସୱାର୍ଡ ଲେଖନ୍ତୁ"),
+                            isVisible = currentVisible,
+                            onToggleVisible = { currentVisible = !currentVisible },
+                            themeColor = themeColor,
+                            enabled = !busy
+                        )
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // New Password
+                        Text(lang.getT("New Password", "नया पासवर्ड", "ନୂଆ ପାସୱାର୍ଡ"), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A))
+                        Spacer(Modifier.height(8.dp))
+                        PasswordField(
+                            value = newPassword,
+                            onValueChange = { newPassword = it },
+                            placeholder = lang.getT("Enter new password", "नया पासवर्ड दर्ज करें", "ନୂଆ ପାସୱାର୍ଡ ଲେଖନ୍ତୁ"),
+                            isVisible = newVisible,
+                            onToggleVisible = { newVisible = !newVisible },
+                            themeColor = themeColor,
+                            enabled = !busy
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            lang.getT(
+                                "Password must be at least 6 characters long and include a combination of letters, numbers & symbols.",
+                                "पासवर्ड कम से कम 6 अक्षर लंबा होना चाहिए और इसमें अक्षरों, संख्याओं और प्रतीकों का संयोजन होना चाहिए।",
+                                "ପାସୱାର୍ଡ ଅତି କମରେ ୬ଟି ଅକ୍ଷର ବିଶିଷ୍ଟ ହେବା ଉଚିତ ଏବଂ ଏଥିରେ ଅକ୍ଷର, ସଂଖ୍ୟା ଏବଂ ପ୍ରତୀକର ମିଶ୍ରଣ ରହିବା ଉଚିତ।"
+                            ),
+                            fontSize = 12.sp, color = Color(0xFF8A908A), lineHeight = 18.sp
+                        )
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // Confirm New Password
+                        Text(lang.getT("Confirm New Password", "नए पासवर्ड की पुष्टि करें", "ନୂଆ ପାସୱାର୍ଡ ନିଶ୍ଚିତ କରନ୍ତୁ"), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A))
+                        Spacer(Modifier.height(8.dp))
+                        PasswordField(
+                            value = confirmPassword,
+                            onValueChange = { confirmPassword = it },
+                            placeholder = lang.getT("Re-enter new password", "नया पासवर्ड फिर से दर्ज करें", "ନୂଆ ପାସୱାର୍ଡ ପୁଣି ଲେଖନ୍ତୁ"),
+                            isVisible = confirmVisible,
+                            onToggleVisible = { confirmVisible = !confirmVisible },
+                            themeColor = themeColor,
+                            enabled = !busy
+                        )
+
+                        Spacer(Modifier.height(24.dp))
+
+                        Button(
+                            onClick = {
+                                if (newPassword != confirmPassword) {
+                                    Toast.makeText(context, lang.getT("Passwords do not match", "पासवर्ड मेल नहीं खाते", "ପାସୱାର୍ଡ ମେଳ ଖାଉନାହିଁ"), Toast.LENGTH_SHORT).show()
+                                } else if (newPassword.length < 6) {
+                                    Toast.makeText(context, lang.getT("Password too short", "पासवर्ड बहुत छोटा है", "ପାସୱାର୍ଡ ବହୁତ ଛୋଟ"), Toast.LENGTH_SHORT).show()
+                                } else {
+                                    profileVm.changePassword(newPassword, currentPassword)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B5E20)),
+                            enabled = !busy && currentPassword.isNotBlank() && newPassword.isNotBlank() && confirmPassword.isNotBlank()
+                        ) {
+                            Text(
+                                if (busy) lang.getT("Updating...", "अपडेट किया जा रहा है...", "ଅପଡେଟ୍ କରାଯାଉଛି...")
+                                else lang.getT("Update Password", "पासवर्ड अपडेट करें", "ପାସୱାର୍ଡ ଅପଡେଟ୍ କରନ୍ତୁ"),
+                                fontWeight = FontWeight.Bold, fontSize = 17.sp, color = Color.White
+                            )
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // Security Card
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF3F7F0)),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                        ) {
+                            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.size(40.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.Security, null, tint = PrimaryGreen, modifier = Modifier.size(24.dp))
+                                }
+                                Spacer(Modifier.width(14.dp))
+                                Column {
+                                    Text(lang.getT("Keep your account secure", "अपने खाते को सुरक्षित रखें", "ଆପଣଙ୍କ ଆକାଉଣ୍ଟକୁ ସୁରକ୍ଷିତ ରଖନ୍ତୁ"), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF1B5E20))
+                                    Text(lang.getT("Choose a strong password that you don't use on other websites.", "एक मजबूत पासवर्ड चुनें जिसे आप अन्य वेबसाइटों पर उपयोग नहीं करते हैं।", "ଏକ ଶକ୍ତିଶାଳୀ ପାସୱାର୍ଡ ବାଛନ୍ତୁ ଯାହାକୁ ଆପଣ ଅନ୍ୟ ୱେବସାଇଟ୍‌ରେ ବ୍ୟବହାର କରନ୍ତି ନାହିଁ।"), fontSize = 12.sp, color = Color(0xFF5B6660), lineHeight = 18.sp)
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(24.dp))
+                    }
+                }
+
+                // Profile photo, drawn the same way as on the Profile page: a white
+                // circle with a soft shadow, no outline. Not editable from here.
                 Surface(
-                    modifier = Modifier.size(120.dp),
+                    modifier = Modifier.align(Alignment.TopCenter).size(128.dp),
                     shape = CircleShape,
-                    color = themeColor.copy(alpha = 0.1f)
-                ) {}
-                
-                Surface(
-                    modifier = Modifier.size(70.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    color = themeColor,
+                    color = Color.White,
                     shadowElevation = 4.dp
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(36.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Text(
-                text = languageState.value.getT("Our Terms, Your Trust", "हमारी शर्तें, आपका विश्वास", "ଆମର ସର୍ତ୍ତାବଳୀ, ଆପଣଙ୍କ ବିଶ୍ୱାସ"),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = languageState.value.getT(
-                    "Welcome! Please read these Terms of Service carefully before using our app. By using the app, you agree to these terms and conditions.",
-                    "स्वागत है! कृपया हमारे ऐप का उपयोग करने से पहले इन सेवा की शर्तों को ध्यान से पढ़ें। ऐप का उपयोग करके, आप इन नियमों और शर्तों से सहमत होते हैं।",
-                    "ସ୍ଵାଗତ! ଦୟାକରି ଆମର ଆପ୍ ବ୍ୟବହାର କରିବା ପୂର୍ବରୁ ଏହି ସେବା ସର୍ତ୍ତାବଳୀକୁ ଧ୍ୟାନର ସହିତ ପଢନ୍ତୁ | ଆପ୍ ବ୍ୟବହାର କରି, ଆପଣ ଏହି ନିୟମ ଏବଂ ସର୍ତ୍ତାବଳୀରେ ସମ୍ମତ ହୁଅନ୍ତି |"
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 40.dp)
-            )
-
-            Spacer(modifier = Modifier.height(40.dp))
-
-            // Terms Sections Card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(24.dp),
-                border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text(
-                        text = languageState.value.getT("In this Document", "इस दस्तावेज़ में", "ଏହି ଦଲିଲରେ"),
-                        color = themeColor,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    val sections = listOf(
-                        PolicySection(
-                            title = languageState.value.getT("1. Acceptance of Terms", "1. शर्तों की स्वीकृति", "୧. ସର୍ତ୍ତାବଳୀର ଗ୍ରହଣ"),
-                            content = languageState.value.getT(
-                                "By accessing or using this application, you agree to be bound by these terms. If you do not agree, please do not use the services.",
-                                "इस एप्लिकेशन तक पहुँचने या उपयोग करने से, आप इन शर्तों से बंधे होने के लिए सहमत होते हैं। यदि आप सहमत नहीं हैं, तो कृपया सेवाओं का उपयोग न करें।",
-                                "ଏହି ଆପ୍ ବ୍ୟବହାର କରି, ଆପଣ ଏହି ସର୍ତ୍ତାବଳୀ ଦ୍ୱାରା ବାଧ୍ୟ ହେବାକୁ ସମ୍ମତ ହୁଅନ୍ତି | ଯଦି ଆପଣ ସମ୍ମତ ନୁହଁନ୍ତି, ଦୟାକରି ସେବାଗୁଡିକ ବ୍ୟବହାର କରନ୍ତୁ ନାହିଁ |"
-                            ),
-                            icon = Icons.AutoMirrored.Filled.Assignment
-                        ),
-                        PolicySection(
-                            title = languageState.value.getT("2. Use of Our Services", "2. हमारी सेवाओं का उपयोग", "୨. ଆମର ସେବା ବ୍ୟବହାର"),
-                            content = languageState.value.getT(
-                                "Our services are designed to facilitate livestock insurance and related assistance. You agree to use the services only for lawful purposes.",
-                                "हमारी सेवाएँ पशुधन बीमा और संबंधित सहायता की सुविधा के लिए डिज़ाइन की गई हैं। आप केवल वैध उद्देश्यों के लिए सेवाओं का उपयोग करने के लिए सहमत हैं।",
-                                "ଆମର ସେବାଗୁଡିକ ପ୍ରାଣୀସମ୍ପଦ ବୀମା ଏବଂ ସମ୍ପୃକ୍ତ ସହାୟତା ପାଇଁ ପ୍ରସ୍ତୁତ କରାଯାଇଛି | ଆପଣ କେବଳ ଆଇନଗତ ଉଦ୍ଦେଶ୍ୟରେ ସେବା ବ୍ୟବହାର କରିବାକୁ ସମ୍ମତ ହୁଅନ୍ତି |"
-                            ),
-                            icon = Icons.Default.VerifiedUser
-                        ),
-                        PolicySection(
-                            title = languageState.value.getT("3. User Responsibilities", "3. उपयोगकर्ता की जिम्मेदारियां", "୩. ବ୍ୟବହାରକାରୀଙ୍କ ଦାୟିତ୍ୱ"),
-                            content = languageState.value.getT(
-                                "Users are responsible for providing accurate information about livestock and maintaining the confidentiality of their account details.",
-                                "उपयोगकर्ता पशुधन के बारे में सटीक जानकारी प्रदान करने और अपने खाते के विवरण की गोपनीयता बनाए रखने के लिए जिम्मेदार हैं।",
-                                "ପ୍ରାଣୀସମ୍ପଦ ବିଷୟରେ ସଠିକ୍ ସୂଚନା ପ୍ରଦାନ କରିବା ଏବଂ ସେମାନଙ୍କ ଆକାଉଣ୍ଟ ବିବରଣୀର ଗୋପନୀୟତା ରକ୍ଷା କରିବା ପାଇଁ ବ୍ୟବହାରକାରୀମାନେ ଦାୟୀ |"
-                            ),
-                            icon = Icons.Default.Person
-                        ),
-                        PolicySection(
-                            title = languageState.value.getT("4. Payments & Transactions", "4. भुगतान और लेनदेन", "୪. ପରିଶୋଧ ଏବଂ କାରବାର"),
-                            content = languageState.value.getT(
-                                "Insurance premiums and service fees must be paid as per the selected plans. All transactions are processed securely.",
-                                "बीमा प्रीमियम और सेवा शुल्क का भुगतान चयनित योजनाओं के अनुसार किया जाना चाहिए। सभी लेनदेन सुरक्षित रूप से संसाधित किए जाते हैं।",
-                                "ବୀମା ପ୍ରିମିୟମ ଏବଂ ସେବା ଶୁଳ୍କ ଚୟନ କରାଯାଇଥିବା ଯୋଜନା ଅନୁଯାୟୀ ପ୍ରଦାନ କରାଯିବା ଆବଶ୍ୟକ | ସମସ୍ତ କାରବାର ସୁରକ୍ଷିତ ଭାବରେ ପ୍ରକ୍ରିୟାକରଣ କରାଯାଏ |"
-                            ),
-                            icon = Icons.Default.Payments
-                        ),
-                        PolicySection(
-                            title = languageState.value.getT("5. Data & Privacy", "5. डेटा और गोपनीयता", "୫. ଡାଟା ଏବଂ ଗୋପନୀୟତା"),
-                            content = languageState.value.getT(
-                                "Your use of the services is also governed by our Privacy Policy. We protect your data as described in the policy document.",
-                                "सेवाओं का आपका उपयोग हमारी गोपनीयता नीति द्वारा भी शासित होता है। हम नीति दस्तावेज़ में वर्णित अनुसार आपके डेटा की सुरक्षा करते हैं।",
-                                "ଆପଣଙ୍କର ସେବା ବ୍ୟବହାର ମଧ୍ୟ ଆମର ଗୋପନୀୟତା ନୀତି ଦ୍ୱାରା ପରିଚାଳିତ | ଆମେ ନୀତି ଦଲିଲରେ ବର୍ଣ୍ଣନା କରାଯାଇଥିବା ଅନୁଯାୟୀ ଆପଣଙ୍କ ତଥ୍ୟକୁ ସୁରକ୍ଷିତ ରଖୁ |"
-                            ),
-                            icon = Icons.Default.Security
-                        ),
-                        PolicySection(
-                            title = languageState.value.getT("6. Termination", "6. समाप्ति", "୬. ସମାପ୍ତି"),
-                            content = languageState.value.getT(
-                                "We reserve the right to terminate or suspend access to our services for violations of these terms or fraudulent activities.",
-                                "हम इन शर्तों के उल्लंघन या धोखाधड़ी की गतिविधियों के लिए अपनी सेवाओं तक पहुँच को समाप्त या निलंबित करने का अधिकार सुरक्षित रखते हैं।",
-                                "ଏହି ସର୍ତ୍ତାବଳୀର ଉଲ୍ଲଂଘନ କିମ୍ବା ପ୍ରତାରଣାମୂଳକ କାର୍ଯ୍ୟକଳାପ ପାଇଁ ଆମର ସେବାଗୁଡିକର ଆକ୍ସେସ୍ ସମାପ୍ତ କିମ୍ବା ସ୍ଥଗିତ ରଖିବାର ଅଧିକାର ଆମେ ସଂରକ୍ଷିତ ରଖୁ |"
-                            ),
-                            icon = Icons.Default.Lock
-                        ),
-                        PolicySection(
-                            title = languageState.value.getT("7. Limitation of Liability", "7. दायित्व की सीमा", "୭. ଦାୟିତ୍ୱର ସୀମା"),
-                            content = languageState.value.getT(
-                                "The company shall not be liable for any indirect, incidental, or consequential damages resulting from the use of our services.",
-                                "कंपनी हमारी सेवाओं के उपयोग के परिणामस्वरूप होने वाले किसी भी अप्रत्यक्ष, आकस्मिक या परिणामी नुकसान के लिए उत्तरदायी नहीं होगी।",
-                                "ଆମର ସେବାଗୁଡିକର ବ୍ୟବହାର ଦ୍ୱାରା ହେଉଥିବା କୌଣସି ପରୋକ୍ଷ, ଆନୁସଙ୍ଗିକ କିମ୍ବା ପରିଣାମସ୍ୱରୂପ କ୍ଷତି ପାଇଁ କମ୍ପାନୀ ଦାୟୀ ରହିବ ନାହିଁ |"
-                            ),
-                            icon = Icons.Default.Gavel
-                        ),
-                        PolicySection(
-                            title = languageState.value.getT("8. Changes to Terms", "8. शर्तों में बदलाव", "୮. ସର୍ତ୍ତାବଳୀରେ ପରିବର୍ତ୍ତନ"),
-                            content = languageState.value.getT(
-                                "We may modify these terms at any time. Significant changes will be communicated through app notifications or email.",
-                                "हम किसी भी समय इन शर्तों को संशोधित कर सकते हैं। महत्वपूर्ण बदलावों की सूचना ऐप नोटिफिकेशन या ईमेल के माध्यम से दी जाएगी।",
-                                "ଆମେ ଯେକୌଣସି ସମୟରେ ଏହି ସର୍ତ୍ତାବଳୀରେ ସଂଶୋଧନ କରିପାରିବା | ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ ପରିବର୍ତ୍ତନଗୁଡିକ ଆପ୍ ବିଜ୍ଞପ୍ତି କିମ୍ବା ଇମେଲ୍ ମାଧ୍ୟମରେ ସୂଚନା ଦିଆଯିବ |"
-                            ),
-                            icon = Icons.Default.Edit
-                        ),
-                        PolicySection(
-                            title = languageState.value.getT("9. Contact Us", "9. हमसे संपर्क करें", "୯. ଆମ ସହ ଯୋଗାଯୋଗ କରନ୍ତୁ"),
-                            content = languageState.value.getT(
-                                "If you have any questions about these Terms of Service, please contact our support team through the Help & Support section.",
-                                "यदि आपके पास इन सेवा की शर्तों के बारे में कोई प्रश्न हैं, तो कृपया सहायता और समर्थन अनुभाग के माध्यम से हमारी सहायता टीम से संपर्क करें।",
-                                "ଯଦି ଏହି ସେବା ସର୍ତ୍ତାବଳୀ ବିଷୟରେ ଆପଣଙ୍କର କୌଣସି ପ୍ରଶ୍ନ ଅଛି, ଦୟାକରି ସାହାଯ୍ୟ ଏବଂ ସମର୍ଥନ ବିଭାଗ ମାଧ୍ୟମରେ ଆମର ସହାୟତା ଟିମ୍ ସହିତ ଯୋଗାଯୋଗ କରନ୍ତୁ |"
-                            ),
-                            icon = Icons.Default.SupportAgent
-                        )
-                    )
-
-                    sections.forEachIndexed { index, section ->
-                        PolicySectionItem(
-                            icon = section.icon,
-                            title = section.title,
-                            content = section.content,
-                            themeColor = themeColor
-                        )
-                        if (index < sections.size - 1) {
-                            PolicySectionDivider()
+                        // The API returns a relative path ("/uploads/x.jpg"); Coil needs an absolute URL.
+                        val remotePhoto = dbProfile?.photo?.takeIf { it.isNotBlank() }?.let {
+                            if (it.startsWith("http")) it
+                            else BuildConfig.BASE_URL.trimEnd('/') + "/" + it.trimStart('/')
+                        }
+                        when {
+                            profileImageState.value != null -> AsyncImage(
+                                model = profileImageState.value, contentDescription = null,
+                                modifier = Modifier.fillMaxSize().padding(5.dp).clip(CircleShape),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            )
+                            remotePhoto != null -> AsyncImage(
+                                model = remotePhoto, contentDescription = null,
+                                modifier = Modifier.fillMaxSize().padding(5.dp).clip(CircleShape),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            )
+                            else -> Icon(Icons.Default.Person, null, tint = Color(0xFFBDBDBD), modifier = Modifier.size(64.dp))
                         }
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Footer Agreement Card
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 24.dp),
-                colors = CardDefaults.cardColors(containerColor = themeColor.copy(alpha = 0.05f)),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Security,
-                        contentDescription = null,
-                        tint = themeColor,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = languageState.value.getT(
-                            "These terms are legally binding between you and our company.",
-                            "ये शर्तें आपके और हमारी कंपनी के बीच कानूनी रूप से बाध्यकारी हैं।",
-                            "ଏହି ସର୍ତ୍ତାବଳୀ ଆପଣଙ୍କ ଏବଂ ଆମ କମ୍ପାନୀ ମଧ୍ୟରେ ଆଇନଗତ ଭାବରେ ବାଧ୍ୟତାମୂଳକ |"
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.DarkGray,
-                        lineHeight = 18.sp
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
 
 @Composable
-fun PolicySectionDivider() {
-    HorizontalDivider(
-        color = Color.LightGray.copy(alpha = 0.2f),
-        modifier = Modifier.padding(start = 52.dp)
+fun PasswordField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    isVisible: Boolean,
+    onToggleVisible: () -> Unit,
+    themeColor: Color,
+    enabled: Boolean
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = { Text(placeholder, color = Color.Gray) },
+        shape = RoundedCornerShape(12.dp),
+        singleLine = true,
+        enabled = enabled,
+        visualTransformation = if (isVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        leadingIcon = { Icon(Icons.Default.Lock, null, tint = Color(0xFF1B5E20)) },
+        trailingIcon = {
+            IconButton(onClick = onToggleVisible) {
+                Icon(if (isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff, null, tint = Color.Gray)
+            }
+        },
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedTextColor = Color.Black,
+            unfocusedTextColor = Color.Black,
+            unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),
+            focusedBorderColor = themeColor
+        )
     )
 }
+
 
 
 

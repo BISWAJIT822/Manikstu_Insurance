@@ -126,10 +126,10 @@ class ProfileViewModel @Inject constructor(
     val password = _password.asStateFlow()
 
     /** Changes the login password (POST auth/set_password). */
-    fun changePassword(newPassword: String) {
+    fun changePassword(newPassword: String, currentPassword: String? = null) {
         viewModelScope.launch {
             _password.value = SubmitState.Submitting
-            repo.safeCall { setPassword(SetPasswordRequest(newPassword)) }
+            repo.safeCall { setPassword(SetPasswordRequest(newPassword, currentPassword)) }
                 .onSuccess { r ->
                     if (r.status == "success") _password.value = SubmitState.Success("Password updated")
                     else _password.value = SubmitState.Error(r.reason ?: "Could not change password")
