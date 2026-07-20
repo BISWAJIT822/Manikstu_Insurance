@@ -177,6 +177,33 @@ val LocalWindowSizeClass = staticCompositionLocalOf<WindowSizeClass?> { null }
 val LocalAppLanguage = compositionLocalOf { mutableStateOf(AppLanguage.ENGLISH) }
 val LocalProfileImage = compositionLocalOf { mutableStateOf<Uri?>(null) }
 val LocalNotificationsEnabled = compositionLocalOf { mutableStateOf(true) }
+
+/** Resolve a server media path ("/media/x.jpg") to an absolute URL Coil can load. */
+fun absoluteMediaUrl(path: String): String =
+    if (path.startsWith("http")) path
+    else BuildConfig.BASE_URL.trimEnd('/') + "/" + path.trimStart('/')
+
+/**
+ * Bridges the server profile photo into the shared avatar state that every dashboard
+ * header renders. Without it a photo set on one device (or before a reinstall) never
+ * shows, because the headers only read the local pick - and a fresh session has none,
+ * even though the photo is safely on the server.
+ *
+ * A local pick (file/content Uri) is never overwritten; only an empty slot or a stale
+ * remote URL is replaced, so cross-device updates still land.
+ */
+@Composable
+fun SyncRemoteProfilePhoto(photo: String?) {
+    val state = LocalProfileImage.current
+    LaunchedEffect(photo, state.value) {
+        val remote = photo?.takeIf { it.isNotBlank() }?.let { absoluteMediaUrl(it) } ?: return@LaunchedEffect
+        val current = state.value
+        val isLocalPick = current != null && current.scheme != "http" && current.scheme != "https"
+        if (!isLocalPick && current?.toString() != remote) {
+            state.value = Uri.parse(remote)
+        }
+    }
+}
 // Unified theme: farmer/coordinator dashboards use the same green as the rest.
 private val PrimaryBlue = PrimaryGreen
 
@@ -1363,6 +1390,7 @@ fun DidiDashboard(navController: NavHostController, sessionManager: SessionManag
     val profileVm: ProfileViewModel = hiltViewModel()
     val dbProfile by profileVm.profile.collectAsState()
     val userName = dbProfile?.fullName ?: savedName ?: ""
+    SyncRemoteProfilePhoto(dbProfile?.photo)
 
     val dashVm: DidiDashboardViewModel = hiltViewModel()
     val dashState by dashVm.state.collectAsState()
@@ -3735,6 +3763,7 @@ fun FarmerDashboard(navController: NavHostController, sessionManager: SessionMan
     val profileVm: ProfileViewModel = hiltViewModel()
     val dbProfile by profileVm.profile.collectAsState()
     val userName = dbProfile?.fullName ?: savedName ?: ""
+    SyncRemoteProfilePhoto(dbProfile?.photo)
 
     val farmerVm: FarmerHomeViewModel = hiltViewModel()
     val policiesState by farmerVm.policies.collectAsState()

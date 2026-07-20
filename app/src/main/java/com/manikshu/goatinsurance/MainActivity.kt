@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
+import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -47,7 +48,6 @@ class MainActivity : AppCompatActivity() {
             }
 
             val savedLanguage by sessionManager.appLanguage.collectAsState(initial = AppLanguage.ENGLISH)
-            val savedProfileImage by sessionManager.profileImageUri.collectAsState(initial = null)
             val savedNotificationsEnabled by sessionManager.notificationsEnabled.collectAsState(initial = true)
             
             // Initialize from system locale to avoid flicker
@@ -56,6 +56,9 @@ class MainActivity : AppCompatActivity() {
             
             val languageState = remember { mutableStateOf(initialLanguage) }
             val profileImageState = remember { mutableStateOf<android.net.Uri?>(null) }
+            // Guards the save effect below: it must not persist the initial null before
+            // the stored image has been read, or the saved photo is wiped on every launch.
+            val profileImageHydrated = remember { mutableStateOf(false) }
             val notificationsEnabledState = remember { mutableStateOf(true) }
 
             // Sync initial values from DataStore
@@ -66,8 +69,12 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-            LaunchedEffect(savedProfileImage) {
-                profileImageState.value = savedProfileImage
+            // Hydrate once from DataStore, then allow saves. Reading it imperatively
+            // (rather than a reactive collect that starts at null) means the save
+            // effect can't clobber the stored image with an initial null.
+            LaunchedEffect(Unit) {
+                profileImageState.value = sessionManager.profileImageUri.first()
+                profileImageHydrated.value = true
             }
             LaunchedEffect(savedNotificationsEnabled) {
                 notificationsEnabledState.value = savedNotificationsEnabled
@@ -82,7 +89,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             LaunchedEffect(profileImageState.value) {
-                sessionManager.saveProfileImage(profileImageState.value)
+                if (profileImageHydrated.value) sessionManager.saveProfileImage(profileImageState.value)
             }
             LaunchedEffect(notificationsEnabledState.value) {
                 sessionManager.saveNotificationsEnabled(notificationsEnabledState.value)

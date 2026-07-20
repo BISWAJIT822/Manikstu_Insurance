@@ -59,6 +59,7 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
     val profileVm: ProfileViewModel = androidx.hilt.navigation.compose.hiltViewModel()
     val dbProfile by profileVm.profile.collectAsState()
     val userName = dbProfile?.fullName ?: savedName ?: ""
+    SyncRemoteProfilePhoto(dbProfile?.photo)
 
     val vm: CoordinatorDashboardViewModel = androidx.hilt.navigation.compose.hiltViewModel()
     val dashState by vm.dashboard.collectAsState()
