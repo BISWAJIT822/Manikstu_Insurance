@@ -72,7 +72,6 @@ import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Star
@@ -4769,11 +4768,11 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
                             fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A),
                             modifier = Modifier.padding(start = 16.dp, top = 13.dp, bottom = 2.dp)
                         )
-                        ProfileInfoRow(Icons.Default.Person, lang.getT("Name", "नाम", "ନାମ"), userName)
+                        ProfileInfoRow(Icons.Default.Person, lang.getT("Name", "नाम", "ନାମ"), userName, accent = IconBlue)
                         ProfileRowDivider()
-                        ProfileInfoRow(Icons.Default.Phone, lang.getT("Mobile Number", "मोबाइल नंबर", "ମୋବାଇଲ୍ ନମ୍ବର"), userMobile)
+                        ProfileInfoRow(Icons.Default.Phone, lang.getT("Mobile Number", "मोबाइल नंबर", "ମୋବାଇଲ୍ ନମ୍ବର"), userMobile, accent = IconTeal)
                         ProfileRowDivider()
-                        ProfileInfoRow(Icons.Default.Shield, lang.getT("Role", "भूमिका", "ଭୂମିକା"), roleLabel)
+                        ProfileInfoRow(Icons.Default.Shield, lang.getT("Role", "भूमिका", "ଭୂମିକା"), roleLabel, accent = IconPurple)
                         Spacer(Modifier.height(8.dp))
                     }
 
@@ -4781,15 +4780,15 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
 
                     // Settings
                     ProfileSectionCard {
-                        ProfileSettingRow(Icons.Default.Lock, lang.getT("Change Password", "पासवर्ड बदलें", "ପାସୱାର୍ଡ ବଦଳାନ୍ତୁ")) { showChangePassword = true }
+                        ProfileSettingRow(Icons.Default.Lock, lang.getT("Change Password", "पासवर्ड बदलें", "ପାସୱାର୍ଡ ବଦଳାନ୍ତୁ"), accent = IconRose) { showChangePassword = true }
                         ProfileRowDivider()
-                        ProfileSettingRow(Icons.Default.Language, lang.getT("Language", "भाषा", "ଭାଷା"), trailing = lang.label) { showLanguagePicker = true }
+                        ProfileSettingRow(Icons.Default.Language, lang.getT("Language", "भाषा", "ଭାଷା"), trailing = lang.label, accent = IconIndigo) { showLanguagePicker = true }
                         ProfileRowDivider()
-                        ProfileSettingRow(Icons.Default.SupportAgent, lang.getT("Help & Support", "सहायता और समर्थन", "ସହାୟତା")) { navController.navigate("help_support") }
+                        ProfileSettingRow(Icons.Default.SupportAgent, lang.getT("Help & Support", "सहायता और समर्थन", "ସହାୟତା"), accent = IconOrange) { navController.navigate("help_support") }
                         ProfileRowDivider()
-                        ProfileSettingRow(Icons.Default.Shield, lang.getT("Privacy Policy", "गोपनीयता नीति", "ଗୋପନୀୟତା ନୀତି")) { navController.navigate("privacy_policy") }
+                        ProfileSettingRow(Icons.Default.Shield, lang.getT("Privacy Policy", "गोपनीयता नीति", "ଗୋପନୀୟତା ନୀତି"), accent = IconCyan) { navController.navigate("privacy_policy") }
                         ProfileRowDivider()
-                        ProfileSettingRow(Icons.Default.Description, lang.getT("Terms & Conditions", "नियम और शर्तें", "ନିୟମ ଏବଂ ସର୍ତ୍ତ")) { navController.navigate("terms_of_service") }
+                        ProfileSettingRow(Icons.Default.Description, lang.getT("Terms & Conditions", "नियम और शर्तें", "ନିୟମ ଏବଂ ସର୍ତ୍ତ"), accent = IconOlive) { navController.navigate("terms_of_service") }
                     }
 
                     Spacer(Modifier.height(20.dp))
@@ -4877,10 +4876,10 @@ private fun ProfileRowDivider() {
 }
 
 @Composable
-private fun ProfileInfoRow(icon: ImageVector, label: String, value: String) {
+private fun ProfileInfoRow(icon: ImageVector, label: String, value: String, accent: Color = PrimaryGreen) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(38.dp).clip(RoundedCornerShape(11.dp)).background(PrimaryGreen.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
+        Box(Modifier.size(38.dp).clip(RoundedCornerShape(11.dp)).background(accent.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(12.dp))
         Column {
@@ -4891,13 +4890,13 @@ private fun ProfileInfoRow(icon: ImageVector, label: String, value: String) {
 }
 
 @Composable
-private fun ProfileSettingRow(icon: ImageVector, label: String, trailing: String? = null, onClick: () -> Unit) {
+private fun ProfileSettingRow(icon: ImageVector, label: String, trailing: String? = null, accent: Color = PrimaryGreen, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(Modifier.size(38.dp).clip(RoundedCornerShape(11.dp)).background(PrimaryGreen.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
+        Box(Modifier.size(38.dp).clip(RoundedCornerShape(11.dp)).background(accent.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(12.dp))
         Text(label, fontSize = 15.sp, color = Color(0xFF14231A), modifier = Modifier.weight(1f))
@@ -5051,34 +5050,6 @@ fun HelpSupportScreen(navController: NavHostController, userRole: UserRole?, onB
                         }
                     }
 
-                    Spacer(Modifier.height(14.dp))
-
-                    // Quick tip
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = softGreen),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                    ) {
-                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.Top) {
-                            Box(Modifier.size(48.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.Lightbulb, null, tint = PrimaryGreen, modifier = Modifier.size(26.dp))
-                            }
-                            Spacer(Modifier.width(14.dp))
-                            Column {
-                                Text(lang.getT("Quick Tip", "त्वरित सुझाव", "ଦ୍ରୁତ ପରାମର୍ଶ"), color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                Text(
-                                    lang.getT(
-                                        "For faster resolution, please keep your GOAT ID or registered mobile number ready while contacting us.",
-                                        "तेज़ समाधान के लिए, संपर्क करते समय अपना GOAT ID या पंजीकृत मोबाइल नंबर तैयार रखें।",
-                                        "ଶୀଘ୍ର ସମାଧାନ ପାଇଁ, ଯୋଗାଯୋଗ ସମୟରେ ଆପଣଙ୍କ GOAT ID କିମ୍ବା ପଞ୍ଜିକୃତ ମୋବାଇଲ୍ ନମ୍ବର ପ୍ରସ୍ତୁତ ରଖନ୍ତୁ।"
-                                    ),
-                                    fontSize = 13.sp, color = Color(0xFF5B6660), lineHeight = 19.sp
-                                )
-                            }
-                        }
-                    }
-
                     Spacer(Modifier.height(28.dp))
                 }
 
@@ -5107,6 +5078,7 @@ private fun SupportRowDivider() {
 /** One Popular Topics entry: the row label plus the answer it expands to show. */
 private data class SupportTopic(
     val icon: ImageVector,
+    val accent: Color,
     val title: String,
     val subtitle: String,
     val body: String,
@@ -5115,6 +5087,7 @@ private data class SupportTopic(
 private fun supportTopics(lang: AppLanguage): List<SupportTopic> = listOf(
     SupportTopic(
         icon = Icons.Default.Description,
+        accent = IconBlue,
         title = lang.getT("Policy related queries", "पॉलिसी संबंधी प्रश्न", "ପଲିସି ସମ୍ବନ୍ଧୀୟ ପ୍ରଶ୍ନ"),
         subtitle = lang.getT("Coverage, renewal and documents", "कवरेज, नवीनीकरण और दस्तावेज़", "କଭରେଜ, ନବୀକରଣ ଏବଂ ଦଲିଲ"),
         body = lang.getT(
@@ -5125,6 +5098,7 @@ private fun supportTopics(lang: AppLanguage): List<SupportTopic> = listOf(
     ),
     SupportTopic(
         icon = Icons.Default.CurrencyRupee,
+        accent = IconAmber,
         title = lang.getT("Premium payment", "प्रीमियम भुगतान", "ପ୍ରିମିୟମ ଦେୟ"),
         subtitle = lang.getT("Payments, receipts and dues", "भुगतान, रसीद और बकाया", "ଦେୟ, ରସିଦ ଏବଂ ବକେୟା"),
         body = lang.getT(
@@ -5135,6 +5109,7 @@ private fun supportTopics(lang: AppLanguage): List<SupportTopic> = listOf(
     ),
     SupportTopic(
         icon = Icons.Default.Shield,
+        accent = IconPurple,
         title = lang.getT("Claim process", "दावा प्रक्रिया", "ଦାବି ପ୍ରକ୍ରିୟା"),
         subtitle = lang.getT("How to raise and track a claim", "दावा कैसे करें और ट्रैक करें", "ଦାବି କିପରି କରିବେ ଓ ଟ୍ରାକ୍ କରିବେ"),
         body = lang.getT(
@@ -5145,6 +5120,7 @@ private fun supportTopics(lang: AppLanguage): List<SupportTopic> = listOf(
     ),
     SupportTopic(
         icon = Icons.Default.Description,
+        accent = IconTeal,
         title = lang.getT("Policy details", "पॉलिसी विवरण", "ପଲିସି ବିବରଣୀ"),
         subtitle = lang.getT("Policy number, validity and cover", "पॉलिसी नंबर, वैधता और कवर", "ପଲିସି ନମ୍ବର, ବୈଧତା ଏବଂ କଭର"),
         body = lang.getT(
@@ -5155,6 +5131,7 @@ private fun supportTopics(lang: AppLanguage): List<SupportTopic> = listOf(
     ),
     SupportTopic(
         icon = Icons.Default.Person,
+        accent = IconRose,
         title = lang.getT("Account & profile", "खाता और प्रोफ़ाइल", "ଖାତା ଏବଂ ପ୍ରୋଫାଇଲ୍"),
         subtitle = lang.getT("Login, password and personal details", "लॉगिन, पासवर्ड और व्यक्तिगत विवरण", "ଲଗଇନ୍, ପାସୱାର୍ଡ ଏବଂ ବ୍ୟକ୍ତିଗତ ବିବରଣୀ"),
         body = lang.getT(
@@ -5165,6 +5142,7 @@ private fun supportTopics(lang: AppLanguage): List<SupportTopic> = listOf(
     ),
     SupportTopic(
         icon = Icons.AutoMirrored.Filled.HelpOutline,
+        accent = IconIndigo,
         title = lang.getT("Other queries", "अन्य प्रश्न", "ଅନ୍ୟ ପ୍ରଶ୍ନ"),
         subtitle = lang.getT("Can't find what you're looking for?\nWe're here to help.", "जो खोज रहे हैं वह नहीं मिला?\nहम मदद के लिए हैं।", "ଯାହା ଖୋଜୁଛନ୍ତି ମିଳୁନାହିଁ?\nଆମେ ସାହାଯ୍ୟ ପାଇଁ ଅଛୁ।"),
         body = lang.getT(
@@ -5182,8 +5160,8 @@ private fun SupportTopicRow(topic: SupportTopic, expanded: Boolean, onToggle: ()
             Modifier.fillMaxWidth().clickable { onToggle() }.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(Modifier.size(40.dp).clip(CircleShape).background(Color(0xFFEDF4E9)), contentAlignment = Alignment.Center) {
-                Icon(topic.icon, null, tint = PrimaryGreen, modifier = Modifier.size(21.dp))
+            Box(Modifier.size(40.dp).clip(CircleShape).background(topic.accent.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+                Icon(topic.icon, null, tint = topic.accent, modifier = Modifier.size(21.dp))
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -5212,7 +5190,7 @@ private fun SupportTopicRow(topic: SupportTopic, expanded: Boolean, onToggle: ()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SupportContactTile(modifier: Modifier, icon: ImageVector, label: String, bg: Color, onClick: () -> Unit) {
+private fun SupportContactTile(modifier: Modifier, icon: ImageVector, label: String, bg: Color, accent: Color = PrimaryGreen, onClick: () -> Unit) {
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(18.dp),
@@ -5225,7 +5203,7 @@ private fun SupportContactTile(modifier: Modifier, icon: ImageVector, label: Str
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(Modifier.size(48.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
-                Icon(icon, null, tint = PrimaryGreen, modifier = Modifier.size(26.dp))
+                Icon(icon, null, tint = accent, modifier = Modifier.size(26.dp))
             }
             Spacer(Modifier.height(8.dp))
             Text(label, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF14231A))
@@ -10234,8 +10212,6 @@ fun CallDetailRow(themeColor: Color, icon: ImageVector, label: String, value: St
 @Composable
 fun PrivacyPolicyScreen(userRole: UserRole?, onBack: () -> Unit) {
     val lang = LocalAppLanguage.current.value
-    val softGreen = Color(0xFFEDF4E9)
-
     val sections = privacyPolicySections(lang)
 
     Box(Modifier.fillMaxSize().background(Color(0xFFF3F4DD))) {
@@ -10292,7 +10268,7 @@ fun PrivacyPolicyScreen(userRole: UserRole?, onBack: () -> Unit) {
                     Spacer(Modifier.height(22.dp))
 
                     sections.forEachIndexed { index, section ->
-                        PrivacySectionRow(index = index + 1, section = section, iconBg = softGreen)
+                        PrivacySectionRow(index = index + 1, section = section)
                         if (index < sections.size - 1) {
                             HorizontalDivider(
                                 color = Color(0xFFF1EEE7),
@@ -10350,11 +10326,12 @@ private const val PRIVACY_LAST_UPDATED_HI = "20 जुलाई 2026"
 private const val PRIVACY_LAST_UPDATED_OR = "୨୦ ଜୁଲାଇ ୨୦୨୬"
 
 /** One numbered clause of the Privacy Policy. */
-private data class PrivacySection(val icon: ImageVector, val title: String, val body: String)
+private data class PrivacySection(val icon: ImageVector, val accent: Color, val title: String, val body: String)
 
 private fun privacyPolicySections(lang: AppLanguage): List<PrivacySection> = listOf(
     PrivacySection(
         icon = Icons.Default.Person,
+        accent = IconBlue,
         title = lang.getT("Information We Collect", "जानकारी जो हम एकत्र करते हैं", "ଆମେ ସଂଗ୍ରହ କରୁଥିବା ସୂଚନା"),
         body = lang.getT(
             "We collect personal information that you provide to us, such as your name, mobile number, role, and other details required for using our services.",
@@ -10364,6 +10341,7 @@ private fun privacyPolicySections(lang: AppLanguage): List<PrivacySection> = lis
     ),
     PrivacySection(
         icon = Icons.Default.Public,
+        accent = IconTeal,
         title = lang.getT("How We Use Your Information", "हम आपकी जानकारी का उपयोग कैसे करते हैं", "ଆମେ ଆପଣଙ୍କ ସୂଚନା କିପରି ବ୍ୟବହାର କରୁ"),
         body = lang.getT(
             "We use your information to provide and improve our services, process your requests, communicate with you, and ensure the security of our platform.",
@@ -10373,6 +10351,7 @@ private fun privacyPolicySections(lang: AppLanguage): List<PrivacySection> = lis
     ),
     PrivacySection(
         icon = Icons.Default.Security,
+        accent = IconGreen,
         title = lang.getT("Data Protection", "डेटा सुरक्षा", "ତଥ୍ୟ ସୁରକ୍ଷା"),
         body = lang.getT(
             "We implement appropriate technical and organizational measures to protect your personal data from unauthorized access, use, or disclosure.",
@@ -10382,6 +10361,7 @@ private fun privacyPolicySections(lang: AppLanguage): List<PrivacySection> = lis
     ),
     PrivacySection(
         icon = Icons.Default.Groups,
+        accent = IconPurple,
         title = lang.getT("Information Sharing", "जानकारी साझा करना", "ସୂଚନା ଅଂଶୀଦାର"),
         body = lang.getT(
             "We do not sell or rent your personal information. We may share your data only with trusted service providers who assist us in operating our app, under strict confidentiality agreements.",
@@ -10391,6 +10371,7 @@ private fun privacyPolicySections(lang: AppLanguage): List<PrivacySection> = lis
     ),
     PrivacySection(
         icon = Icons.Default.CalendarToday,
+        accent = IconAmber,
         title = lang.getT("Data Retention", "डेटा प्रतिधारण", "ତଥ୍ୟ ସଂରକ୍ଷଣ"),
         body = lang.getT(
             "We retain your information only for as long as necessary to fulfill the purposes outlined in this policy or as required by law.",
@@ -10400,6 +10381,7 @@ private fun privacyPolicySections(lang: AppLanguage): List<PrivacySection> = lis
     ),
     PrivacySection(
         icon = Icons.Default.HowToReg,
+        accent = IconRose,
         title = lang.getT("Your Rights", "आपके अधिकार", "ଆପଣଙ୍କ ଅଧିକାର"),
         body = lang.getT(
             "You have the right to access, update, or delete your personal information. You may contact us anytime for assistance regarding your data.",
@@ -10409,6 +10391,7 @@ private fun privacyPolicySections(lang: AppLanguage): List<PrivacySection> = lis
     ),
     PrivacySection(
         icon = Icons.Default.NoteAlt,
+        accent = IconIndigo,
         title = lang.getT("Changes to This Policy", "इस नीति में बदलाव", "ଏହି ନୀତିରେ ପରିବର୍ତ୍ତନ"),
         body = lang.getT(
             "We may update this Privacy Policy from time to time. Any changes will be posted on this page with the updated date.",
@@ -10419,16 +10402,16 @@ private fun privacyPolicySections(lang: AppLanguage): List<PrivacySection> = lis
 )
 
 @Composable
-private fun PrivacySectionRow(index: Int, section: PrivacySection, iconBg: Color) {
+private fun PrivacySectionRow(index: Int, section: PrivacySection) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 14.dp),
         verticalAlignment = Alignment.Top
     ) {
         Box(
-            Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(iconBg),
+            Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(section.accent.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(section.icon, null, tint = PrimaryGreen, modifier = Modifier.size(24.dp))
+            Icon(section.icon, null, tint = section.accent, modifier = Modifier.size(24.dp))
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
