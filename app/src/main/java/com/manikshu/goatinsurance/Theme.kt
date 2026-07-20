@@ -13,6 +13,18 @@ val SuccessGreen = Color(0xFF28A745)
 val WarningYellow = Color(0xFFFFC107)
 val ErrorRed = Color(0xFFDC3545)
 
+// Per-icon accent colours for the Help & Support topic rows and the Privacy
+// Policy clauses. Each is dark enough to stay legible at ~20dp against white and
+// against its own 10% tint, which is what the rounded icon tiles use behind them.
+// Profile deliberately stays uniform green.
+val IconGreen = Color(0xFF1B6B3A)
+val IconBlue = Color(0xFF2F6FED)
+val IconPurple = Color(0xFF7A4FD6)
+val IconTeal = Color(0xFF0E8C8C)
+val IconAmber = Color(0xFFD98200)
+val IconRose = Color(0xFFD6455D)
+val IconIndigo = Color(0xFF3F51B5)
+
 private val LightColorScheme = lightColorScheme(
     primary = PrimaryGreen,
     onPrimary = Color.White,
