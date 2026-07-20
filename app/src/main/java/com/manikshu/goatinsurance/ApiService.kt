@@ -58,6 +58,9 @@ interface ApiService {
     @PUT("auth/profile")
     suspend fun updateProfile(@Body body: UpdateProfileRequest): ProfileResponse
 
+    @POST("auth/set_password")
+    suspend fun setPassword(@Body body: SetPasswordRequest): StatusResponse
+
     @Streaming
     @GET("farmer/policy_certificate/{tag}")
     suspend fun policyCertificate(@Path("tag") tag: String): okhttp3.ResponseBody

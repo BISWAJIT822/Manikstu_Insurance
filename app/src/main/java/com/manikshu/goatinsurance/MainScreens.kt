@@ -1,5 +1,9 @@
 package com.manikshu.goatinsurance
 
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.CurrencyRupee
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -99,6 +103,7 @@ import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.text.style.TextDecoration
@@ -1477,22 +1482,28 @@ fun DidiContent(padding: PaddingValues, navController: NavHostController, userNa
             SectionTitle(languageState.value.getT("Overview", "अवलोकन", "ସମୀକ୍ଷା"))
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                OverviewInfoCard(
+                OverviewCard(
                     modifier = Modifier.weight(1f),
                     label = languageState.value.getT("TOTAL GOATS", "कुल बकरियां", "ମୋଟ ଛେଳି"),
                     value = stats?.totalEnrolled?.toString() ?: "…",
                     subtitle = languageState.value.getT("All goats under your care", "आपकी देखरेख में सभी बकरियां", "ଆପଣଙ୍କ ଯତ୍ନରେ ଥିବା ସମସ୍ତ ଛେଳି"),
-                    icon = painterResource(R.drawable.ic_ewe_custom),
-                    accent = PrimaryGreen,
+                    accent = Color(0xFF2D6FE0),
+                    cardBg = Color(0xFFEAF1FC),
+                    footerBg = Color(0xFFD9E6FB),
+                    badgeIcon = painterResource(R.drawable.ic_ewe_custom),
+                    watermark = painterResource(R.drawable.ic_ewe_custom),
                     onClick = { navController.navigate("goat_list") }
                 )
-                OverviewInfoCard(
+                OverviewCard(
                     modifier = Modifier.weight(1f),
                     label = languageState.value.getT("EARNINGS", "आय", "ଉପାର୍ଜନ"),
                     value = "₹ " + (stats?.premiumCollected?.let { inr.format(it.toLong()) } ?: "…"),
                     subtitle = languageState.value.getT("Total earnings till date", "आज तक की कुल आय", "ଆଜି ପର୍ଯ୍ୟନ୍ତ ମୋଟ ଉପାର୍ଜନ"),
-                    icon = Icons.Default.AccountBalanceWallet,
                     accent = PrimaryGreen,
+                    cardBg = Color(0xFFEBF3E6),
+                    footerBg = Color(0xFFDBECD1),
+                    badgeIcon = Icons.Default.AccountBalanceWallet,
+                    watermark = Icons.AutoMirrored.Filled.TrendingUp,
                     onClick = { navController.navigate("earning_history") }
                 )
             }
@@ -1597,15 +1608,15 @@ fun DidiHomeHeader(userName: String, unread: Int, onProfileClick: () -> Unit, on
 @Composable
 fun HeroAssignedFarmersCard(count: Int?, onViewAll: () -> Unit) {
     val languageState = LocalAppLanguage.current
-    Card(shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth().height(172.dp), elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
+    Card(shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth().height(138.dp), elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
         Box(Modifier.fillMaxSize()) {
             Image(painterResource(R.drawable.ic_bg_login), null, modifier = Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
             Box(Modifier.fillMaxSize().background(
                 Brush.horizontalGradient(0.0f to Color(0xE61B5230), 0.45f to Color(0xB31B5230), 1.0f to Color(0x111B5230))
             ))
-            Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                Text(languageState.value.getT("My Assigned Farmers", "मेरे सौंपे गए किसान", "ମୋର ନ୍ୟସ୍ତ କୃଷକ"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                Text(count?.toString() ?: "…", color = Color.White, fontSize = 46.sp, fontWeight = FontWeight.Bold)
+            Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                Text(languageState.value.getT("My Assigned Farmers", "मेरे सौंपे गए किसान", "ମୋର ନ୍ୟସ୍ତ କୃଷକ"), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(count?.toString() ?: "…", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Bold)
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onViewAll() }) {
                     Text(languageState.value.getT("View all", "सभी देखें", "ସବୁ ଦେଖନ୍ତୁ"), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                     Icon(Icons.Default.ChevronRight, null, tint = Color.White, modifier = Modifier.size(20.dp))
@@ -1616,26 +1627,62 @@ fun HeroAssignedFarmersCard(count: Int?, onViewAll: () -> Unit) {
 }
 
 @Composable
-fun OverviewInfoCard(modifier: Modifier, label: String, value: String, subtitle: String, icon: Any, accent: Color, onClick: () -> Unit) {
+fun OverviewCard(
+    modifier: Modifier,
+    label: String,
+    value: String,
+    subtitle: String,
+    accent: Color,
+    cardBg: Color,
+    footerBg: Color,
+    badgeIcon: Any,
+    watermark: Any,
+    onClick: () -> Unit
+) {
     val lang = LocalAppLanguage.current.value
-    Card(modifier = modifier, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp), onClick = onClick) {
-        Column(Modifier.padding(16.dp)) {
-            Box(Modifier.size(48.dp).clip(CircleShape).background(accent.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
-                when (icon) {
-                    is ImageVector -> Icon(icon, null, tint = accent, modifier = Modifier.size(26.dp))
-                    is Painter -> Icon(icon, null, tint = accent, modifier = Modifier.size(26.dp))
+    Card(
+        modifier = modifier.height(118.dp),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        onClick = onClick
+    ) {
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxWidth().weight(1f).padding(horizontal = 14.dp, vertical = 12.dp), contentAlignment = Alignment.CenterStart) {
+                // faint watermark, bottom-right
+                when (watermark) {
+                    is Painter -> Icon(watermark, null, tint = accent.copy(alpha = 0.10f), modifier = Modifier.align(Alignment.BottomEnd).size(66.dp))
+                    is ImageVector -> Icon(watermark, null, tint = accent.copy(alpha = 0.13f), modifier = Modifier.align(Alignment.BottomEnd).size(54.dp))
+                }
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(38.dp).clip(CircleShape).background(Color.White)
+                                .border(1.5.dp, accent.copy(alpha = 0.35f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            when (badgeIcon) {
+                                is Painter -> Icon(badgeIcon, null, tint = accent, modifier = Modifier.size(22.dp))
+                                is ImageVector -> Icon(badgeIcon, null, tint = accent, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                        Spacer(Modifier.width(7.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(label, color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.sp, maxLines = 1)
+                            Text(value, color = Color(0xFF14231A), fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        }
+                    }
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = accent, letterSpacing = 0.5.sp)
-            Spacer(Modifier.height(2.dp))
-            Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), maxLines = 1)
-            Spacer(Modifier.height(4.dp))
-            Text(subtitle, fontSize = 12.sp, color = Color(0xFF7A8078), lineHeight = 15.sp)
-            Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(lang.getT("View Details", "विवरण देखें", "ବିବରଣୀ ଦେଖନ୍ତୁ"), color = accent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                Icon(Icons.Default.ChevronRight, null, tint = accent, modifier = Modifier.size(16.dp))
+            Surface(color = footerBg, modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(lang.getT("View Details", "विवरण देखें", "ବିବରଣୀ ଦେଖନ୍ତୁ"), color = accent, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Icon(Icons.Default.ChevronRight, null, tint = accent, modifier = Modifier.size(18.dp))
+                }
             }
         }
     }
@@ -1703,19 +1750,12 @@ fun formatActivityDate(iso: String): String {
 
 @Composable
 fun MakingDifferenceBanner(lang: AppLanguage) {
-    Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF4EA)), modifier = Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Color.White), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.Favorite, null, tint = PrimaryGreen, modifier = Modifier.size(24.dp))
-            }
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(lang.getT("You are making a difference!", "आप बदलाव ला रहे हैं!", "ଆପଣ ପରିବର୍ତ୍ତନ ଆଣୁଛନ୍ତି!"), color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text(lang.getT("Thank you for protecting farmers and their goats.", "किसानों और उनकी बकरियों की रक्षा के लिए धन्यवाद।", "କୃଷକ ଏବଂ ସେମାନଙ୍କ ଛେଳିଙ୍କୁ ସୁରକ୍ଷା ଦେବା ପାଇଁ ଧନ୍ୟବାଦ।"), color = Color(0xFF5B6660), fontSize = 12.sp, lineHeight = 16.sp)
-            }
-            Image(painterResource(R.drawable.avatar_didi), null, modifier = Modifier.size(56.dp).clip(CircleShape), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-        }
-    }
+    Image(
+        painter = painterResource(R.drawable.didi_banner_l),
+        contentDescription = lang.getT("You are making a difference!", "आप बदलाव ला रहे हैं!", "ଆପଣ ପରିବର୍ତ୍ତନ ଆଣୁଛନ୍ତି!"),
+        modifier = Modifier.fillMaxWidth(),
+        contentScale = androidx.compose.ui.layout.ContentScale.FillWidth
+    )
 }
 
 @Composable
@@ -4486,13 +4526,11 @@ fun NotificationItem(notification: AppNotification, themeColor: Color = PrimaryG
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(navController: NavHostController, userRole: UserRole?, sessionManager: SessionManager, onLogout: () -> Unit, onBack: () -> Unit) {
-    val backgroundColor = Color(0xFFF8F9F5)
     val languageState = LocalAppLanguage.current
-    var showLanguagePicker by remember { mutableStateOf(false) }
-    
+    val lang = languageState.value
     val context = LocalContext.current
     val profileImageState = LocalProfileImage.current
-    
+
     val savedName by sessionManager.userName.collectAsState(initial = null)
     val savedVillage by sessionManager.village.collectAsState(initial = null)
     val savedMobile by sessionManager.mobileNumber.collectAsState(initial = null)
@@ -4502,11 +4540,12 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
     val profileVm: ProfileViewModel = hiltViewModel()
     val dbProfile by profileVm.profile.collectAsState()
     val saveState by profileVm.save.collectAsState()
-    val isSavingProfile = saveState is SubmitState.Submitting
+    val passwordState by profileVm.password.collectAsState()
+
     LaunchedEffect(saveState) {
         when (val s = saveState) {
             is SubmitState.Success -> {
-                Toast.makeText(context, languageState.value.getT("Profile updated", "प्रोफ़ाइल अपडेट किया गया", "ପ୍ରୋଫାଇଲ୍ ଅପଡେଟ୍ ହୋଇଛି"), Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, lang.getT("Profile updated", "प्रोफ़ाइल अपडेट किया गया", "ପ୍ରୋଫାଇଲ୍ ଅପଡେଟ୍ ହୋଇଛି"), Toast.LENGTH_SHORT).show()
                 profileVm.resetSave()
             }
             is SubmitState.Error -> {
@@ -4517,15 +4556,24 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
         }
     }
 
-    val isFarmer = userRole == UserRole.FARMER
-    val isCoordinator = userRole == UserRole.COORDINATOR
-    val themeColor = when(userRole) {
-        UserRole.FARMER -> PrimaryBlue
-        UserRole.COORDINATOR -> CoordinatorOrange
-        else -> PrimaryGreen
+    var showChangePassword by remember { mutableStateOf(false) }
+    LaunchedEffect(passwordState) {
+        when (val s = passwordState) {
+            is SubmitState.Success -> {
+                Toast.makeText(context, lang.getT("Password updated", "पासवर्ड अपडेट हुआ", "ପାସୱାର୍ଡ ଅପଡେଟ୍ ହୋଇଛି"), Toast.LENGTH_SHORT).show()
+                showChangePassword = false
+                profileVm.resetPassword()
+            }
+            is SubmitState.Error -> {
+                Toast.makeText(context, s.message, Toast.LENGTH_LONG).show()
+                profileVm.resetPassword()
+            }
+            else -> {}
+        }
     }
+
     val userName = dbProfile?.fullName ?: savedName ?: ""
-    val userMobile = dbProfile?.mobileNumber ?: savedMobile
+    val userMobile = dbProfile?.mobileNumber ?: savedMobile ?: ""
     val userVillage = dbProfile?.village ?: savedVillage
 
     val effectiveRole = when (dbProfile?.role) {
@@ -4534,10 +4582,10 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
         "sd" -> UserRole.SURAKSHA_DIDI
         else -> userRole
     }
-    val roleLabel = when(effectiveRole) {
-        UserRole.FARMER -> languageState.value.getT("Farmer", "किसान", "କୃଷକ")
-        UserRole.COORDINATOR -> languageState.value.getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ")
-        else -> languageState.value.getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି")
+    val roleLabel = when (effectiveRole) {
+        UserRole.FARMER -> lang.getT("Farmer", "किसान", "କୃଷକ")
+        UserRole.COORDINATOR -> lang.getT("Coordinator", "समन्वयक", "ସମନ୍ଵୟକାରୀ")
+        else -> lang.getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି")
     }
 
     fun saveImageToInternalStorage(uri: Uri): Uri? {
@@ -4545,11 +4593,7 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
             val inputStream = context.contentResolver.openInputStream(uri)
             val file = File(context.filesDir, "profile_pic.jpg")
             val outputStream = FileOutputStream(file)
-            inputStream?.use { input ->
-                outputStream.use { output ->
-                    input.copyTo(output)
-                }
-            }
+            inputStream?.use { input -> outputStream.use { output -> input.copyTo(output) } }
             Uri.fromFile(file)
         } catch (e: Exception) {
             null
@@ -4563,7 +4607,6 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
             val internalUri = saveImageToInternalStorage(uri)
             if (internalUri != null) {
                 profileImageState.value = internalUri
-                // Upload the new photo and persist it on the account.
                 profileVm.updateProfile(name = null, village = null, photoUri = internalUri)
             }
         }
@@ -4574,11 +4617,9 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
         if (success && tempUriStr != null) {
-            val uri = Uri.parse(tempUriStr!!)
-            val internalUri = saveImageToInternalStorage(uri)
+            val internalUri = saveImageToInternalStorage(Uri.parse(tempUriStr!!))
             if (internalUri != null) {
                 profileImageState.value = internalUri
-                // Upload the new photo and persist it on the account.
                 profileVm.updateProfile(name = null, village = null, photoUri = internalUri)
             }
         }
@@ -4586,11 +4627,7 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            tempUriStr?.let { cameraLauncher.launch(Uri.parse(it)) }
-        }
-    }
+    ) { isGranted -> if (isGranted) tempUriStr?.let { cameraLauncher.launch(Uri.parse(it)) } }
 
     fun launchCamera() {
         val file = File(context.filesDir, "camera_profile.jpg")
@@ -4603,333 +4640,583 @@ fun ProfileScreen(navController: NavHostController, userRole: UserRole?, session
         }
     }
 
-    fun getLanguageName(lang: AppLanguage) = when(lang) {
-        AppLanguage.HINDI -> "हिन्दी (HI)"
-        AppLanguage.ODIA -> "ଓଡ଼ିଆ (OR)"
-        AppLanguage.ENGLISH -> "English (EN)"
-    }
-    
     var showPhotoOptions by remember { mutableStateOf(false) }
     var showEditProfile by remember { mutableStateOf(false) }
+    var showLanguagePicker by remember { mutableStateOf(false) }
+    var showLogoutConfirm by remember { mutableStateOf(false) }
+
+    // ---------------- dialogs ----------------
+    if (showPhotoOptions) {
+        AlertDialog(
+            onDismissRequest = { showPhotoOptions = false },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(20.dp),
+            title = { Text(lang.getT("Profile Photo", "प्रोफ़ाइल फोटो", "ପ୍ରୋଫାଇଲ୍ ଫଟୋ"), fontWeight = FontWeight.Bold, color = Color.Black) },
+            text = {
+                Column {
+                    Surface(color = Color.Transparent, onClick = { showPhotoOptions = false; launchCamera() }) {
+                        Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CameraAlt, null, tint = PrimaryGreen, modifier = Modifier.size(26.dp))
+                            Spacer(Modifier.width(16.dp))
+                            Text(lang.getT("Take Photo", "फोटो लें", "ଫଟୋ ନିଅନ୍ତୁ"), fontSize = 16.sp, color = Color.Black)
+                        }
+                    }
+                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f))
+                    Surface(color = Color.Transparent, onClick = { showPhotoOptions = false; imagePickerLauncher.launch("image/*") }) {
+                        Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.PhotoLibrary, null, tint = PrimaryGreen, modifier = Modifier.size(26.dp))
+                            Spacer(Modifier.width(16.dp))
+                            Text(lang.getT("Choose from Gallery", "गैलरी से चुनें", "ଗ୍ୟାଲେରୀରୁ ବାଛନ୍ତୁ"), fontSize = 16.sp, color = Color.Black)
+                        }
+                    }
+                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f))
+                    Surface(color = Color.Transparent, onClick = { showPhotoOptions = false; showEditProfile = true }) {
+                        Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Edit, null, tint = PrimaryGreen, modifier = Modifier.size(26.dp))
+                            Spacer(Modifier.width(16.dp))
+                            Text(lang.getT("Edit Details", "विवरण संपादित करें", "ବିବରଣୀ ସଂପାଦନ କରନ୍ତୁ"), fontSize = 16.sp, color = Color.Black)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { showPhotoOptions = false }) { Text(lang.getT("Cancel", "रद्द करें", "ବାତିଲ୍"), color = Color.Gray) } }
+        )
+    }
 
     if (showEditProfile) {
         var editName by remember { mutableStateOf(userName) }
         var editVillage by remember { mutableStateOf(userVillage ?: "") }
         AlertDialog(
             onDismissRequest = { showEditProfile = false },
-            title = { Text(languageState.value.getT("Edit Profile", "प्रोफ़ाइल संपादित करें", "ପ୍ରୋଫାଇଲ୍ ସଂପାଦନ କରନ୍ତୁ"), fontWeight = FontWeight.Bold, color = Color.Black) },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(20.dp),
+            title = { Text(lang.getT("Edit Profile", "प्रोफ़ाइल संपादित करें", "ପ୍ରୋଫାଇଲ୍ ସଂପାଦନ କରନ୍ତୁ"), fontWeight = FontWeight.Bold, color = Color.Black) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = editName,
                         onValueChange = { if (it.all { c -> c.isLetter() || c.isWhitespace() }) editName = it },
-                        label = { Text(languageState.value.getT("Full Name", "पूरा नाम", "ପୁରା ନାମ")) },
+                        label = { Text(lang.getT("Full Name", "पूरा नाम", "ପୁରା ନାମ")) },
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, focusedBorderColor = themeColor)
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, focusedBorderColor = PrimaryGreen)
                     )
                     OutlinedTextField(
                         value = editVillage,
                         onValueChange = { editVillage = it },
-                        label = { Text(languageState.value.getT("Location", "स्थान", "ଅବସ୍ଥାନ")) },
+                        label = { Text(lang.getT("Location", "स्थान", "ଅବସ୍ଥାନ")) },
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, focusedBorderColor = themeColor)
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, focusedBorderColor = PrimaryGreen)
                     )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    profileVm.updateProfile(name = editName, village = editVillage, photoUri = null)
+                    showEditProfile = false
+                }) { Text(lang.getT("Save", "सहेजें", "ସଂରକ୍ଷଣ"), color = PrimaryGreen, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = { TextButton(onClick = { showEditProfile = false }) { Text(lang.getT("Cancel", "रद्द करें", "ବାତିଲ୍"), color = Color.Gray) } }
+        )
+    }
+
+    if (showChangePassword) {
+        var pwd by remember { mutableStateOf("") }
+        var pwd2 by remember { mutableStateOf("") }
+        val busy = passwordState is SubmitState.Submitting
+        AlertDialog(
+            onDismissRequest = { if (!busy) showChangePassword = false },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(20.dp),
+            title = { Text(lang.getT("Change Password", "पासवर्ड बदलें", "ପାସୱାର୍ଡ ବଦଳାନ୍ତୁ"), fontWeight = FontWeight.Bold, color = Color.Black) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = pwd, onValueChange = { pwd = it },
+                        label = { Text(lang.getT("New password (min 6)", "नया पासवर्ड (न्यूनतम 6)", "ନୂଆ ପାସୱାର୍ଡ (ସର୍ବନିମ୍ନ 6)")) },
+                        singleLine = true, visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, focusedBorderColor = PrimaryGreen)
+                    )
+                    OutlinedTextField(
+                        value = pwd2, onValueChange = { pwd2 = it },
+                        label = { Text(lang.getT("Confirm password", "पासवर्ड की पुष्टि करें", "ପାସୱାର୍ଡ ନିଶ୍ଚିତ କରନ୍ତୁ")) },
+                        singleLine = true, visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, focusedBorderColor = PrimaryGreen)
+                    )
+                    if (pwd2.isNotEmpty() && pwd != pwd2) {
+                        Text(lang.getT("Passwords do not match", "पासवर्ड मेल नहीं खाते", "ପାସୱାର୍ଡ ମେଳ ଖାଉନାହିଁ"), color = Color.Red, fontSize = 12.sp)
+                    }
                 }
             },
             confirmButton = {
                 TextButton(
-                    enabled = editName.isNotBlank() && !isSavingProfile,
-                    onClick = {
-                        profileVm.updateProfile(name = editName, village = editVillage, photoUri = null)
-                        showEditProfile = false
-                    }
-                ) { Text(languageState.value.getT("Save", "सहेजें", "ସେଭ୍"), fontWeight = FontWeight.Bold, color = themeColor) }
+                    enabled = !busy && pwd.length >= 6 && pwd == pwd2,
+                    onClick = { profileVm.changePassword(pwd) }
+                ) { Text(lang.getT("Update", "अपडेट करें", "ଅପଡେଟ୍"), color = PrimaryGreen, fontWeight = FontWeight.Bold) }
             },
-            dismissButton = {
-                TextButton(onClick = { showEditProfile = false }) {
-                    Text(languageState.value.getT("Cancel", "रद्द करें", "ବାତିଲ୍"), color = Color.Gray)
-                }
-            }
+            dismissButton = { TextButton(onClick = { if (!busy) showChangePassword = false }) { Text(lang.getT("Cancel", "रद्द करें", "ବାତିଲ୍"), color = Color.Gray) } }
         )
     }
 
-    if (showPhotoOptions) {
+    if (showLanguagePicker) {
         AlertDialog(
-            onDismissRequest = { showPhotoOptions = false },
-            title = { Text(languageState.value.getT("Update Profile Photo", "प्रोफ़ाइल फ़ोटो अपडेट करें", "ପ୍ରୋଫାଇଲ୍ ଫଟୋ ଅପଡେଟ୍ କରନ୍ତୁ"), fontWeight = FontWeight.Bold, color = Color.Black) },
-            text = { Text(languageState.value.getT("Choose a source", "एक स्रोत चुनें", "ଏକ ଉତ୍ସ ବାଛନ୍ତୁ"), color = Color.Black) },
-            confirmButton = {
-                TextButton(onClick = { 
-                    showPhotoOptions = false
-                    launchCamera()
-                }) {
-                    Text(languageState.value.getT("Camera", "कैमरा", "କ୍ୟାମେରା"), fontWeight = FontWeight.Bold, color = themeColor)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { 
-                    showPhotoOptions = false
-                    imagePickerLauncher.launch("image/*")
-                }) {
-                    Text(languageState.value.getT("Gallery", "गैलरी", "ଗ୍ୟାଲେରୀ"), fontWeight = FontWeight.Bold, color = themeColor)
-                }
-            },
+            onDismissRequest = { showLanguagePicker = false },
             containerColor = Color.White,
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(20.dp),
+            title = { Text(lang.getT("Language", "भाषा", "ଭାଷା"), fontWeight = FontWeight.Bold, color = Color.Black) },
+            text = {
+                Column {
+                    AppLanguage.entries.forEach { option ->
+                        Surface(color = Color.Transparent, onClick = { languageState.value = option; showLanguagePicker = false }) {
+                            Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(option.label, fontSize = 16.sp, color = Color.Black, modifier = Modifier.weight(1f))
+                                if (languageState.value == option) Icon(Icons.Default.CheckCircle, null, tint = PrimaryGreen)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { showLanguagePicker = false }) { Text(lang.getT("Close", "बंद करें", "ବନ୍ଦ କରନ୍ତୁ"), color = Color.Gray) } }
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(backgroundColor)
-            .verticalScroll(rememberScrollState())
-    ) {
-        // Dynamic Header
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp))
-                .background(themeColor)
-                .padding(top = 48.dp, bottom = 32.dp, start = 20.dp, end = 20.dp)
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
-                    }
-                    Text(
-                        languageState.value.getT("Profile Settings", "प्रोफ़ाइल सेटिंग्स", "ପ୍ରୋଫାଇଲ୍ ସେଟିଙ୍ଗ୍ସ"),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+    if (showLogoutConfirm) {
+        AlertDialog(
+            onDismissRequest = { showLogoutConfirm = false },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(20.dp),
+            title = { Text(lang.getT("Logout", "लॉग आउट", "ଲଗଆଉଟ୍"), fontWeight = FontWeight.Bold, color = Color.Black) },
+            text = { Text(lang.getT("Are you sure you want to logout?", "क्या आप वाकई लॉग आउट करना चाहते हैं?", "ଆପଣ ନିଶ୍ଚିତ ଭାବରେ ଲଗଆଉଟ୍ କରିବାକୁ ଚାହାଁନ୍ତି?"), color = Color.Black) },
+            confirmButton = {
+                TextButton(onClick = { showLogoutConfirm = false; onLogout() }) {
+                    Text(lang.getT("Logout", "लॉग आउट", "ଲଗଆଉଟ୍"), color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
                 }
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                // Profile Image
-                Box(contentAlignment = Alignment.Center) {
+            },
+            dismissButton = { TextButton(onClick = { showLogoutConfirm = false }) { Text(lang.getT("Cancel", "रद्द करें", "ବାତିଲ୍"), color = Color.Gray) } }
+        )
+    }
+
+    // ---------------- screen ----------------
+    Box(Modifier.fillMaxSize().background(Color(0xFFF3F4DD))) {
+        // faint farm scene behind the header
+        Image(
+            painter = painterResource(R.drawable.profile_banner),
+            contentDescription = null,
+            modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter),
+            contentScale = androidx.compose.ui.layout.ContentScale.FillWidth
+        )
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            // top bar over the cream header
+            Box(Modifier.fillMaxWidth().statusBarsPadding().padding(vertical = 8.dp)) {
+                IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart).padding(start = 6.dp)) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color(0xFF1B1B1B))
+                }
+                Text(
+                    lang.getT("Profile", "प्रोफ़ाइल", "ପ୍ରୋଫାଇଲ୍"),
+                    modifier = Modifier.align(Alignment.Center),
+                    fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1B1B1B)
+                )
+            }
+
+            Spacer(Modifier.height(18.dp))
+
+            Box(Modifier.fillMaxWidth()) {
+                // white panel with a rounded top; the avatar straddles its edge
+                Column(
+                    Modifier.fillMaxWidth()
+                        .padding(top = 64.dp)
+                        .clip(RoundedCornerShape(topStart = 46.dp, topEnd = 46.dp))
+                        .background(Color(0xFFFCFAF6))
+                        .navigationBarsPadding()
+                ) {
+                    Spacer(Modifier.height(74.dp))
+                    Text(userName, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(4.dp))
+                    Text(userMobile, fontSize = 16.sp, color = Color(0xFF8A908A), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+
+                    Spacer(Modifier.height(22.dp))
+
+                    // My Information
+                    ProfileSectionCard {
+                        Text(
+                            lang.getT("My Information", "मेरी जानकारी", "ମୋର ସୂଚନା"),
+                            fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A),
+                            modifier = Modifier.padding(start = 16.dp, top = 13.dp, bottom = 2.dp)
+                        )
+                        ProfileInfoRow(Icons.Default.Person, lang.getT("Name", "नाम", "ନାମ"), userName)
+                        ProfileRowDivider()
+                        ProfileInfoRow(Icons.Default.Phone, lang.getT("Mobile Number", "मोबाइल नंबर", "ମୋବାଇଲ୍ ନମ୍ବର"), userMobile)
+                        ProfileRowDivider()
+                        ProfileInfoRow(Icons.Default.Shield, lang.getT("Role", "भूमिका", "ଭୂମିକା"), roleLabel)
+                        Spacer(Modifier.height(8.dp))
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // Settings
+                    ProfileSectionCard {
+                        ProfileSettingRow(Icons.Default.Lock, lang.getT("Change Password", "पासवर्ड बदलें", "ପାସୱାର୍ଡ ବଦଳାନ୍ତୁ")) { showChangePassword = true }
+                        ProfileRowDivider()
+                        ProfileSettingRow(Icons.Default.Language, lang.getT("Language", "भाषा", "ଭାଷା"), trailing = lang.label) { showLanguagePicker = true }
+                        ProfileRowDivider()
+                        ProfileSettingRow(Icons.Default.SupportAgent, lang.getT("Help & Support", "सहायता और समर्थन", "ସହାୟତା")) { navController.navigate("help_support") }
+                        ProfileRowDivider()
+                        ProfileSettingRow(Icons.Default.Shield, lang.getT("Privacy Policy", "गोपनीयता नीति", "ଗୋପନୀୟତା ନୀତି")) { navController.navigate("privacy_policy") }
+                        ProfileRowDivider()
+                        ProfileSettingRow(Icons.Default.Description, lang.getT("Terms & Conditions", "नियम और शर्तें", "ନିୟମ ଏବଂ ସର୍ତ୍ତ")) { navController.navigate("terms_of_service") }
+                    }
+
+                    Spacer(Modifier.height(20.dp))
+
+                    // Logout
+                    OutlinedButton(
+                        onClick = { showLogoutConfirm = true },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp).height(56.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.5.dp, Color(0xFFE57373)),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.Logout, null, tint = Color(0xFFD32F2F), modifier = Modifier.size(22.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text(lang.getT("Logout", "लॉग आउट", "ଲଗଆଉଟ୍"), color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    }
+
+                    Spacer(Modifier.height(28.dp))
+                }
+
+                // avatar + Edit pill, centred over the panel edge
+                Box(Modifier.align(Alignment.TopCenter)) {
                     Surface(
-                        color = Color(0xFFFFCCBC),
+                        modifier = Modifier.size(128.dp),
                         shape = CircleShape,
-                        modifier = Modifier.size(100.dp),
-                        border = BorderStroke(4.dp, Color.White.copy(alpha = 0.2f))
+                        color = Color.White,
+                        shadowElevation = 4.dp,
+                        onClick = { showPhotoOptions = true }
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            if (profileImageState.value != null) {
-                                AsyncImage(
-                                    model = profileImageState.value,
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                            // The API returns a relative path ("/uploads/x.jpg"); Coil needs an absolute URL.
+                            val remotePhoto = dbProfile?.photo?.takeIf { it.isNotBlank() }?.let {
+                                if (it.startsWith("http")) it
+                                else BuildConfig.BASE_URL.trimEnd('/') + "/" + it.trimStart('/')
+                            }
+                            when {
+                                profileImageState.value != null -> AsyncImage(
+                                    model = profileImageState.value, contentDescription = null,
+                                    modifier = Modifier.fillMaxSize().padding(5.dp).clip(CircleShape),
                                     contentScale = androidx.compose.ui.layout.ContentScale.Crop
                                 )
-                            } else {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(60.dp),
-                                    tint = Color.White
+                                remotePhoto != null -> AsyncImage(
+                                    model = remotePhoto, contentDescription = null,
+                                    modifier = Modifier.fillMaxSize().padding(5.dp).clip(CircleShape),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
                                 )
+                                else -> Icon(Icons.Default.Person, null, tint = Color(0xFFBDBDBD), modifier = Modifier.size(64.dp))
                             }
                         }
                     }
                     Surface(
                         onClick = { showPhotoOptions = true },
+                        shape = RoundedCornerShape(20.dp),
                         color = Color.White,
-                        shape = CircleShape,
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .size(32.dp)
-                            .border(1.dp, Color.LightGray.copy(alpha = 0.5f), CircleShape),
-                        shadowElevation = 4.dp
+                        shadowElevation = 3.dp,
+                        modifier = Modifier.align(Alignment.BottomEnd).offset(x = 10.dp)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Edit, null, tint = themeColor, modifier = Modifier.size(16.dp))
+                        Row(Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Edit, null, tint = PrimaryGreen, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(5.dp))
+                            Text(lang.getT("Edit", "संपादित करें", "ସଂପାଦନ"), color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        userName,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    IconButton(onClick = { showEditProfile = true }, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit profile", tint = Color.White, modifier = Modifier.size(18.dp))
-                    }
-                }
-                Text(
-                    userMobile?.let { "+91 $it" } ?: "",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.8f)
-                )
             }
         }
+    }
+}
 
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Info Cards - values come from the backend profile (session cache as fallback)
-            ProfileInfoSection(languageState.value.getT("Account Details", "खाता विवरण", "ଖାତା ବିବରଣୀ"), themeColor) {
-                ProfileInfoItem(
-                    languageState.value.getT("Full Name", "पूरा नाम", "ପୁରା ନାମ"),
-                    userName
-                )
-                ProfileInfoItem(
-                    languageState.value.getT("Mobile Number", "मोबाइल नंबर", "ମୋବାଇଲ୍ ନମ୍ବର"),
-                    userMobile ?: "-"
-                )
-                ProfileInfoItem(
-                    languageState.value.getT("Role", "भूमिका", "ଭୂମିକା"),
-                    roleLabel
-                )
-                ProfileInfoItem(
-                    languageState.value.getT("Location", "स्थान", "ଅବସ୍ଥାନ"),
-                    userVillage ?: "-"
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            ProfileInfoSection(languageState.value.getT("App Settings", "ऐप सेटिंग्स", "ଆପ୍ ସେଟିଙ୍ଗ୍ସ"), themeColor) {
-                val notificationsEnabled = LocalNotificationsEnabled.current
-                SettingsToggleItem(
-                    label = languageState.value.getT("Enable Notifications", "सूचनाएं सक्षम करें", "ବିଜ୍ଞପ୍ତି ସକ୍ଷମ କରନ୍ତୁ"),
-                    checked = notificationsEnabled.value,
-                    onCheckedChange = { notificationsEnabled.value = it },
-                    themeColor = themeColor
-                )
-                Box {
-                    SettingsClickItem(languageState.value.getT("Language", "भाषा", "ଭାଷା"), getLanguageName(languageState.value)) {
-                        showLanguagePicker = true
-                    }
-                    DropdownMenu(
-                        expanded = showLanguagePicker,
-                        onDismissRequest = { showLanguagePicker = false }
-                    ) {
-                        DropdownMenuItem(text = { Text("English") }, onClick = { languageState.value = AppLanguage.ENGLISH; showLanguagePicker = false })
-                        DropdownMenuItem(text = { Text("हिन्दी") }, onClick = { languageState.value = AppLanguage.HINDI; showLanguagePicker = false })
-                        DropdownMenuItem(text = { Text("ଓଡ଼ିଆ") }, onClick = { languageState.value = AppLanguage.ODIA; showLanguagePicker = false })
-                    }
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            ProfileInfoSection(languageState.value.getT("Support & Legal", "समर्थन और कानूनी", "ସମର୍ଥନ ଏବଂ ଆଇନଗତ"), themeColor) {
-                SettingsClickItem(languageState.value.getT("Help & Support", "सहायता और समर्थन", "ସାହାଯ୍ୟ ଏବଂ ସମର୍ଥନ"), "") {
-                    navController.navigate("help_support")
-                }
-                SettingsClickItem(languageState.value.getT("Privacy Policy", "गोपनीयता नीति", "ଗୋପନୀୟତା ନୀତି"), "") {
-                    navController.navigate("privacy_policy")
-                }
-                SettingsClickItem(languageState.value.getT("Terms of Service", "सेवा की शर्तें", "ସେବା ସର୍ତ୍ତାବଳୀ"), "") {
-                    navController.navigate("terms_of_service")
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            Button(
-                onClick = onLogout,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.AutoMirrored.Filled.Logout, null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(languageState.value.getT("Logout", "लॉग आउट", "ଲଗ୍ ଆଉଟ୍"), fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(languageState.value.getT("Version 1.0.0", "संस्करण 1.0.0", "ସଂସ୍କରଣ ୧.୦.୦"), color = Color.Gray, fontSize = 12.sp)
-            Spacer(modifier = Modifier.height(32.dp))
+/** White rounded card used for the Profile page sections. */
+@Composable
+private fun ProfileSectionCard(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, Color(0xFFEFEBE3)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) { Column { content() } }
+}
+
+@Composable
+private fun ProfileRowDivider() {
+    HorizontalDivider(color = Color(0xFFF1EEE7), modifier = Modifier.padding(start = 72.dp, end = 16.dp))
+}
+
+@Composable
+private fun ProfileInfoRow(icon: ImageVector, label: String, value: String) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(38.dp).clip(RoundedCornerShape(11.dp)).background(PrimaryGreen.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
         }
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(label, fontSize = 12.sp, color = Color(0xFF9AA09A))
+            Text(value.ifBlank { "—" }, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A))
+        }
+    }
+}
+
+@Composable
+private fun ProfileSettingRow(icon: ImageVector, label: String, trailing: String? = null, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(Modifier.size(38.dp).clip(RoundedCornerShape(11.dp)).background(PrimaryGreen.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(label, fontSize = 15.sp, color = Color(0xFF14231A), modifier = Modifier.weight(1f))
+        if (trailing != null) {
+            Text(trailing, color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Spacer(Modifier.width(6.dp))
+        }
+        Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFB6BCB6), modifier = Modifier.size(20.dp))
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HelpSupportScreen(navController: NavHostController, userRole: UserRole?, onReportIssue: () -> Unit, onFaqs: () -> Unit, onContactSupport: () -> Unit, onBack: () -> Unit) {
-    val languageState = LocalAppLanguage.current
+    val lang = LocalAppLanguage.current.value
     val context = LocalContext.current
-    val themeColor = when(userRole) {
-        UserRole.FARMER -> PrimaryBlue
-        UserRole.COORDINATOR -> CoordinatorOrange
-        else -> PrimaryGreen
-    }
-    
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { 
-                    Text(
-                        languageState.value.getT("Help & Support", "सहायता और समर्थन", "ସାହାଯ୍ୟ ଏବଂ ସମର୍ଥନ"), 
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    ) 
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = themeColor,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
+    val cardBorder = Color(0xFFEFEBE3)
+    val softGreen = Color(0xFFEDF4E9)
+
+    Box(Modifier.fillMaxSize().background(Color(0xFFF3F4DD))) {
+        // same faint farm scene used on the Profile header
+        Image(
+            painter = painterResource(R.drawable.profile_banner),
+            contentDescription = null,
+            modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter),
+            contentScale = androidx.compose.ui.layout.ContentScale.FillWidth
+        )
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            Box(Modifier.fillMaxWidth().statusBarsPadding().padding(vertical = 8.dp)) {
+                IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart).padding(start = 6.dp)) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color(0xFF1B1B1B))
+                }
+                Text(
+                    lang.getT("Help & Support", "सहायता और समर्थन", "ସହାୟତା ଏବଂ ସମର୍ଥନ"),
+                    modifier = Modifier.align(Alignment.Center),
+                    fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1B1B1B)
                 )
-            )
-        },
-        containerColor = Color(0xFFF8F9F5)
-    ) { padding ->
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            Box(Modifier.fillMaxWidth()) {
+                Column(
+                    Modifier.fillMaxWidth()
+                        .padding(top = 54.dp)
+                        .clip(RoundedCornerShape(topStart = 46.dp, topEnd = 46.dp))
+                        .background(Color(0xFFFCFAF6))
+                        .navigationBarsPadding()
+                ) {
+                    Spacer(Modifier.height(64.dp))
+                    Text(
+                        lang.getT("How can we help you?", "हम आपकी कैसे मदद कर सकते हैं?", "ଆମେ ଆପଣଙ୍କୁ କିପରି ସାହାଯ୍ୟ କରିପାରିବୁ?"),
+                        fontSize = 23.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A),
+                        modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        lang.getT("We're here to assist you with\nany queries or issues.", "किसी भी प्रश्न या समस्या में\nहम आपकी सहायता के लिए हैं।", "ଯେକୌଣସି ପ୍ରଶ୍ନ କିମ୍ବା ସମସ୍ୟାରେ\nଆମେ ସାହାଯ୍ୟ ପାଇଁ ଅଛୁ।"),
+                        fontSize = 15.sp, color = Color(0xFF7A8078), lineHeight = 21.sp,
+                        modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center
+                    )
+
+                    Spacer(Modifier.height(22.dp))
+                    SupportSectionTitle(lang.getT("Popular Topics", "लोकप्रिय विषय", "ଲୋକପ୍ରିୟ ବିଷୟ"))
+                    Spacer(Modifier.height(10.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        border = BorderStroke(1.dp, cardBorder),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                    ) {
+                        Column {
+                            SupportTopicRow(Icons.Default.Description, lang.getT("Policy related queries", "पॉलिसी संबंधी प्रश्न", "ପଲିସି ସମ୍ବନ୍ଧୀୟ ପ୍ରଶ୍ନ"), onFaqs)
+                            SupportRowDivider()
+                            SupportTopicRow(Icons.Default.CurrencyRupee, lang.getT("Premium payment", "प्रीमियम भुगतान", "ପ୍ରିମିୟମ ଦେୟ"), onFaqs)
+                            SupportRowDivider()
+                            SupportTopicRow(Icons.Default.Shield, lang.getT("Claim process", "दावा प्रक्रिया", "ଦାବି ପ୍ରକ୍ରିୟା"), onFaqs)
+                            SupportRowDivider()
+                            SupportTopicRow(Icons.Default.Description, lang.getT("Policy details", "पॉलिसी विवरण", "ପଲିସି ବିବରଣୀ"), onFaqs)
+                            SupportRowDivider()
+                            SupportTopicRow(Icons.Default.Person, lang.getT("Account & profile", "खाता और प्रोफ़ाइल", "ଖାତା ଏବଂ ପ୍ରୋଫାଇଲ୍"), onFaqs)
+                            SupportRowDivider()
+                            SupportTopicRow(Icons.AutoMirrored.Filled.HelpOutline, lang.getT("Other queries", "अन्य प्रश्न", "ଅନ୍ୟ ପ୍ରଶ୍ନ"), onReportIssue)
+                        }
+                    }
+
+                    Spacer(Modifier.height(22.dp))
+                    SupportSectionTitle(lang.getT("Still need help?", "अभी भी मदद चाहिए?", "ଏବେ ବି ସାହାଯ୍ୟ ଦରକାର?"))
+                    Spacer(Modifier.height(10.dp))
+
+                    // Contact Us
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = softGreen),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                        onClick = onContactSupport
+                    ) {
+                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(52.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.SupportAgent, null, tint = PrimaryGreen, modifier = Modifier.size(28.dp))
+                            }
+                            Spacer(Modifier.width(14.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(lang.getT("Contact Us", "हमसे संपर्क करें", "ଆମ ସହ ଯୋଗାଯୋଗ କରନ୍ତୁ"), color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text(lang.getT("Our support team is ready to help you.", "हमारी सहायता टीम आपकी मदद के लिए तैयार है।", "ଆମର ସହାୟତା ଦଳ ଆପଣଙ୍କୁ ସାହାଯ୍ୟ କରିବାକୁ ପ୍ରସ୍ତୁତ।"), color = Color(0xFF6C7570), fontSize = 13.sp, lineHeight = 18.sp)
+                            }
+                            Icon(Icons.Default.ChevronRight, null, tint = Color(0xFF9AA09A), modifier = Modifier.size(20.dp))
+                        }
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+
+                    // Chat / Call
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        SupportContactTile(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.AutoMirrored.Filled.Chat,
+                            label = lang.getT("Chat Us", "चैट करें", "ଚାଟ୍ କରନ୍ତୁ"),
+                            bg = softGreen
+                        ) { context.chatOnWhatsApp() }
+                        SupportContactTile(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.Phone,
+                            label = lang.getT("Call Us", "कॉल करें", "କଲ୍ କରନ୍ତୁ"),
+                            bg = softGreen
+                        ) { context.callSupport() }
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+
+                    // Support timing
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        border = BorderStroke(1.dp, cardBorder),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                    ) {
+                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(48.dp).clip(CircleShape).background(softGreen), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.AccessTime, null, tint = PrimaryGreen, modifier = Modifier.size(26.dp))
+                            }
+                            Spacer(Modifier.width(14.dp))
+                            Column {
+                                Text(lang.getT("Support Timing", "सहायता समय", "ସହାୟତା ସମୟ"), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF14231A))
+                                Text(lang.getT("Mon - Sat: 9:00 AM - 7:00 PM", "सोम - शनि: सुबह 9:00 - शाम 7:00", "ସୋମ - ଶନି: ସକାଳ ୯ଟା - ସନ୍ଧ୍ୟା ୭ଟା"), fontSize = 13.sp, color = Color(0xFF4A544C))
+                                Text(lang.getT("(Except Sundays & Public Holidays)", "(रविवार और सार्वजनिक अवकाश को छोड़कर)", "(ରବିବାର ଓ ସରକାରୀ ଛୁଟି ବ୍ୟତୀତ)"), fontSize = 12.sp, color = Color(0xFF8A908A))
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+
+                    // Quick tip
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = softGreen),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                    ) {
+                        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.Top) {
+                            Box(Modifier.size(48.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Lightbulb, null, tint = PrimaryGreen, modifier = Modifier.size(26.dp))
+                            }
+                            Spacer(Modifier.width(14.dp))
+                            Column {
+                                Text(lang.getT("Quick Tip", "त्वरित सुझाव", "ଦ୍ରୁତ ପରାମର୍ଶ"), color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Text(
+                                    lang.getT(
+                                        "For faster resolution, please keep your GOAT ID or registered mobile number ready while contacting us.",
+                                        "तेज़ समाधान के लिए, संपर्क करते समय अपना GOAT ID या पंजीकृत मोबाइल नंबर तैयार रखें।",
+                                        "ଶୀଘ୍ର ସମାଧାନ ପାଇଁ, ଯୋଗାଯୋଗ ସମୟରେ ଆପଣଙ୍କ GOAT ID କିମ୍ବା ପଞ୍ଜିକୃତ ମୋବାଇଲ୍ ନମ୍ବର ପ୍ରସ୍ତୁତ ରଖନ୍ତୁ।"
+                                    ),
+                                    fontSize = 13.sp, color = Color(0xFF5B6660), lineHeight = 19.sp
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(28.dp))
+                }
+
+                // headset badge straddling the panel edge
+                Box(
+                    Modifier.align(Alignment.TopCenter).size(104.dp).clip(CircleShape).background(Color(0xFFF3F7F0)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.SupportAgent, null, tint = PrimaryGreen, modifier = Modifier.size(50.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SupportSectionTitle(text: String) {
+    Text(text, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), modifier = Modifier.padding(start = 18.dp))
+}
+
+@Composable
+private fun SupportRowDivider() {
+    HorizontalDivider(color = Color(0xFFF1EEE7), modifier = Modifier.padding(start = 68.dp, end = 16.dp))
+}
+
+@Composable
+private fun SupportTopicRow(icon: ImageVector, label: String, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(Modifier.size(40.dp).clip(CircleShape).background(Color(0xFFEDF4E9)), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = PrimaryGreen, modifier = Modifier.size(21.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(label, fontSize = 15.sp, color = Color(0xFF14231A), modifier = Modifier.weight(1f))
+        Icon(Icons.Default.ChevronRight, null, tint = Color(0xFFB6BCB6), modifier = Modifier.size(20.dp))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SupportContactTile(modifier: Modifier, icon: ImageVector, label: String, bg: Color, onClick: () -> Unit) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = bg),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        onClick = onClick
+    ) {
         Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .padding(20.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            Modifier.fillMaxWidth().padding(vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            HelpItemCard(
-                title = languageState.value.getT("FAQs", "सामान्य प्रश्न", "FAQs"),
-                subtitle = languageState.value.getT("Frequently asked questions", "अक्सर पूछे जाने वाले प्रश्न", "ବାରମ୍ବାର ପଚରାଯାଉଥିବା ପ୍ରଶ୍ନ"),
-                icon = Icons.AutoMirrored.Filled.Help,
-                themeColor = themeColor,
-                onClick = onFaqs
-            )
-            HelpItemCard(
-                title = languageState.value.getT("Contact Support", "सहायता से संपर्क करें", "ସହାୟତା ସହିତ ଯୋଗାଯୋଗ କରନ୍ତୁ"),
-                subtitle = languageState.value.getT("Chat with us on WhatsApp", "व्हाट्सएप पर हमसे चैट करें", "ହ୍ୱାଟସ୍ଆପରେ ଆମ ସହ ଚାଟ୍ କରନ୍ତୁ"),
-                icon = Icons.AutoMirrored.Filled.Chat,
-                themeColor = themeColor,
-                onClick = { context.chatOnWhatsApp() }
-            )
-            HelpItemCard(
-                title = languageState.value.getT("Call Support", "कॉल सहायता", "କଲ୍ ସହାୟତା"),
-                subtitle = SupportContact.DISPLAY,
-                icon = Icons.Default.Phone,
-                themeColor = themeColor,
-                onClick = { context.callSupport() }
-            )
-            HelpItemCard(
-                title = languageState.value.getT("Report an Issue", "एक समस्या की रिपोर्ट करें", "ଏକ ସମସ୍ୟା ରିପୋର୍ଟ କରନ୍ତୁ"),
-                subtitle = languageState.value.getT("Let us know your problem", "हमें अपनी समस्या बताएं", "ଆମକୁ ଆପଣଙ୍କର ସମସ୍ୟା ଜଣାନ୍ତୁ"),
-                icon = Icons.Default.Error,
-                themeColor = themeColor,
-                onClick = onReportIssue
-            )
+            Box(Modifier.size(48.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = PrimaryGreen, modifier = Modifier.size(26.dp))
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(label, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF14231A))
+            Spacer(Modifier.height(2.dp))
+            Text(SupportContact.DISPLAY, color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
         }
     }
 }

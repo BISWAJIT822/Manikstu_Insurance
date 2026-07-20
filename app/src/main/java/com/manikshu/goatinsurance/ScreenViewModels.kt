@@ -121,6 +121,24 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun resetSave() { _save.value = SubmitState.Idle }
+
+    private val _password = MutableStateFlow<SubmitState>(SubmitState.Idle)
+    val password = _password.asStateFlow()
+
+    /** Changes the login password (POST auth/set_password). */
+    fun changePassword(newPassword: String) {
+        viewModelScope.launch {
+            _password.value = SubmitState.Submitting
+            repo.safeCall { setPassword(SetPasswordRequest(newPassword)) }
+                .onSuccess { r ->
+                    if (r.status == "success") _password.value = SubmitState.Success("Password updated")
+                    else _password.value = SubmitState.Error(r.reason ?: "Could not change password")
+                }
+                .onFailure { _password.value = SubmitState.Error(it.message ?: "Could not change password") }
+        }
+    }
+
+    fun resetPassword() { _password.value = SubmitState.Idle }
 }
 
 /** Loads the current user's in-app notifications (AjahFi notification workflow). */

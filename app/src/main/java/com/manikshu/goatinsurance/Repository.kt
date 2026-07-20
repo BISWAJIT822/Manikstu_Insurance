@@ -51,6 +51,7 @@ class Repository @Inject constructor(
     suspend fun forgotPassword(body: ForgotPasswordRequest) = api.forgotPassword(body)
     suspend fun verifySignup(body: VerifySignupRequest) = api.verifySignup(body)
     suspend fun profile() = api.profile()
+    suspend fun setPassword(body: SetPasswordRequest) = api.setPassword(body)
     suspend fun logout() = api.logout()
 
     // ---------------- upload ----------------

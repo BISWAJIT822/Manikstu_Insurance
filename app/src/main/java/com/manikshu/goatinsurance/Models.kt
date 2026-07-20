@@ -86,6 +86,12 @@ data class VerifySignupRequest(
     val password: String? = null,   // login credential, usable once admin approves
 )
 
+/** Sets/changes the logged-in user's login password (POST auth/set_password). */
+@Serializable
+data class SetPasswordRequest(
+    val password: String,
+)
+
 @Serializable
 data class ProfileResponse(
     val photo: String? = null,
