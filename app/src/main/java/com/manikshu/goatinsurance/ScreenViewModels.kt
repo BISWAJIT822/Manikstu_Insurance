@@ -250,10 +250,7 @@ class DidiDashboardViewModel @Inject constructor(
     private val _state = MutableStateFlow<UiState<SdDashboard>>(UiState.Loading)
     val state = _state.asStateFlow()
 
-    private val _activities = MutableStateFlow<List<ActivityItem>>(emptyList())
-    val activities = _activities.asStateFlow()
-
-    init { load(); loadActivities() }
+    init { load() }
 
     fun load() {
         viewModelScope.launch {
@@ -261,12 +258,6 @@ class DidiDashboardViewModel @Inject constructor(
             repo.safeCall { sdDashboard() }
                 .onSuccess { _state.value = UiState.Success(it) }
                 .onFailure { _state.value = UiState.Error(it.message ?: "Failed to load dashboard") }
-        }
-    }
-
-    fun loadActivities() {
-        viewModelScope.launch {
-            repo.safeCall { sdLiveActivity() }.onSuccess { _activities.value = it }
         }
     }
 }
