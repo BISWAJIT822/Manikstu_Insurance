@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import coil.compose.AsyncImage
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -152,6 +153,7 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
 @Composable
 fun CoordinatorHeader(navController: NavHostController, name: String, role: String, onProfileClick: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
+    val profileImage = LocalProfileImage.current.value
     val todayLabel = stringResource(R.string.date_today)
     val yesterdayLabel = stringResource(R.string.date_yesterday)
     val thisWeekLabel = stringResource(R.string.date_this_week)
@@ -175,7 +177,16 @@ fun CoordinatorHeader(navController: NavHostController, name: String, role: Stri
                 color = Color.White
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Person, null, tint = Color.Gray, modifier = Modifier.size(40.dp))
+                    if (profileImage != null) {
+                        AsyncImage(
+                            model = profileImage,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        )
+                    } else {
+                        Icon(Icons.Default.Person, null, tint = Color.Gray, modifier = Modifier.size(40.dp))
+                    }
                 }
             }
             

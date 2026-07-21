@@ -377,6 +377,7 @@ data class AiAssistantResponse(val answer: String)
 data class EarningItem(
     val id: Int,
     val source: String,
+    val detail: String? = null,   // e.g. "PPR Vaccination", "Field Services"
     val amount: Double,
     @SerialName("earned_on") val earnedOn: String? = null,
     @SerialName("ear_tag_number") val earTagNumber: String? = null,
@@ -385,7 +386,17 @@ data class EarningItem(
 @Serializable
 data class EarningListResponse(
     val total: Double = 0.0,
+    @SerialName("this_month") val thisMonth: Double = 0.0,
+    @SerialName("total_enrollments") val totalEnrollments: Int = 0,
+    @SerialName("per_goat") val perGoat: Double = 52.0,
     val items: List<EarningItem> = emptyList(),
+)
+
+@Serializable
+data class WithdrawalResponse(
+    val status: String,
+    val amount: Double = 0.0,
+    val reason: String? = null,
 )
 
 @Serializable
