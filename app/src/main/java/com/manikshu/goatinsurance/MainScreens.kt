@@ -10533,114 +10533,190 @@ fun ProfileSetupSection(title: String, icon: ImageVector, themeColor: Color, con
 @Composable
 fun EarningHistoryScreen(onBack: () -> Unit) {
     val languageState = LocalAppLanguage.current
+    val context = LocalContext.current
     val backgroundColor = Color(0xFFF8F9F5)
 
     val earningsVm: EarningsViewModel = hiltViewModel()
     val earningsState by earningsVm.state.collectAsState()
     val earningsData = (earningsState as? UiState.Success)?.data
+    val withdrawState by earningsVm.withdraw.collectAsState()
+    var showWithdrawConfirm by remember { mutableStateOf(false) }
+
+    LaunchedEffect(withdrawState) {
+        when (val s = withdrawState) {
+            is SubmitState.Success -> {
+                Toast.makeText(context, s.message ?: "Withdrawal requested", Toast.LENGTH_LONG).show()
+                earningsVm.resetWithdraw(); earningsVm.load()
+            }
+            is SubmitState.Error -> {
+                Toast.makeText(context, s.message, Toast.LENGTH_LONG).show(); earningsVm.resetWithdraw()
+            }
+            else -> {}
+        }
+    }
+
+    if (showWithdrawConfirm) {
+        AlertDialog(
+            onDismissRequest = { showWithdrawConfirm = false },
+            icon = { Icon(Icons.Default.AccountBalanceWallet, null, tint = PrimaryGreen) },
+            title = { Text(languageState.value.getT("Withdraw Earnings", "आय निकालें", "ଉପାର୍ଜନ ଉଠାନ୍ତୁ"), fontWeight = FontWeight.Bold) },
+            text = {
+                Text(languageState.value.getT(
+                    "This sends a withdrawal request for your balance of ₹${(earningsData?.total ?: 0.0).toInt()}. An admin will process the payout.",
+                    "यह ₹${(earningsData?.total ?: 0.0).toInt()} की निकासी अनुरोध भेजेगा। एडमिन भुगतान संसाधित करेंगे।",
+                    "ଏହା ₹${(earningsData?.total ?: 0.0).toInt()} ଉଠାଣ ଅନୁରୋଧ ପଠାଇବ। ଆଡମିନ୍ ଦେୟ ପ୍ରକ୍ରିୟା କରିବେ।"
+                ), color = Color.DarkGray)
+            },
+            confirmButton = {
+                TextButton(onClick = { showWithdrawConfirm = false; earningsVm.requestWithdrawal() }) {
+                    Text(languageState.value.getT("Request", "अनुरोध करें", "ଅନୁରୋଧ"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showWithdrawConfirm = false }) {
+                    Text(languageState.value.getT("Cancel", "रद्द करें", "ବାତିଲ୍"), color = Color.Gray)
+                }
+            },
+            shape = RoundedCornerShape(20.dp)
+        )
+    }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(backgroundColor)
-            .verticalScroll(rememberScrollState())
+        modifier = Modifier.fillMaxSize().background(backgroundColor).verticalScroll(rememberScrollState())
     ) {
-        // Green Header Area
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp))
-                .background(PrimaryGreen)
-                .padding(top = 48.dp, bottom = 32.dp, start = 20.dp, end = 20.dp)
+        // Top bar
+        Row(
+            modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
-                    }
-                    Text(
-                        languageState.value.getT("Earning History", "आय का इतिहास", "ଉପାର୍ଜନ ଇତିହାସ"),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                // Total Earnings Summary Card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.15f)),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.Start
-                    ) {
-                        Text(languageState.value.getT("Total Earnings", "कुल आय", "ମୋଟ ଉପାର୍ଜନ"), color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
-                        Text("₹ ${earningsData?.total?.toInt() ?: 0}", style = MaterialTheme.typography.headlineLarge, color = Color.White, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Surface(color = Color.White.copy(alpha = 0.2f), shape = RoundedCornerShape(12.dp)) {
-                            Text(
-                                text = languageState.value.getT("This Month", "इस महीने", "ଏହି ମାସ"),
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
+            Surface(onClick = onBack, shape = CircleShape, color = Color.White, shadowElevation = 1.dp, modifier = Modifier.size(40.dp)) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PrimaryGreen, modifier = Modifier.size(20.dp))
                 }
             }
+            Spacer(modifier = Modifier.weight(1f))
+            Text(languageState.value.getT("Earnings", "आय", "ଉପାର୍ଜନ"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color(0xFF14231A))
+            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.width(40.dp))
         }
 
-        Column(
-            modifier = Modifier
-                .padding(horizontal = 24.dp, vertical = 24.dp)
-                .fillMaxWidth()
-        ) {
-            Text(
-                languageState.value.getT("Recent Transactions", "हाल के लेनदेन", "ସାମ୍ପ୍ରତିକ କାରବାର"),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            Spacer(modifier = Modifier.height(8.dp))
 
-            val enrollIcon = painterResource(R.drawable.ic_ewe_custom)
-            val earnings = (earningsData?.items ?: emptyList()).map { e ->
+            // Hero card: this-month total, Withdraw, and real stats.
+            Box(
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
+                    .background(Brush.linearGradient(listOf(Color(0xFF2E7D32), Color(0xFF15501C))))
+                    .padding(20.dp)
+            ) {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(languageState.value.getT("Total Earnings (This Month)", "कुल आय (इस महीने)", "ମୋଟ ଉପାର୍ଜନ (ଏହି ମାସ)"), color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("₹ ${(earningsData?.thisMonth ?: 0.0).toInt()}", fontSize = 32.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                        Surface(onClick = { showWithdrawConfirm = true }, shape = RoundedCornerShape(14.dp), color = Color.White,
+                            enabled = withdrawState !is SubmitState.Submitting) {
+                            Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.AccountBalanceWallet, null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(languageState.value.getT("Withdraw", "निकालें", "ଉଠାନ୍ତୁ"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        EarningHeroStat(languageState.value.getT("Total Enrollments", "कुल नामांकन", "ମୋଟ ପଞ୍ଜିକରଣ"), "${earningsData?.totalEnrollments ?: 0}", Modifier.weight(1f))
+                        EarningHeroStat(languageState.value.getT("Total Earned", "कुल कमाई", "ମୋଟ ଉପାର୍ଜନ"), "₹ ${(earningsData?.total ?: 0.0).toInt()}", Modifier.weight(1f))
+                        EarningHeroStat(languageState.value.getT("Per Goat", "प्रति बकरी", "ପ୍ରତି ଛେଳି"), "₹ ${(earningsData?.perGoat ?: 52.0).toInt()}", Modifier.weight(1f))
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(languageState.value.getT("Earnings Breakdown", "आय विवरण", "ଉପାର୍ଜନ ବିବରଣୀ"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color(0xFF14231A))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            val items = earningsData?.items ?: emptyList()
+            if (items.isEmpty()) {
+                Text(languageState.value.getT("No earnings yet.", "अभी तक कोई आय नहीं।", "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ଉପାର୍ଜନ ନାହିଁ।"), color = Color.Gray, fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp))
+            }
+            items.forEach { e ->
                 val isVacc = e.source == "vaccination"
-                EarningData(
-                    title = if (isVacc) languageState.value.getT("Vaccination Fee", "टीकाकरण शुल्क", "ଟୀକାକରଣ ଶୁଳ୍କ")
-                            else languageState.value.getT("Goat Enrollment", "बकरी नामांकन", "ଛେଳି ପଞ୍ଜିକରଣ"),
+                EarningBreakdownRow(
+                    icon = if (isVacc) Icons.Default.Vaccines else Icons.Default.Badge,
+                    title = e.detail ?: (if (isVacc) "Vaccination" else "Field Services"),
                     subtitle = e.earTagNumber ?: "—",
-                    amount = "+ ₹${e.amount.toInt()}",
+                    amount = "₹ ${e.amount.toInt()}",
                     time = e.earnedOn ?: "",
-                    icon = if (isVacc) Icons.Default.MedicalServices else enrollIcon,
-                    color = if (isVacc) InfoBlue else PrimaryGreen,
                 )
             }
-            if (earnings.isEmpty()) {
-                Text(languageState.value.getT("No earnings yet.", "अभी तक कोई आय नहीं।", "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ଉପାର୍ଜନ ନାହିଁ।"), color = Color.Gray, fontSize = 13.sp)
-            }
-            earnings.forEach { data ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Box(modifier = Modifier.padding(12.dp)) {
-                        EarningItem(data.title, data.subtitle, data.amount, data.time, data.icon, data.color)
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // About Earnings — the ₹52/goat explanation.
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF2F5F0)),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Row(modifier = Modifier.padding(14.dp)) {
+                    Box(modifier = Modifier.size(38.dp).clip(CircleShape).background(PrimaryGreen), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Info, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(languageState.value.getT("About Earnings", "आय के बारे में", "ଉପାର୍ଜନ ବିଷୟରେ"), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF14231A))
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            languageState.value.getT(
+                                "You earn ₹52 per enrolled goat — ₹8 for each vaccine given plus ₹20 for field services. This is built into the ₹350 premium, so the farmer pays nothing extra.",
+                                "आप प्रति नामांकित बकरी ₹52 कमाते हैं — प्रत्येक दिए गए टीके के लिए ₹8 और फील्ड सेवाओं के लिए ₹20। यह ₹350 प्रीमियम में शामिल है, इसलिए किसान कुछ अतिरिक्त नहीं देता।",
+                                "ଆପଣ ପ୍ରତି ପଞ୍ଜିକୃତ ଛେଳିରେ ₹52 ଉପାର୍ଜନ କରନ୍ତି — ପ୍ରତ୍ୟେକ ଦିଆଯାଇଥିବା ଟୀକା ପାଇଁ ₹8 ଏବଂ କ୍ଷେତ୍ର ସେବା ପାଇଁ ₹20। ଏହା ₹350 ପ୍ରିମିୟମରେ ଅନ୍ତର୍ଭୁକ୍ତ, ତେଣୁ କୃଷକ କିଛି ଅତିରିକ୍ତ ଦିଅନ୍ତି ନାହିଁ।"
+                            ),
+                            fontSize = 12.sp, color = Color(0xFF3D473E), lineHeight = 17.sp
+                        )
                     }
                 }
             }
             Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+private fun EarningHeroStat(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Text(value, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Text(label, color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, lineHeight = 13.sp)
+    }
+}
+
+@Composable
+private fun EarningBreakdownRow(icon: ImageVector, title: String, subtitle: String, amount: String, time: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(1.dp, Color(0xFFEDF0EA))
+    ) {
+        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.size(42.dp).clip(CircleShape).background(PrimaryGreen.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = PrimaryGreen, modifier = Modifier.size(22.dp))
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF14231A))
+                Text(subtitle, fontSize = 12.sp, color = Color.Gray)
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(amount, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = PrimaryGreen)
+                if (time.isNotBlank()) Text(time, fontSize = 11.sp, color = Color.Gray)
+            }
         }
     }
 }

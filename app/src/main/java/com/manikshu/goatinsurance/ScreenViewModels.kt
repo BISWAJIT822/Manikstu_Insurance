@@ -431,6 +431,9 @@ class EarningsViewModel @Inject constructor(
 
     init { load() }
 
+    private val _withdraw = MutableStateFlow<SubmitState>(SubmitState.Idle)
+    val withdraw = _withdraw.asStateFlow()
+
     fun load() {
         viewModelScope.launch {
             _state.value = UiState.Loading
@@ -439,6 +442,21 @@ class EarningsViewModel @Inject constructor(
                 .onFailure { _state.value = UiState.Error(it.message ?: "Failed to load earnings") }
         }
     }
+
+    /** Raise a withdrawal request; an admin settles it out of band (no money moves here). */
+    fun requestWithdrawal() {
+        viewModelScope.launch {
+            _withdraw.value = SubmitState.Submitting
+            repo.safeCall { sdWithdraw() }
+                .onSuccess {
+                    if (it.status == "success") _withdraw.value = SubmitState.Success(it.reason)
+                    else _withdraw.value = SubmitState.Error(it.reason ?: "Could not request withdrawal")
+                }
+                .onFailure { _withdraw.value = SubmitState.Error(it.message ?: "Could not request withdrawal") }
+        }
+    }
+
+    fun resetWithdraw() { _withdraw.value = SubmitState.Idle }
 }
 
 /** Backs the multi-step enrollment: uploads photos then POST /sd/enroll_goat. */

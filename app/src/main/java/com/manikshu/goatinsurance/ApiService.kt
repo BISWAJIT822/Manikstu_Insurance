@@ -175,6 +175,9 @@ interface ApiService {
     @GET("sd/earnings")
     suspend fun sdEarnings(): EarningListResponse
 
+    @POST("sd/withdraw")
+    suspend fun sdWithdraw(): WithdrawalResponse
+
     @GET("sd/claims")
     suspend fun sdClaims(): SdClaimListResponse
 
