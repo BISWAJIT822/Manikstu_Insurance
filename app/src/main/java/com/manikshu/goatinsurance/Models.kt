@@ -281,6 +281,11 @@ data class GoatPolicyOut(
     @SerialName("valid_from") val validFrom: String,
     @SerialName("valid_to") val validTo: String,
     @SerialName("sum_insured") val sumInsured: Double,
+    @SerialName("annual_premium") val annualPremium: Double? = null,
+    val status: String? = null,
+    @SerialName("payment_mode") val paymentMode: String? = null,
+    @SerialName("receipt_number") val receiptNumber: String? = null,
+    @SerialName("paid_at") val paidAt: String? = null,
 )
 
 @Serializable
@@ -446,6 +451,9 @@ data class PolicyDetail(
     @SerialName("annual_premium") val annualPremium: Double,
     val status: String,
     @SerialName("certificate_url") val certificateUrl: String? = null,
+    @SerialName("payment_mode") val paymentMode: String? = null,
+    @SerialName("receipt_number") val receiptNumber: String? = null,
+    @SerialName("paid_at") val paidAt: String? = null,
     val goat: PolicyGoatInfo? = null,
     val vaccinations: List<GoatVaccinationOut> = emptyList(),
     @SerialName("next_vaccination_date") val nextVaccinationDate: String? = null,
