@@ -501,7 +501,6 @@ class EnrollmentViewModel @Inject constructor(
         gpsLocation: String?,
         aadhaarId: String?,
         goats: List<GoatDraft>,
-        vaccines: List<VaccineIn>,
         paymentMode: String,
         amount: Double,
     ) {
@@ -509,6 +508,24 @@ class EnrollmentViewModel @Inject constructor(
             _submit.value = SubmitState.Submitting
             val done = mutableListOf<EnrollGoatResponse>()
             try {
+                // Vaccination dates are the same for the batch; the selections are per goat.
+                val cal = java.util.Calendar.getInstance()
+                fun isoOf(c: java.util.Calendar) = String.format(
+                    "%04d-%02d-%02d", c.get(java.util.Calendar.YEAR),
+                    c.get(java.util.Calendar.MONTH) + 1, c.get(java.util.Calendar.DAY_OF_MONTH)
+                )
+                val todayIso = isoOf(cal)
+                cal.add(java.util.Calendar.MONTH, 6)
+                val boosterIso = isoOf(cal)
+                fun vaccinesFor(g: GoatDraft): List<VaccineIn> = listOf(
+                    "ppr" to g.pprGiven, "et_tt" to g.etttGiven,
+                    "fmd" to g.fmdGiven, "goat_pox" to g.poxGiven
+                ).map { (type, given) ->
+                    if (given) VaccineIn(vaccineType = type, status = "done",
+                        vaccinationDate = todayIso, nextVaccinationDate = boosterIso)
+                    else VaccineIn(vaccineType = type, status = "pending", nextVaccinationDate = todayIso)
+                }
+
                 val types = listOf("left", "right", "face", "ear_tag")
                 goats.forEachIndexed { index, goat ->
                     _progress.value = "Enrolling goat ${index + 1} of ${goats.size}…"
@@ -526,7 +543,7 @@ class EnrollmentViewModel @Inject constructor(
                         village = village, gpsLocation = gpsLocation, aadhaarId = aadhaarId,
                         earTagNumber = goat.earTag, breed = goat.breed, gender = goat.genderRaw,
                         ageMonths = goat.ageMonths, weightKg = goat.weightKg, color = goat.color.ifBlank { null },
-                        photos = photos, vaccines = vaccines,
+                        photos = photos, vaccines = vaccinesFor(goat),
                         paymentMode = paymentMode, amount = amount,
                         receiptNumber = "RCP-${System.currentTimeMillis()}-$index",
                     )
@@ -559,6 +576,11 @@ data class GoatDraft(
     val color: String,
     val earTag: String,
     val photos: List<android.net.Uri>,
+    // Vaccination is captured per goat (step 4, before the goat is added to the list).
+    val pprGiven: Boolean = true,
+    val etttGiven: Boolean = true,
+    val fmdGiven: Boolean = false,
+    val poxGiven: Boolean = false,
 )
 
 /** Backs the mortality reporting flow (report + upload carcass photos). */

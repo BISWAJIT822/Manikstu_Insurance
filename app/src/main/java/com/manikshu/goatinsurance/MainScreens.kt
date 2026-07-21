@@ -2827,8 +2827,8 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
         Icons.Default.Person,        // 1 Farmer Information
         Icons.Default.Pets,          // 2 Goat Details
         Icons.Default.CameraAlt,     // 3 Goat Photos
-        Icons.AutoMirrored.Filled.List, // 4 Goats Added
-        Icons.Default.Vaccines,      // 5 Vaccination History
+        Icons.Default.Vaccines,      // 4 Vaccination History
+        Icons.AutoMirrored.Filled.List, // 5 Goats Added
         Icons.Default.Payments,      // 6 Premium Payment
         Icons.Default.VerifiedUser,  // 7 Policy Generated
     )
@@ -2880,6 +2880,8 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
         breed = ""; gender = ""; age = ""; ageUnit = monthsLabel
         weight = ""; colorMarks = ""; earTagNumber = ""
         leftPhotoUri = null; rightPhotoUri = null; frontPhotoUri = null; tagPhotoUri = null
+        // Vaccination is now captured per goat, so reset it to the defaults too.
+        pprGiven = true; etttGiven = true; fmdGiven = false; poxGiven = false
     }
 
     fun currentGoatDraft(): GoatDraft {
@@ -2892,6 +2894,7 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
             weightKg = weight.toDoubleOrNull() ?: 0.0, weightLabel = "$weight Kg",
             color = colorMarks, earTag = earTagNumber,
             photos = listOfNotNull(leftPhotoUri, rightPhotoUri, frontPhotoUri, tagPhotoUri),
+            pprGiven = pprGiven, etttGiven = etttGiven, fmdGiven = fmdGiven, poxGiven = poxGiven,
         )
     }
 
@@ -2904,14 +2907,15 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
         colorMarks = g.color; earTagNumber = g.earTag
         leftPhotoUri = g.photos.getOrNull(0); rightPhotoUri = g.photos.getOrNull(1)
         frontPhotoUri = g.photos.getOrNull(2); tagPhotoUri = g.photos.getOrNull(3)
+        pprGiven = g.pprGiven; etttGiven = g.etttGiven; fmdGiven = g.fmdGiven; poxGiven = g.poxGiven
     }
 
     val steps = listOf(
         languageState.value.getT("Farmer Information", "किसान जानकारी", "କୃଷକ ସୂଚନା"),
         languageState.value.getT("Goat Details", "बकरी का विवरण", "ଛେଳି ବିବରଣୀ"),
         languageState.value.getT("Goat Photos", "बकरी की तस्वीरें", "ଛେଳି ଫଟୋ"),
-        languageState.value.getT("Goats Added", "जोड़ी गई बकरियां", "ଯୋଡ଼ାଯାଇଥିବା ଛେଳି"),
         languageState.value.getT("Vaccination History", "टीकाकरण इतिहास", "ଟୀକାକରଣ ଇତିହାସ"),
+        languageState.value.getT("Goats Added", "जोड़ी गई बकरियां", "ଯୋଡ଼ାଯାଇଥିବା ଛେଳି"),
         languageState.value.getT("Premium Payment", "प्रीमियम भुगतान", "ପ୍ରିମିୟମ ଦେୟ"),
         languageState.value.getT("Policy Generated", "पॉलिसी जेनरेट हुई", "ନୀତି ପ୍ରସ୍ତୁତ ହୋଇଛି")
     )
@@ -2967,16 +2971,16 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                         frontUri = frontPhotoUri, onFrontCapture = { frontPhotoUri = it },
                         tagUri = tagPhotoUri, onTagCapture = { tagPhotoUri = it }
                     )
-                    4 -> EnrollmentGoatsAddedStep(
+                    4 -> EnrollmentVaccinationStep(
+                        pprGiven, { pprGiven = it }, etttGiven, { etttGiven = it },
+                        fmdGiven, { fmdGiven = it }, poxGiven, { poxGiven = it }
+                    )
+                    5 -> EnrollmentGoatsAddedStep(
                         goats = goats,
                         onAddAnother = { resetGoatForm(); editingIndex = null; currentStep = 2 },
                         onEdit = { i -> loadGoatIntoForm(goats[i]); editingIndex = i; currentStep = 2 },
                         onDelete = { i -> goats.removeAt(i) },
-                        onContinue = { currentStep = 5 }
-                    )
-                    5 -> EnrollmentVaccinationStep(
-                        pprGiven, { pprGiven = it }, etttGiven, { etttGiven = it },
-                        fmdGiven, { fmdGiven = it }, poxGiven, { poxGiven = it }
+                        onContinue = { currentStep = 6 }
                     )
                     6 -> EnrollmentPaymentStep(goats.size)
                     7 -> EnrollmentPoliciesStep(farmerName, enrollResults, goats, onFinish = onComplete)
@@ -2992,19 +2996,19 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                 else -> true
             }
 
-            // Steps 4 (Goats Added) and 7 (Policy Generated) carry their own buttons.
-            if (currentStep != 4 && currentStep != 7) {
+            // Steps 5 (Goats Added) and 7 (Policy Generated) carry their own buttons.
+            if (currentStep != 5 && currentStep != 7) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    if (currentStep == 2 || currentStep == 3 || currentStep == 5 || currentStep == 6) {
+                    if (currentStep == 2 || currentStep == 3 || currentStep == 4 || currentStep == 6) {
                         OutlinedButton(
                             onClick = {
                                 when (currentStep) {
-                                    2 -> { editingIndex = null; currentStep = if (goats.isNotEmpty()) 4 else 1 }
-                                    5 -> currentStep = 4
-                                    else -> currentStep--   // 3 -> 2, 6 -> 5
+                                    2 -> { editingIndex = null; currentStep = if (goats.isNotEmpty()) 5 else 1 }
+                                    4 -> currentStep = 3   // Vaccination -> Photos
+                                    else -> currentStep--   // 3 -> 2, 6 -> 5 (Goats Added)
                                 }
                             },
                             modifier = Modifier.weight(1f).height(56.dp),
@@ -3018,46 +3022,28 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                     Button(
                         onClick = {
                             when (currentStep) {
-                                3 -> {
-                                    // Commit the current goat into the list, then show Goats Added.
+                                3 -> currentStep = 4   // Photos -> Vaccination (goat committed after vaccination)
+                                4 -> {
+                                    // Vaccination done for THIS goat: commit it (with its own vaccines)
+                                    // into the list, then show Goats Added.
                                     val draft = currentGoatDraft()
                                     val idx = editingIndex
                                     if (idx != null && idx in goats.indices) goats[idx] = draft else goats.add(draft)
                                     editingIndex = null
-                                    currentStep = 4
+                                    currentStep = 5
                                 }
                                 6 -> {
-                                    // Submit the whole batch: shared vaccines + payment for every goat.
-                                    val cal = java.util.Calendar.getInstance()
-                                    fun isoOf(c: java.util.Calendar) = String.format(
-                                        "%04d-%02d-%02d", c.get(java.util.Calendar.YEAR),
-                                        c.get(java.util.Calendar.MONTH) + 1, c.get(java.util.Calendar.DAY_OF_MONTH)
-                                    )
-                                    val todayIso = isoOf(cal)
-                                    cal.add(java.util.Calendar.MONTH, 6)
-                                    val boosterIso = isoOf(cal)
-                                    val vaccineList = listOf(
-                                        "ppr" to pprGiven, "et_tt" to etttGiven,
-                                        "fmd" to fmdGiven, "goat_pox" to poxGiven
-                                    ).map { (type, given) ->
-                                        if (given) VaccineIn(
-                                            vaccineType = type, status = "done",
-                                            vaccinationDate = todayIso, nextVaccinationDate = boosterIso
-                                        ) else VaccineIn(
-                                            vaccineType = type, status = "pending",
-                                            nextVaccinationDate = todayIso
-                                        )
-                                    }
+                                    // Submit the whole batch: each goat carries its own vaccines now.
                                     enrollVm.enrollBatch(
                                         farmerName = farmerName, farmerMobile = mobileNumber,
                                         village = village.ifBlank { null }, gpsLocation = location.ifBlank { null },
                                         aadhaarId = aadhaar.ifBlank { null },
-                                        goats = goats.toList(), vaccines = vaccineList,
+                                        goats = goats.toList(),
                                         paymentMode = "cash", amount = 350.0,
                                     )
                                 }
                                 7 -> onComplete()
-                                else -> currentStep++   // 1 -> 2, 2 -> 3, 5 -> 6
+                                else -> currentStep++   // 1 -> 2, 2 -> 3
                             }
                         },
                         enabled = isStepValid && !isSubmitting,
