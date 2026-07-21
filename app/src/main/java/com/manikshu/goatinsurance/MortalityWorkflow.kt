@@ -103,10 +103,11 @@ fun MortalityQueueScreen(navController: androidx.navigation.NavHostController, o
                 )
             )
         },
-        bottomBar = { DidiBottomBar(navController) },
-        containerColor = Color(0xFFF8F9F5)
+        containerColor = PageBackground
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+      Box(Modifier.fillMaxSize()) {
+        val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        Column(modifier = Modifier.padding(top = padding.calculateTopPadding(), bottom = 74.dp + navInset).fillMaxSize()) {
             // Important Note Card
             Card(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -152,13 +153,6 @@ fun MortalityQueueScreen(navController: androidx.navigation.NavHostController, o
                 )
             }
 
-            Text(
-                text = languageState.value.getT("Farmers List", "किसानों की सूची", "କୃଷକ ତାଲିକା"),
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.Black
-            )
-
             Box(modifier = Modifier.fillMaxSize()) {
                 when (val s = state) {
                     is UiState.Loading -> CircularProgressIndicator(
@@ -184,7 +178,7 @@ fun MortalityQueueScreen(navController: androidx.navigation.NavHostController, o
                         } else {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(bottom = 16.dp, start = 16.dp, end = 16.dp),
+                                contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp, start = 16.dp, end = 16.dp),
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 items(filteredFarmers.values.toList()) { reports ->
@@ -206,6 +200,8 @@ fun MortalityQueueScreen(navController: androidx.navigation.NavHostController, o
                 }
             }
         }
+        Box(Modifier.align(Alignment.BottomCenter)) { DidiBottomBar(navController) }
+      }
     }
 }
 
@@ -436,31 +432,34 @@ fun MortalityDetailScreen(
                 )
             )
         },
-        bottomBar = { DidiBottomBar(navController) },
-        containerColor = Color(0xFFF8F9F5)
+        containerColor = PageBackground
     ) { padding ->
+      Box(Modifier.fillMaxSize()) {
+        val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        val contentPad = PaddingValues(top = padding.calculateTopPadding(), bottom = 74.dp + navInset)
         when (val s = state) {
-            is UiState.Loading -> Box(Modifier.padding(padding).fillMaxSize(), Alignment.Center) { CircularProgressIndicator(color = PrimaryGreen) }
-            is UiState.Error -> Box(Modifier.padding(padding).fillMaxSize(), Alignment.Center) { Text(s.message, color = Color.Gray) }
+            is UiState.Loading -> Box(Modifier.padding(contentPad).fillMaxSize(), Alignment.Center) { CircularProgressIndicator(color = PrimaryGreen) }
+            is UiState.Error -> Box(Modifier.padding(contentPad).fillMaxSize(), Alignment.Center) { Text(s.message, color = Color.Gray) }
             is UiState.Success -> {
                 val d = s.data
                 val alreadyClaimed = d.status == "claim_initiated" || d.claimNumber != null
                 
                 Column(
-                    modifier = Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+                    modifier = Modifier.padding(contentPad).fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // Selected Goat Card
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFEDF4E9)),
                         shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.dp, Color(0xFFE8F5E9))
+                        border = BorderStroke(1.dp, PrimaryGreen.copy(alpha = 0.35f)),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box {
-                                    Surface(modifier = Modifier.size(84.dp), shape = CircleShape, color = Color(0xFFF0F0F0)) {
+                                    Surface(modifier = Modifier.size(84.dp), shape = CircleShape, color = Color.White) {
                                         Box(contentAlignment = Alignment.Center) {
                                             Icon(painterResource(R.drawable.ic_ewe_custom), null, tint = Color.Gray, modifier = Modifier.size(44.dp))
                                         }
@@ -475,7 +474,7 @@ fun MortalityDetailScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(languageState.value.getT("Selected Goat", "चयनित बकरी", "ଚୟନିତ ଛେଳି"), fontSize = 12.sp, color = Color.Gray)
                                     Text(d.earTagNumber, fontWeight = FontWeight.Bold, fontSize = 24.sp, color = Color.Black)
-                                    Surface(color = Color(0xFFE8F5E9), shape = RoundedCornerShape(8.dp)) {
+                                    Surface(color = Color.White, shape = RoundedCornerShape(8.dp)) {
                                         Text(d.breed ?: "Black Bengal", modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), fontSize = 12.sp, color = PrimaryGreen, fontWeight = FontWeight.Bold)
                                     }
                                     Text(languageState.value.getT("Ear Tag: ${d.earTagNumber}", "कान का टैग: ${d.earTagNumber}", "କାନ ଟ୍ୟାଗ୍: ${d.earTagNumber}"), fontSize = 14.sp, color = Color.Gray)
@@ -483,7 +482,7 @@ fun MortalityDetailScreen(
                             }
                             
                             Spacer(modifier = Modifier.height(20.dp))
-                            HorizontalDivider(color = Color(0xFFF0F0F0))
+                            HorizontalDivider(color = Color(0xFFDCE8D6))
                             Spacer(modifier = Modifier.height(16.dp))
                             
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -628,6 +627,8 @@ fun MortalityDetailScreen(
                 }
             }
         }
+        Box(Modifier.align(Alignment.BottomCenter)) { DidiBottomBar(navController) }
+      }
     }
 }
 
