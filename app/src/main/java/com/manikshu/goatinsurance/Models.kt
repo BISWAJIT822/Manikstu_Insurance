@@ -652,17 +652,31 @@ data class ClaimListResponse(
 data class ClaimGoatInfo(
     @SerialName("ear_tag_number") val earTagNumber: String,
     val breed: String,
+    val gender: String? = null,
+    @SerialName("age_months") val ageMonths: Int? = null,
+    val photo: String? = null,
 )
 
 @Serializable
 data class ClaimAiAssessment(val confidence: Double? = null)
 
 @Serializable
+data class ClaimEvidence(val type: String, val url: String)
+
+@Serializable
 data class ClaimReview(
     @SerialName("claim_number") val claimNumber: String,
     val status: String,
+    @SerialName("claim_reported_on") val claimReportedOn: String? = null,
     val goat: ClaimGoatInfo? = null,
     val farmer: String? = null,
+    @SerialName("reported_by") val reportedBy: String? = null,
+    val location: String? = null,
+    @SerialName("policy_number") val policyNumber: String? = null,
+    @SerialName("policy_valid_to") val policyValidTo: String? = null,
+    val evidence: List<ClaimEvidence> = emptyList(),
+    @SerialName("reported_at") val reportedAt: String? = null,
+    @SerialName("verified_at") val verifiedAt: String? = null,
     @SerialName("date_of_death") val dateOfDeath: String? = null,
     @SerialName("cause_of_death") val causeOfDeath: String? = null,
     @SerialName("sum_insured") val sumInsured: Double,

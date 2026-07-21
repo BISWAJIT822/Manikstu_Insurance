@@ -140,6 +140,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.PathEffect
@@ -5284,9 +5285,30 @@ private fun ProfileSettingRow(icon: ImageVector, label: String, trailing: String
     }
 }
 
+/**
+ * System back on a bottom-bar destination returns to the dashboard rather than
+ * unwinding the stack. Those tabs are siblings, not steps in a journey, so backing
+ * out of Claims into whatever screen happened to open it reads as going sideways.
+ */
+@Composable
+private fun BackToDashboard(navController: NavHostController, userRole: UserRole?) {
+    val home = when (userRole) {
+        UserRole.FARMER -> "farmer_dashboard"
+        UserRole.COORDINATOR -> "coordinator_dashboard"
+        else -> "didi_dashboard"
+    }
+    BackHandler {
+        navController.navigate(home) {
+            popUpTo(navController.graph.startDestinationId)
+            launchSingleTop = true
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HelpSupportScreen(navController: NavHostController, userRole: UserRole?, onBack: () -> Unit) {
+    BackToDashboard(navController, userRole)
     val lang = LocalAppLanguage.current.value
     val context = LocalContext.current
     val cardBorder = Color(0xFFEFEBE3)
@@ -5707,6 +5729,7 @@ fun SettingsClickItem(label: String, value: String, onClick: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack: () -> Unit) {
+    BackToDashboard(navController, userRole)
     val languageState = LocalAppLanguage.current
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -6264,27 +6287,46 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
                 // ---- hero: id, breed, status, photo, with the policy strip overlapping ----
                 Box(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                     Card(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 44.dp),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 32.dp),
                         shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(containerColor = Color(0xFFEDF4E4)),
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
-                        Row(Modifier.fillMaxWidth().height(150.dp)) {
-                            Column(Modifier.weight(1f).padding(start = 16.dp, top = 16.dp, bottom = 16.dp)) {
-                                Icon(
-                                    Icons.Default.VerifiedUser, null,
-                                    tint = PrimaryGreen, modifier = Modifier.size(30.dp)
-                                )
-                                Spacer(Modifier.height(6.dp))
-                                Text(
-                                    lang.getT("GOAT ID", "बकरी आईडी", "ଛେଳି ID"),
-                                    fontSize = 11.sp, color = Color(0xFF7A8078), letterSpacing = 0.8.sp
-                                )
-                                Text(displayTag, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), maxLines = 1)
-                                Spacer(Modifier.height(6.dp))
+                        Box(Modifier.fillMaxWidth().height(172.dp)) {
+                            Image(
+                                painter = painterResource(R.drawable.goat_banner),
+                                contentDescription = null,
+                                modifier = Modifier.matchParentSize(),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                alignment = Alignment.CenterStart
+                            )
+                            // Shield sits beside the ID block, with breed and status
+                            // stacked under it so every label shares one left edge.
+                            Column(
+                                Modifier.fillMaxWidth(0.62f).padding(start = 16.dp, top = 34.dp, bottom = 32.dp),
+                                horizontalAlignment = Alignment.Start
+                            ) {
+                                // The shield centres against the ID lines only, so it stays
+                                // centred when the system font scale grows the text.
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Default.VerifiedUser, null,
+                                        tint = Color.White, modifier = Modifier.size(38.dp)
+                                    )
+                                    Spacer(Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            lang.getT("GOAT ID", "बकरी आईडी", "ଛେଳି ID"),
+                                            fontSize = 11.sp, color = Color(0xFF4A554F),
+                                            fontWeight = FontWeight.Medium, letterSpacing = 0.8.sp
+                                        )
+                                        Text(displayTag, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), maxLines = 1)
+                                    }
+                                }
+                                Spacer(Modifier.height(8.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     if (!breed.isNullOrBlank()) {
-                                        Surface(color = Color.White.copy(alpha = 0.7f), shape = RoundedCornerShape(8.dp)) {
+                                        Surface(color = Color.White.copy(alpha = 0.85f), shape = RoundedCornerShape(8.dp)) {
                                             Text(
                                                 breed, fontSize = 11.sp, color = Color(0xFF5B6660),
                                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp), maxLines = 1
@@ -6295,7 +6337,6 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
                                     GoatStatusChip(statusStr, lang)
                                 }
                             }
-                            GoatHeroPhoto(photoUrls.firstOrNull(), Modifier.width(150.dp).fillMaxHeight())
                         }
                     }
 
@@ -6306,10 +6347,8 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
                         colors = CardDefaults.cardColors(containerColor = Color.White),
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                             GoatPolicyStat(Icons.Default.CalendarToday, lang.getT("Valid Till", "मान्यता तक", "ବୈଧତା ପର୍ଯ୍ୟନ୍ତ"), validTo ?: "—", IconBlue, Modifier.weight(1f))
-                            GoatStatDivider()
-                            GoatPolicyStat(Icons.Default.Shield, lang.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), money(sumInsured), IconTeal, Modifier.weight(1f))
                             GoatStatDivider()
                             GoatPolicyStat(Icons.Default.Description, lang.getT("Policy No.", "पॉलिसी संख्या", "ପଲିସି ନମ୍ବର"), policyNumber ?: "—", IconIndigo, Modifier.weight(1f))
                         }
@@ -6847,41 +6886,25 @@ private fun GoatPhotoTile(url: String, modifier: Modifier) {
     }
 }
 
-/** The goat photo on the hero card, falling back to the house illustration. */
-@Composable
-private fun GoatHeroPhoto(url: String?, modifier: Modifier) {
-    var failed by remember(url) { mutableStateOf(false) }
-    Box(modifier, contentAlignment = Alignment.Center) {
-        if (url != null && !failed) {
-            AsyncImage(
-                model = absoluteMediaUrl(url),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                onError = { failed = true }
-            )
-        } else {
-            Icon(
-                painterResource(R.drawable.ic_ewe_custom), null,
-                tint = PrimaryGreen.copy(alpha = 0.25f), modifier = Modifier.size(84.dp)
-            )
-        }
-    }
-}
-
 @Composable
 private fun GoatPolicyStat(icon: ImageVector, label: String, value: String, accent: Color, modifier: Modifier) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, null, tint = accent, modifier = Modifier.size(17.dp))
-        Spacer(Modifier.height(3.dp))
-        Text(label, fontSize = 10.sp, color = Color(0xFF8A908A), maxLines = 1)
-        Text(value, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = accent, maxLines = 1)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = accent, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(5.dp))
+            Text(label, fontSize = 10.sp, color = Color(0xFF8A908A), maxLines = 1)
+        }
+        Spacer(Modifier.height(2.dp))
+        Text(
+            value, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = accent,
+            maxLines = 1, overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
 @Composable
 private fun GoatStatDivider() {
-    Box(Modifier.height(34.dp).width(1.dp).background(Color(0xFFEFEBE3)))
+    Box(Modifier.height(28.dp).width(1.dp).background(Color(0xFFEFEBE3)))
 }
 
 @Composable
@@ -7470,6 +7493,7 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBack: () -> Unit) {
+    BackToDashboard(navController, userRole)
     val languageState = LocalAppLanguage.current
     val lang = languageState.value
     var searchQuery by remember { mutableStateOf("") }
@@ -7771,7 +7795,12 @@ fun DidiClaimCard(claim: Map<String, String>, themeColor: Color, onClick: () -> 
             
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(claim["id"] ?: "", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = Color.Black)
+                    Text(
+                        claim["id"] ?: "",
+                        fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = Color.Black,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     
                     val status = (claim["status"] ?: "").lowercase()
@@ -7788,7 +7817,9 @@ fun DidiClaimCard(claim: Map<String, String>, themeColor: Color, onClick: () -> 
                             color = statusColor,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
@@ -8130,42 +8161,394 @@ fun ClaimReviewScreen(navController: NavHostController, claimId: String, userRol
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { 
+            CenterAlignedTopAppBar(
+                title = {
                     Text(
                         text = languageState.value.getT("Claim Details", "दावा विवरण", "ଦାବି ବିବରଣୀ"),
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    ) 
+                        fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color(0xFF14231A)
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color(0xFF14231A))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = themeColor)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         },
         containerColor = PageBackground
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-            DidiClaimDetailsContent(
-                claim = claimData,
-                themeColor = themeColor,
-                selectedTab = selectedTab,
-                onTabSelected = { selectedTab = it },
-                userRole = userRole,
-                onSubmit = {
-                    if (userRole == UserRole.SURAKSHA_DIDI) {
-                        navController.navigate("claim_bank_details/$claimId")
-                    } else if (userRole == UserRole.COORDINATOR) {
-                        navController.navigate("claim_verify/$claimId")
-                    } else {
-                        Toast.makeText(context, "Send to coordinator", Toast.LENGTH_SHORT).show()
-                        onBack()
+        val loaded = review
+        if (loaded == null) {
+            Box(Modifier.padding(padding).fillMaxSize(), Alignment.Center) {
+                CircularProgressIndicator(color = PrimaryGreen)
+            }
+            return@Scaffold
+        }
+        ClaimDetailsBody(
+            review = loaded,
+            onContactSupport = { context.callSupport() },
+            modifier = Modifier.padding(padding)
+        )
+    }
+}
+
+/** Claim Details, as supplied: hero, goat, death, evidence, progress. */
+@Composable
+private fun ClaimDetailsBody(
+    review: ClaimReview,
+    onContactSupport: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val lang = LocalAppLanguage.current.value
+    val inr = remember { java.text.NumberFormat.getInstance(java.util.Locale("en", "IN")) }
+    fun money(v: Double?) = v?.let { "₹ " + inr.format(it.toLong()) } ?: "—"
+
+    Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
+        Spacer(Modifier.height(12.dp))
+
+        // ---- hero ----
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFEDF4E4)),
+            border = BorderStroke(1.dp, Color(0xFFEFEBE3)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Box(Modifier.fillMaxWidth()) {
+                Image(
+                    painter = painterResource(R.drawable.claim_banner2),
+                    contentDescription = null,
+                    // The goat sits dead centre in this artwork, right where the claim
+                    // id is drawn. ContentScale alone can't shift it (Crop scales to the
+                    // width here, so horizontal alignment is a no-op), so zoom slightly
+                    // and translate right to keep the left half clear for the text.
+                    modifier = Modifier.matchParentSize().graphicsLayer {
+                        scaleX = 1.35f
+                        scaleY = 1.35f
+                        translationX = size.width * 0.16f
+                        translationY = size.height * 0.10f
+                    },
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    alignment = Alignment.CenterEnd
+                )
+                // Fade the banner out to white along the bottom so the reported-on /
+                // reported-by stats read against the grass instead of over it.
+                Box(
+                    Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(86.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.Transparent,
+                                    Color.White.copy(alpha = 0.75f),
+                                    Color.White.copy(alpha = 0.95f),
+                                )
+                            )
+                        )
+                )
+                Column(Modifier.fillMaxWidth().padding(14.dp)) {
+                    Row(Modifier.fillMaxWidth(0.7f), verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(52.dp).clip(RoundedCornerShape(14.dp)).background(Color.White),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Description, null, tint = PrimaryGreen, modifier = Modifier.size(34.dp))
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(lang.getT("Claim ID", "दावा आईडी", "ଦାବି ID"), fontSize = 10.sp, color = Color(0xFF5B6660))
+                            Text(review.claimNumber, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), maxLines = 1)
+                            Spacer(Modifier.height(4.dp))
+                            ClaimStatusPill(review.status, lang)
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    HorizontalDivider(color = Color(0x33000000), modifier = Modifier.fillMaxWidth(0.7f))
+                    Spacer(Modifier.height(10.dp))
+                    Row(Modifier.fillMaxWidth(0.72f)) {
+                        ClaimHeroStat(
+                            Icons.Default.CalendarToday,
+                            lang.getT("Claim Reported On", "दावा दर्ज", "ଦାବି ଦାଖଲ"),
+                            claimDate(review.claimReportedOn), Modifier.weight(1f), accent = IconBlue
+                        )
+                        Box(Modifier.height(34.dp).width(1.dp).background(Color(0x22000000)))
+                        Spacer(Modifier.width(10.dp))
+                        ClaimHeroStat(
+                            Icons.Default.Person,
+                            lang.getT("Reported By", "रिपोर्ट कर्ता", "ରିପୋର୍ଟକର୍ତ୍ତା"),
+                            review.reportedBy ?: review.farmer ?: "—", Modifier.weight(1f), accent = IconPurple
+                        )
                     }
                 }
+            }
+        }
+
+        // ---- goat information ----
+        Spacer(Modifier.height(14.dp))
+        ClaimSectionCard(Icons.Default.Pets, lang.getT("Goat Information", "बकरी की जानकारी", "ଛେଳି ସୂଚନା"), IconGreen) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                ClaimGoatPhoto(review.goat?.photo, Modifier.size(104.dp))
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Row {
+                        ClaimField(Icons.Default.Label, lang.getT("Ear Tag", "कान का टैग", "କାନ ଟ୍ୟାଗ୍"), review.goat?.earTagNumber ?: "—", Modifier.weight(1f), accent = IconBlue)
+                        ClaimField(Icons.Default.Pets, lang.getT("Breed", "नस्ल", "ଜାତି"), review.goat?.breed ?: "—", Modifier.weight(1f), accent = IconRose)
+                    }
+                    Row {
+                        ClaimField(Icons.Default.Person, lang.getT("Gender", "लिंग", "ଲିଙ୍ଗ"), review.goat?.gender?.replaceFirstChar { it.uppercase() } ?: "—", Modifier.weight(1f), accent = IconPurple)
+                        ClaimField(Icons.Default.CalendarToday, lang.getT("Age", "आयु", "ବୟସ"), review.goat?.ageMonths?.let { goatAgeLabel(it, lang) } ?: "—", Modifier.weight(1f), accent = IconAmber)
+                    }
+                }
+            }
+            HorizontalDivider(color = Color(0xFFF1EEE7), modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
+            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
+                ClaimField(Icons.Default.Shield, lang.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), money(review.sumInsured), Modifier.weight(1f), accent = IconGreen)
+                ClaimField(Icons.Default.VerifiedUser, lang.getT("Policy No.", "पॉलिसी संख्या", "ପଲିସି ନମ୍ବର"), review.policyNumber ?: "—", Modifier.weight(1f), accent = IconIndigo)
+            }
+            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
+                ClaimField(Icons.Default.CalendarToday, lang.getT("Policy Valid Till", "पॉलिसी वैधता", "ପଲିସି ବୈଧତା"), claimDate(review.policyValidTo), Modifier.weight(1f), accent = IconBlue)
+                ClaimField(Icons.Default.Description, lang.getT("Claim Amount", "दावा राशि", "ଦାବି ରାଶି"), money(review.claimAmount), Modifier.weight(1f), accent = IconTeal)
+            }
+            Spacer(Modifier.height(10.dp))
+        }
+
+        // ---- death information ----
+        Spacer(Modifier.height(14.dp))
+        ClaimSectionCard(Icons.Default.Info, lang.getT("Death Information", "मृत्यु की जानकारी", "ମୃତ୍ୟୁ ସୂଚନା"), IconRose) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
+                ClaimField(Icons.Default.CalendarToday, lang.getT("Date of Death", "मृत्यु की तारीख", "ମୃତ୍ୟୁ ତାରିଖ"), claimDate(review.dateOfDeath), Modifier.weight(1f), accent = IconBlue)
+                ClaimField(Icons.Default.Info, lang.getT("Cause of Death", "मृत्यु का कारण", "ମୃତ୍ୟୁର କାରଣ"), review.causeOfDeath ?: "—", Modifier.weight(1f), accent = IconRose)
+            }
+            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
+                ClaimField(Icons.Default.LocationOn, lang.getT("Location", "स्थान", "ସ୍ଥାନ"), review.location ?: "—", Modifier.weight(1f), accent = IconTeal)
+                ClaimField(Icons.Default.Person, lang.getT("Reported By", "रिपोर्ट कर्ता", "ରିପୋର୍ଟକର୍ତ୍ତା"), review.reportedBy ?: review.farmer ?: "—", Modifier.weight(1f), accent = IconPurple)
+            }
+            Spacer(Modifier.height(10.dp))
+        }
+
+        // ---- uploaded evidence ----
+        if (review.evidence.isNotEmpty()) {
+            Spacer(Modifier.height(14.dp))
+            ClaimSectionCard(Icons.Default.CameraAlt, lang.getT("Uploaded Evidence", "अपलोड किए गए प्रमाण", "ଅପଲୋଡ୍ ପ୍ରମାଣ"), IconAmber) {
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    review.evidence.forEach { e -> ClaimEvidenceTile(e, lang) }
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+        }
+
+        // ---- claim progress ----
+        Spacer(Modifier.height(14.dp))
+        ClaimSectionCard(Icons.AutoMirrored.Filled.TrendingUp, lang.getT("Claim Progress", "दावा प्रगति", "ଦାବି ପ୍ରଗତି"), IconIndigo) {
+            ClaimProgressTrack(review, lang)
+            Spacer(Modifier.height(12.dp))
+        }
+
+        Spacer(Modifier.height(18.dp))
+        Button(
+            onClick = onContactSupport,
+            modifier = Modifier.fillMaxWidth().height(54.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+        ) {
+            Icon(Icons.Default.SupportAgent, null, tint = Color.White, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(10.dp))
+            Text(
+                lang.getT("Contact Support", "सहायता से संपर्क करें", "ସହାୟତା ସହ ଯୋଗାଯୋଗ"),
+                color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp
             )
+        }
+        Spacer(Modifier.height(20.dp))
+    }
+}
+
+/** "17 Jul 2026" from the API's yyyy-MM-dd (or a full timestamp). */
+private fun claimDate(raw: String?): String {
+    if (raw.isNullOrBlank()) return "—"
+    val parts = raw.take(10).split("-")
+    if (parts.size != 3) return raw.take(10)
+    val months = arrayOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    val m = parts[1].toIntOrNull() ?: return raw.take(10)
+    return "${parts[2]} ${months.getOrElse(m - 1) { parts[1] }} ${parts[0]}"
+}
+
+@Composable
+private fun ClaimStatusPill(status: String, lang: AppLanguage) {
+    val (label, bg, fg) = when (status) {
+        "approved", "claimed" -> Triple(lang.getT("Approved", "स्वीकृत", "ଅନୁମୋଦିତ"), Color(0xFFE3F3E4), Color(0xFF2E7D32))
+        "rejected" -> Triple(lang.getT("Rejected", "अस्वीकृत", "ପ୍ରତ୍ୟାଖ୍ୟାନ"), Color(0xFFFBE7E7), Color(0xFFC62828))
+        "hold" -> Triple(lang.getT("On Hold", "होल्ड पर", "ହୋଲ୍ଡ"), Color(0xFFE6EFFA), Color(0xFF1565C0))
+        else -> Triple(lang.getT("Pending", "लंबित", "ବାକି"), Color(0xFFFCEEDA), Color(0xFFC68A2E))
+    }
+    Surface(color = bg, shape = RoundedCornerShape(50)) {
+        Text(label, color = fg, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+             modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp))
+    }
+}
+
+@Composable
+private fun ClaimHeroStat(icon: ImageVector, label: String, value: String, modifier: Modifier, accent: Color = PrimaryGreen) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = accent, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(6.dp))
+        Column {
+            Text(label, fontSize = 9.sp, color = Color(0xFF5B6660), maxLines = 1)
+            Text(value, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun ClaimSectionCard(icon: ImageVector, title: String, accent: Color = PrimaryGreen, content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, Color(0xFFEFEBE3)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column {
+            Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(9.dp))
+                Text(title, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = accent)
+            }
+            HorizontalDivider(color = Color(0xFFF1EEE7))
+            Spacer(Modifier.height(10.dp))
+            content()
+        }
+    }
+}
+
+@Composable
+private fun ClaimField(icon: ImageVector, label: String, value: String, modifier: Modifier, accent: Color = PrimaryGreen) {
+    Column(modifier.padding(vertical = 5.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = accent, modifier = Modifier.size(17.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(label, fontSize = 12.sp, color = Color(0xFF8A908A), maxLines = 1)
+        }
+        Text(
+            value, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A),
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+            // matches the icon (17dp) + its 6dp gap, so values line up under the labels
+            modifier = Modifier.padding(start = 23.dp)
+        )
+    }
+}
+
+@Composable
+private fun ClaimGoatPhoto(url: String?, modifier: Modifier) {
+    var failed by remember(url) { mutableStateOf(false) }
+    Box(
+        modifier.clip(RoundedCornerShape(14.dp)).background(Color(0xFFEDF4E4)),
+        contentAlignment = Alignment.Center
+    ) {
+        if (url != null && !failed) {
+            AsyncImage(
+                model = absoluteMediaUrl(url), contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                onError = { failed = true }
+            )
+        } else {
+            Icon(
+                painterResource(R.drawable.ic_ewe_custom), null,
+                tint = PrimaryGreen.copy(alpha = 0.35f), modifier = Modifier.size(40.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ClaimEvidenceTile(e: ClaimEvidence, lang: AppLanguage) {
+    val caption = when (e.type) {
+        "ear_tag" -> lang.getT("Tag Photo", "टैग फोटो", "ଟ୍ୟାଗ୍ ଫଟୋ")
+        "full_body" -> lang.getT("Dead Goat Photo", "मृत बकरी फोटो", "ମୃତ ଛେଳି ଫଟୋ")
+        "location" -> lang.getT("Site Visit Photo", "साइट विजिट फोटो", "ସାଇଟ୍ ଫଟୋ")
+        else -> lang.getT("Documents", "दस्तावेज़", "ଦଲିଲ")
+    }
+    var failed by remember(e.url) { mutableStateOf(false) }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier.size(96.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF1F3EE)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (!failed) {
+                AsyncImage(
+                    model = absoluteMediaUrl(e.url), contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    onError = { failed = true }
+                )
+            } else {
+                Icon(Icons.Default.Image, null, tint = Color(0xFFB0B7B0), modifier = Modifier.size(28.dp))
+            }
+        }
+        Spacer(Modifier.height(5.dp))
+        Text(caption, fontSize = 11.sp, color = Color(0xFF5B6660), maxLines = 1)
+    }
+}
+
+/** The five claim stages, driven by the progress map the API already returns. */
+@Composable
+private fun ClaimProgressTrack(review: ClaimReview, lang: AppLanguage) {
+    data class Step(val label: String, val done: Boolean, val current: Boolean, val date: String?)
+
+    val p = review.progress
+    fun doneOf(key: String) = p[key] == "completed"
+    val decided = review.status in listOf("approved", "rejected", "claimed")
+
+    val steps = listOf(
+        Step(lang.getT("Death Reported", "मृत्यु दर्ज", "ମୃତ୍ୟୁ ଦାଖଲ"), doneOf("death_notification"), false, review.reportedAt),
+        Step(lang.getT("Didi Verification", "दीदी सत्यापन", "ଦିଦି ଯାଞ୍ଚ"), doneOf("site_visit"), false, review.verifiedAt),
+        Step(lang.getT("Coordinator Review", "समन्वयक समीक्षा", "ସମନ୍ୱୟକ ସମୀକ୍ଷା"), doneOf("claim_review"), doneOf("claim_submission") && !doneOf("claim_review"), null),
+        Step(lang.getT("Admin Approval", "प्रशासक अनुमोदन", "ପ୍ରଶାସକ ଅନୁମୋଦନ"), decided, false, null),
+        Step(lang.getT("Payment Completed", "भुगतान पूर्ण", "ଦେୟ ସମ୍ପୂର୍ଣ୍ଣ"), review.status == "claimed", false, null),
+    )
+
+    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+        steps.forEach { step ->
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    Modifier.size(24.dp).clip(CircleShape)
+                        .background(if (step.done) PrimaryGreen else Color(0xFFE3E6E1))
+                        .border(
+                            width = if (step.current) 3.dp else 0.dp,
+                            color = if (step.current) PrimaryGreen else Color.Transparent,
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (step.done) Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    step.label, fontSize = 9.sp, lineHeight = 12.sp,
+                    color = if (step.done || step.current) Color(0xFF14231A) else Color(0xFF8A908A),
+                    fontWeight = if (step.done || step.current) FontWeight.Bold else FontWeight.Normal,
+                    textAlign = TextAlign.Center, maxLines = 2
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    when {
+                        step.date != null -> claimDate(step.date)
+                        step.current -> lang.getT("In Progress", "जारी", "ଚାଲିଛି")
+                        step.done -> lang.getT("Done", "पूर्ण", "ସମ୍ପୂର୍ଣ୍ଣ")
+                        else -> lang.getT("Pending", "लंबित", "ବାକି")
+                    },
+                    fontSize = 8.sp,
+                    color = if (step.current) PrimaryGreen else Color(0xFF8A908A),
+                    textAlign = TextAlign.Center, maxLines = 1
+                )
+            }
         }
     }
 }
@@ -8272,282 +8655,7 @@ fun ClaimBankDetailsScreen(navController: NavHostController, claimId: String, us
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DidiClaimDetailsContent(
-    claim: Map<String, String>,
-    themeColor: Color,
-    selectedTab: Int,
-    onTabSelected: (Int) -> Unit,
-    userRole: UserRole? = null,
-    onSubmit: () -> Unit
-) {
-    val languageState = LocalAppLanguage.current
-    
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Header Info Card
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(claim["id"] ?: "", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
-                    
-                    Surface(
-                        color = Color(0xFFFFF3E0),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = languageState.value.getT("In Progress", "प्रगति में", "ପ୍ରଗତିରେ ଅଛି"),
-                            color = Color(0xFFE65100),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(claim["farmer"] ?: "", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.DarkGray)
-                Text(
-                    text = languageState.value.getT("Tag No: ", "टैग नंबर: ", "ଟ୍ୟାଗ୍ ନମ୍ବର: ") + (claim["tag"] ?: ""),
-                    fontSize = 13.sp,
-                    color = Color.Gray
-                )
-                Text(
-                    text = languageState.value.getT("Reported On: ", "रिपोर्ट की तारीख: ", "ରିପୋର୍ଟ ତାରିଖ: ") + (claim["date"] ?: "") + ", " + (claim["time"] ?: ""),
-                    fontSize = 13.sp,
-                    color = Color.Gray
-                )
-            }
-        }
 
-        // Tabs
-        val tabs = listOf("Overview", "Documents")
-        TabRow(
-            selectedTabIndex = selectedTab,
-            containerColor = Color.Transparent,
-            divider = {},
-            indicator = {}
-        ) {
-            tabs.forEachIndexed { index, title ->
-                val isSelected = selectedTab == index
-                Tab(
-                    selected = isSelected,
-                    onClick = { onTabSelected(index) },
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                ) {
-                    Surface(
-                        color = if (isSelected) themeColor.copy(alpha = 0.1f) else Color.Transparent,
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = title,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                            color = if (isSelected) themeColor else Color.Gray,
-                            fontSize = 13.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                        )
-                    }
-                }
-            }
-        }
-
-        // Tab Content
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            when (selectedTab) {
-                0 -> { // Overview
-                    // Claim Progress
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(languageState.value.getT("Claim Progress", "दावा प्रगति", "ଦାବି ପ୍ରଗତି"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                            Spacer(modifier = Modifier.height(20.dp))
-                            
-                            val doneText = languageState.value.getT("Completed", "पूर्ण", "ସମ୍ପୂର୍ଣ୍ଣ")
-                            val pendingText = languageState.value.getT("Pending", "लंबित", "ବିଚାରାଧୀନ")
-                            val reviewSubtitle = when (claim["status"]) {
-                                "approved", "claimed" -> languageState.value.getT("Approved", "स्वीकृत", "ମଞ୍ଜୁର")
-                                "rejected" -> languageState.value.getT("Rejected", "अस्वीकृत", "ଅସ୍ୱୀକୃତ")
-                                "hold" -> languageState.value.getT("On hold", "होल्ड पर", "ଅପେକ୍ଷାରେ")
-                                else -> pendingText
-                            }
-                            val steps = listOf(
-                                Triple(languageState.value.getT("Death Reported", "मृत्यु की सूचना", "ମୃତ୍ୟୁ ରିପୋର୍ଟ"),
-                                    claim["date"].takeUnless { it.isNullOrBlank() || it == "—" } ?: doneText,
-                                    claim["p_death"] == "completed"),
-                                Triple(languageState.value.getT("Didi Site Visit", "दीदी साइट विज़िट", "ଦିଦି ସାଇଟ୍ ପରିଦର୍ଶନ"),
-                                    if (claim["p_site"] == "completed") doneText else pendingText,
-                                    claim["p_site"] == "completed"),
-                                Triple(languageState.value.getT("Verification", "सत्यापन", "ଯାଞ୍ଚ"),
-                                    if (claim["p_verify"] == "completed") doneText else pendingText,
-                                    claim["p_verify"] == "completed"),
-                                Triple(languageState.value.getT("Coordinator Review", "समन्वयक समीक्षा", "ସମନ୍ୱୟକ ସମୀକ୍ଷା"),
-                                    reviewSubtitle,
-                                    claim["p_review"] == "completed"),
-                            )
-
-                            steps.forEachIndexed { index, step ->
-                                DidiClaimProgressItem(
-                                    stepNumber = index + 1,
-                                    title = step.first,
-                                    subtitle = step.second,
-                                    isCompleted = step.third,
-                                    isLast = index == steps.size - 1,
-                                    themeColor = themeColor
-                                )
-                            }
-                        }
-                    }
-
-                    // Claim Information
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(languageState.value.getT("Claim Information", "दावा जानकारी", "ଦାବି ସୂଚନା"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            
-                            DidiInfoRow(languageState.value.getT("Policy No.", "पॉलिसी नंबर", "ପଲିସି ନମ୍ବର"), claim["policy"] ?: "")
-                            DidiInfoRow(languageState.value.getT("Insured Goat", "बीमित बकरी", "ବୀମାଭୁକ୍ତ ଛେଳି"), claim["tag"] ?: "")
-                            DidiInfoRow(languageState.value.getT("Date of Death", "मृत्यु की तिथि", "ମୃତ୍ୟୁ ତାରିଖ"), claim["date"] ?: "—")
-                            DidiInfoRow(languageState.value.getT("Cause of Death", "मृत्यु का कारण", "ମୃତ୍ୟୁର କାରଣ"), claim["cause"] ?: "")
-                            val vaccines = claim["vaccines"] ?: ""
-                            if (vaccines.isNotBlank()) {
-                                DidiInfoRow(languageState.value.getT("Vaccinations Completed", "पूर्ण टीकाकरण", "ସମ୍ପୂର୍ଣ୍ଣ ଟୀକାକରଣ"), "$vaccines / 4")
-                            }
-                            val amount = claim["amount"] ?: ""
-                            if (amount.isNotBlank() && amount != "—") {
-                                DidiInfoRow(languageState.value.getT("Entitled Amount", "पात्र राशि", "ହକଦାର ରାଶି"), "₹$amount")
-                            }
-                        }
-                    }
-                }
-                1 -> { // Documents
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(languageState.value.getT("Uploaded Documents", "अपलोड किए गए दस्तावेज़", "ଅପଲୋଡ୍ ହୋଇଥିବା ଦଲିଲ"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            DidiDocItem("Death Report Photo", "20 May 2024, 10:31 AM", themeColor)
-                            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.2f))
-                            DidiDocItem("Didi Site Visit Photo", "20 May 2024, 02:20 PM", themeColor)
-                            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.2f))
-                            DidiDocItem("Goat Ear Tag Photo", "20 May 2024, 02:21 PM", themeColor)
-                            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.2f))
-                            DidiDocItem("Veterinary Certificate", "20 May 2024, 03:10 PM", themeColor, icon = Icons.Default.MedicalServices)
-                            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.2f))
-                            DidiDocItem("Other Supporting Document", "20 May 2024, 03:15 PM", themeColor)
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.VerifiedUser, null, tint = SuccessGreen, modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                languageState.value.getT("All documents are secured and used only for claim verification.", "सभी दस्तावेज़ सुरक्षित हैं और केवल दावा सत्यापन के लिए उपयोग किए जाते हैं।", "ସମସ୍ତ ଦଲିଲ ସୁରକ୍ଷିତ ଏବଂ କେବଳ ଦାବି ଯାଞ୍ଚ ପାଇଁ ବ୍ୟବହୃତ ହୁଏ |"),
-                                fontSize = 13.sp,
-                                color = Color.DarkGray,
-                                lineHeight = 18.sp
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // Bottom Action Button
-        Button(
-            onClick = onSubmit,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .height(56.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = themeColor)
-        ) {
-            val buttonText = if (userRole == UserRole.SURAKSHA_DIDI || userRole == UserRole.COORDINATOR) 
-                languageState.value.getT("Next", "अगला", "ପରବର୍ତ୍ତୀ")
-            else 
-                languageState.value.getT("Submit", "सबमिट करें", "ସବମିଟ୍")
-            Text(buttonText, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-@Composable
-fun DidiClaimProgressItem(
-    stepNumber: Int,
-    title: String,
-    subtitle: String,
-    isCompleted: Boolean,
-    isLast: Boolean,
-    themeColor: Color
-) {
-    Row(modifier = Modifier.fillMaxWidth()) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .background(if (isCompleted) themeColor else Color.White)
-                    .border(1.dp, if (isCompleted) themeColor else Color.LightGray.copy(alpha = 0.5f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isCompleted) {
-                    Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                } else {
-                    Text(stepNumber.toString(), color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-            if (!isLast) {
-                Box(
-                    modifier = Modifier
-                        .width(1.5.dp)
-                        .height(40.dp)
-                        .background(if (isCompleted) themeColor else Color.LightGray.copy(alpha = 0.3f))
-                )
-            }
-        }
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.padding(bottom = if (isLast) 0.dp else 20.dp)) {
-            Text(text = title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Black)
-            Text(text = subtitle, fontSize = 12.sp, color = Color.Gray)
-        }
-    }
-}
 
 @Composable
 fun DidiInfoRow(label: String, value: String) {
