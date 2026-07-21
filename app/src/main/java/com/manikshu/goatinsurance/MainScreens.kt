@@ -2816,7 +2816,7 @@ fun EnrollmentSectionHeader(title: String, icon: ImageVector) {
             Icon(icon, null, tint = PrimaryGreen, modifier = Modifier.size(24.dp))
         }
         Spacer(Modifier.width(14.dp))
-        Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color(0xFF14231A))
+        Text(title, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A))
     }
 }
 
@@ -2940,18 +2940,18 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
         modifier = Modifier.fillMaxSize().navigationBarsPadding(),
         containerColor = Color.White,
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.White,
-                    titleContentColor = Color.Black,
-                    navigationIconContentColor = Color.Black
+                    titleContentColor = Color(0xFF14231A),
+                    navigationIconContentColor = Color(0xFF14231A)
                 ),
-                title = { 
+                title = {
                     Text(
                         languageState.value.getT("Enrollment (Step $currentStep of 7)", "नामांकन (चरण $currentStep of 7)", "ପଞ୍ଜିକରଣ (ପଦକ୍ଷେପ $currentStep of 7)"),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    ) 
+                        fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color(0xFF14231A),
+                        maxLines = 1
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = { if (currentStep > 1) currentStep-- else onBack() }) {
@@ -2970,10 +2970,6 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
             }
 
             Column(modifier = Modifier.weight(1f).verticalScroll(scrollState)) {
-                EnrollmentGreetingBanner(didiName)
-
-                Spacer(modifier = Modifier.height(20.dp))
-
                 EnrollmentSectionHeader(steps[currentStep - 1], stepIcons[currentStep - 1])
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -3410,27 +3406,18 @@ fun EnrollmentPaymentStep(goatCount: Int = 1) {
     val total = 350 * goatCount.coerceAtLeast(1)
 
     Column {
-        // Premium hero banner: rich green with the goat illustration bleeding off the right.
+        // Premium hero banner: rich green, with the amount centred on it.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(150.dp)
                 .clip(RoundedCornerShape(18.dp))
-                .background(Brush.linearGradient(listOf(Color(0xFF2E7D32), Color(0xFF15501C))))
+                .background(Brush.linearGradient(listOf(Color(0xFF2E7D32), Color(0xFF15501C)))),
+            contentAlignment = Alignment.Center
         ) {
-            Image(
-                painter = painterResource(R.drawable.didi_banner_l),
-                contentDescription = null,
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .fillMaxHeight()
-                    .fillMaxWidth(0.5f)
-                    .clip(RoundedCornerShape(topEnd = 18.dp, bottomEnd = 18.dp)),
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                alignment = Alignment.CenterEnd,
-            )
             Column(
-                modifier = Modifier.align(Alignment.CenterStart).padding(start = 24.dp, end = 8.dp)
+                modifier = Modifier.padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(languageState.value.getT("Total Premium Amount", "कुल प्रीमियम राशि", "ମୋଟ ପ୍ରିମିୟମ ପରିମାଣ"), fontSize = 15.sp, color = Color.White)
                 Spacer(modifier = Modifier.height(4.dp))
@@ -3482,7 +3469,7 @@ fun EnrollmentPaymentStep(goatCount: Int = 1) {
         }
         
         Spacer(modifier = Modifier.height(24.dp))
-        EnrollmentTextField(label = languageState.value.getT("Premium Amount (editable if needed)", "प्रीमियम राशि (यदि आवश्यक हो तो संपादन योग्य)", "ପ୍ରିମିୟମ ପରିମାଣ (ଆବଶ୍ୟକ ହେଲେ ସଂପାଦନ ଯୋଗ୍ୟ)"), value = "350", onValueChange = {}, prefix = "₹", trailingIcon = Icons.Default.Receipt)
+        EnrollmentTextField(label = languageState.value.getT("Premium Amount", "प्रीमियम राशि", "ପ୍ରିମିୟମ ପରିମାଣ"), value = "350", onValueChange = {}, prefix = "₹", trailingIcon = Icons.Default.Receipt)
         Spacer(modifier = Modifier.height(16.dp))
         EnrollmentTextField(label = languageState.value.getT("Receipt Number", "रसीद संख्या", "ରସିଦ ନମ୍ବର"), value = "RCP-240801-001", onValueChange = {}, leadingIcon = Icons.Default.Receipt)
     }
