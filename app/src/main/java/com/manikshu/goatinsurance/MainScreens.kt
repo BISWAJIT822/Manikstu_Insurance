@@ -71,6 +71,7 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Transgender
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Add
@@ -2659,44 +2660,147 @@ fun MortalityStep4() {
 
 @Composable
 fun StepProgressIndicator(currentStep: Int, totalSteps: Int) {
+    val track = Color(0xFFE7ECE6)      // soft grey-green connector for upcoming steps
+    val idleFill = Color(0xFFF1F4EF)   // upcoming circle fill
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 18.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         repeat(totalSteps) { index ->
             val step = index + 1
             val isCompleted = step < currentStep
             val isCurrent = step == currentStep
-            
+            val done = isCompleted || isCurrent
+
             Box(
                 modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(if (isCompleted || isCurrent) PrimaryGreen else Color.LightGray.copy(alpha = 0.3f))
-                    .border(1.dp, if (isCompleted || isCurrent) PrimaryGreen else Color.LightGray, CircleShape),
+                    // Current step wears a soft halo ring; keeps it the clear focal point.
+                    .then(
+                        if (isCurrent) Modifier.size(34.dp).clip(CircleShape)
+                            .background(PrimaryGreen.copy(alpha = 0.14f))
+                        else Modifier.size(30.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                if (isCompleted) {
-                    Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp), tint = Color.White)
-                } else {
-                    Text(
-                        text = step.toString(),
-                        color = if (isCurrent) Color.White else Color.Gray,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                Box(
+                    modifier = Modifier
+                        .size(if (isCurrent) 30.dp else 30.dp)
+                        .clip(CircleShape)
+                        .background(if (done) PrimaryGreen else idleFill)
+                        .border(1.dp, if (done) PrimaryGreen else track, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isCompleted) {
+                        Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp), tint = Color.White)
+                    } else {
+                        Text(
+                            text = step.toString(),
+                            color = if (isCurrent) Color.White else Color(0xFF9AA69B),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
-            
+
             if (index < totalSteps - 1) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(2.dp)
-                        .background(if (step < currentStep) PrimaryGreen else Color.LightGray.copy(alpha = 0.3f))
+                        .clip(RoundedCornerShape(1.dp))
+                        .background(if (step < currentStep) PrimaryGreen else track)
                 )
             }
         }
+    }
+}
+
+/**
+ * Premium greeting banner shown at the top of the enrollment flow, matching the
+ * Didi dashboard header: circular avatar, "Hello, <name>", and the farm illustration.
+ * Purely decorative - no field, step, or workflow is affected.
+ */
+@Composable
+fun EnrollmentGreetingBanner(name: String) {
+    val languageState = LocalAppLanguage.current
+    val profileImage = LocalProfileImage.current.value
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                Brush.horizontalGradient(listOf(Color(0xFFEFF6EC), Color(0xFFE3F0DB)))
+            )
+    ) {
+        // Farm / goat illustration bleeds off the right edge, behind the text.
+        Image(
+            painter = painterResource(R.drawable.didi_banner_l),
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight()
+                .fillMaxWidth(0.5f)
+                .clip(RoundedCornerShape(topEnd = 18.dp, bottomEnd = 18.dp)),
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            alignment = Alignment.CenterEnd,
+        )
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(color = Color.White, shape = CircleShape, shadowElevation = 2.dp, modifier = Modifier.size(56.dp)) {
+                Box(contentAlignment = Alignment.Center) {
+                    if (profileImage != null) {
+                        AsyncImage(model = profileImage, contentDescription = null,
+                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                    } else {
+                        Image(painterResource(R.drawable.avatar_didi), null,
+                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                    }
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text(languageState.value.getT("Hello,", "नमस्ते,", "ନମସ୍କାର,"), fontSize = 14.sp, color = Color(0xFF5B6660))
+                Text(
+                    name.ifBlank { languageState.value.getT("Suraksha Didi", "सुरक्षा दीदी", "ସୁରକ୍ଷା ଦିଦି") },
+                    fontSize = 19.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen
+                )
+            }
+        }
+    }
+}
+
+/** Circular light-green badge that holds a field's leading icon (enrollment fields). */
+@Composable
+fun FieldLeadingBadge(icon: ImageVector, tint: Color) {
+    Box(Modifier.size(32.dp).clip(CircleShape).background(tint.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+        Icon(icon, null, tint = tint, modifier = Modifier.size(19.dp))
+    }
+}
+
+@Composable
+fun FieldLeadingBadge(painter: Painter, tint: Color) {
+    Box(Modifier.size(32.dp).clip(CircleShape).background(tint.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+        Icon(painter, null, tint = tint, modifier = Modifier.size(19.dp))
+    }
+}
+
+/** Step title with a circular icon badge, matching the reference "Farmer Information" header. */
+@Composable
+fun EnrollmentSectionHeader(title: String, icon: ImageVector) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier.size(46.dp).clip(CircleShape).background(PrimaryGreen.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = PrimaryGreen, modifier = Modifier.size(24.dp))
+        }
+        Spacer(Modifier.width(14.dp))
+        Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color(0xFF14231A))
     }
 }
 
@@ -2712,6 +2816,22 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
     val enrollResults by enrollVm.results.collectAsState()
     val enrollProgress by enrollVm.progress.collectAsState()
     val isSubmitting = submitState is SubmitState.Submitting
+
+    // Logged-in Didi's name for the greeting banner (decorative only).
+    val profileVm: ProfileViewModel = hiltViewModel()
+    val didiProfile by profileVm.profile.collectAsState()
+    val didiName = didiProfile?.fullName ?: ""
+
+    // Icon badge shown beside each step title, aligned to `steps` below.
+    val stepIcons = listOf(
+        Icons.Default.Person,        // 1 Farmer Information
+        Icons.Default.Pets,          // 2 Goat Details
+        Icons.Default.CameraAlt,     // 3 Goat Photos
+        Icons.AutoMirrored.Filled.List, // 4 Goats Added
+        Icons.Default.Vaccines,      // 5 Vaccination History
+        Icons.Default.Payments,      // 6 Premium Payment
+        Icons.Default.VerifiedUser,  // 7 Policy Generated
+    )
     LaunchedEffect(submitState) {
         when (val s = submitState) {
             is SubmitState.Success -> { currentStep = 7 }
@@ -2823,22 +2943,20 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize().background(Color.White).padding(horizontal = 20.dp)) {
             StepProgressIndicator(currentStep, 7)
-            
+
             val scrollState = rememberScrollState()
             LaunchedEffect(currentStep) {
                 scrollState.scrollTo(0)
             }
 
             Column(modifier = Modifier.weight(1f).verticalScroll(scrollState)) {
-                Text(
-                    text = steps[currentStep-1],
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
+                EnrollmentGreetingBanner(didiName)
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                EnrollmentSectionHeader(steps[currentStep - 1], stepIcons[currentStep - 1])
+
+                Spacer(modifier = Modifier.height(20.dp))
                 
                 when(currentStep) {
                     1 -> EnrollmentFarmerStep(farmerName, { if (it.all { char -> char.isLetter() || char.isWhitespace() }) farmerName = it }, mobileNumber, { if (it.length <= 10) mobileNumber = it }, village, { if (it.all { char -> char.isLetter() || char.isWhitespace() }) village = it }, location, { location = it }, aadhaar, { if (it.length <= 12) aadhaar = it })
@@ -2890,8 +3008,8 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                                 }
                             },
                             modifier = Modifier.weight(1f).height(56.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, PrimaryGreen)
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.5.dp, PrimaryGreen)
                         ) {
                             Text(languageState.value.getT("Back", "पीछे", "ପଛକୁ"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
                         }
@@ -2944,7 +3062,8 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                         },
                         enabled = isStepValid && !isSubmitting,
                         modifier = Modifier.weight(1f).height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp, pressedElevation = 0.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f))
                     ) {
                         Text(
@@ -2969,18 +3088,19 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
 fun EnrollmentFarmerStep(name: String, onNameChange: (String) -> Unit, phone: String, onPhoneChange: (String) -> Unit, village: String, onVillageChange: (String) -> Unit, location: String, onLocationChange: (String) -> Unit, aadhaar: String, onAadhaarChange: (String) -> Unit) {
     val languageState = LocalAppLanguage.current
     val fetchGps = rememberGpsFetcher(onResult = { onLocationChange(it) })
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        EnrollmentTextField(label = languageState.value.getT("Farmer Name *", "किसान का नाम *", "କୃଷକଙ୍କ ନାମ *"), value = name, onValueChange = onNameChange, placeholder = "Full Name")
-        EnrollmentTextField(label = languageState.value.getT("Mobile Number *", "मोबाइल नंबर *", "ମୋବାଇଲ୍ ନମ୍ବର *"), value = phone, onValueChange = onPhoneChange, placeholder = "10-digit number", keyboardType = KeyboardType.Phone, prefix = "+91 ")
-        EnrollmentTextField(label = languageState.value.getT("Village *", "गाँव *", "ଗ୍ରାମ *"), value = village, onValueChange = onVillageChange, placeholder = "Village Name")
+    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        EnrollmentTextField(label = languageState.value.getT("Farmer Name *", "किसान का नाम *", "କୃଷକଙ୍କ ନାମ *"), value = name, onValueChange = onNameChange, placeholder = "Full Name", leadingIcon = Icons.Default.Person)
+        EnrollmentTextField(label = languageState.value.getT("Mobile Number *", "मोबाइल नंबर *", "ମୋବାଇଲ୍ ନମ୍ବର *"), value = phone, onValueChange = onPhoneChange, placeholder = "10-digit number", keyboardType = KeyboardType.Phone, prefix = "+91 ", leadingIcon = Icons.Default.Phone)
+        EnrollmentTextField(label = languageState.value.getT("Village *", "गाँव *", "ଗ୍ରାମ *"), value = village, onValueChange = onVillageChange, placeholder = "Village Name", leadingIcon = Icons.Default.Home)
         EnrollmentTextField(
             label = languageState.value.getT("GPS Location *", "जीपीएस स्थान *", "GPS ଅବସ୍ଥାନ *"),
             value = location, onValueChange = onLocationChange,
             placeholder = languageState.value.getT("Tap the icon to fetch GPS", "जीपीएस लाने के लिए आइकन दबाएं", "GPS ଆଣିବାକୁ ଆଇକନ୍ ଦବାନ୍ତୁ"),
+            leadingIcon = Icons.Default.LocationOn,
             trailingIcon = Icons.Default.MyLocation,
             onTrailingIconClick = { fetchGps() }
         )
-        EnrollmentTextField(label = languageState.value.getT("Aadhaar / Gov ID *", "आधार / सरकारी आईडी *", "ଆଧାର / ସରକାରୀ ID *"), value = aadhaar, onValueChange = onAadhaarChange, placeholder = "12-digit number", keyboardType = KeyboardType.Number)
+        EnrollmentTextField(label = languageState.value.getT("Aadhaar / Gov ID *", "आधार / सरकारी आईडी *", "ଆଧାର / ସରକାରୀ ID *"), value = aadhaar, onValueChange = onAadhaarChange, placeholder = "12-digit number", keyboardType = KeyboardType.Number, leadingIcon = Icons.Default.Badge)
     }
 }
 
@@ -2997,7 +3117,8 @@ fun EnrollmentGoatStep(breed: String, onBreedChange: (String) -> Unit, gender: S
             selectedValue = breed,
             placeholder = languageState.value.getT("Select Breed", "नस्ल चुनें", "ପ୍ରଜାତି ବାଛନ୍ତୁ"),
             options = listOf("Black Bengal", "Jamunapari", "Sirohi", "Barbari", "Beetal", "Ganjam", "Osmanabadi", "Anjori"),
-            onValueChange = onBreedChange
+            onValueChange = onBreedChange,
+            leadingPainter = painterResource(R.drawable.ic_ewe_custom)
         )
         EnrollmentDropdownField(
             label = languageState.value.getT("Gender *", "लिंग *", "ଲିଙ୍ଗ *"),
@@ -3007,7 +3128,8 @@ fun EnrollmentGoatStep(breed: String, onBreedChange: (String) -> Unit, gender: S
                 languageState.value.getT("Female", "मादा", "ମାଈ"),
                 languageState.value.getT("Male", "नर", "ଅଣ୍ଡିରା")
             ),
-            onValueChange = onGenderChange
+            onValueChange = onGenderChange,
+            leadingIcon = Icons.Default.Transgender
         )
 
         Row(
@@ -3016,7 +3138,7 @@ fun EnrollmentGoatStep(breed: String, onBreedChange: (String) -> Unit, gender: S
             verticalAlignment = Alignment.Bottom
         ) {
             Box(modifier = Modifier.weight(0.6f)) {
-                EnrollmentTextField(label = languageState.value.getT("Age (Approx) *", "आयु (लगभग) *", "ବୟସ (ପ୍ରାୟ) *"), value = age, onValueChange = onAgeChange, placeholder = "12", keyboardType = KeyboardType.Number)
+                EnrollmentTextField(label = languageState.value.getT("Age (Approx) *", "आयु (लगभग) *", "ବୟସ (ପ୍ରାୟ) *"), value = age, onValueChange = onAgeChange, placeholder = "12", keyboardType = KeyboardType.Number, leadingIcon = Icons.Default.CalendarToday)
             }
             Box(modifier = Modifier.weight(0.4f)) {
                 EnrollmentDropdownField(
@@ -3031,12 +3153,13 @@ fun EnrollmentGoatStep(breed: String, onBreedChange: (String) -> Unit, gender: S
             }
         }
 
-        EnrollmentTextField(label = languageState.value.getT("Weight (Approx) *", "वजन (लगभग) *", "ଓଜନ (ପ୍ରୟ) *"), value = weight, onValueChange = onWeightChange, placeholder = "18", keyboardType = KeyboardType.Number, suffix = "KG")
-        EnrollmentTextField(label = languageState.value.getT("Color / Marks *", "रंग / निशान *", "ରଙ୍ଗ / ଚିହ୍ନ *"), value = color, onValueChange = onColorChange, placeholder = "Black with White Spots")
+        EnrollmentTextField(label = languageState.value.getT("Weight (Approx) *", "वजन (लगभग) *", "ଓଜନ (ପ୍ରୟ) *"), value = weight, onValueChange = onWeightChange, placeholder = "18", keyboardType = KeyboardType.Number, suffix = "KG", leadingIcon = Icons.Default.Scale)
+        EnrollmentTextField(label = languageState.value.getT("Color / Marks *", "रंग / निशान *", "ରଙ୍ଗ / ଚିହ୍ନ *"), value = color, onValueChange = onColorChange, placeholder = "Black with White Spots", leadingIcon = Icons.Default.Palette)
 
         EnrollmentTextField(
             label = languageState.value.getT("Ear Tag Number *", "कान का टैग नंबर *", "କାନ ଟ୍ୟାଗ୍ ନମ୍ବର *"),
             value = earTag, onValueChange = onTagChange, placeholder = "e.g. ET-240801",
+            leadingIcon = Icons.Default.Label,
             trailingIcon = Icons.Default.QrCodeScanner,
             onTrailingIconClick = {
                 val options = com.journeyapps.barcodescanner.ScanOptions()
@@ -3158,19 +3281,24 @@ fun EnrollmentPhotoStep(
         Spacer(modifier = Modifier.height(24.dp))
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = InfoBlue.copy(alpha = 0.1f)),
-            shape = RoundedCornerShape(12.dp)
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF2F5F0)),
+            shape = RoundedCornerShape(14.dp)
         ) {
             Row(
-                modifier = Modifier.padding(12.dp),
+                modifier = Modifier.padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Info, null, tint = InfoBlue, modifier = Modifier.size(20.dp))
+                Box(
+                    modifier = Modifier.size(34.dp).clip(CircleShape).background(PrimaryGreen.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Info, null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
+                }
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     languageState.value.getT("Ensure clear photos in good lighting", "अच्छी रोशनी में स्पष्ट फोटो सुनिश्चित करें", "ଭଲ ଆଲୋକରେ ସ୍ପଷ୍ଟ ଫଟୋ ନିଶ୍ଚିତ କରନ୍ତୁ"),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Black
+                    color = Color(0xFF3D473E)
                 )
             }
         }
@@ -3265,7 +3393,7 @@ fun EnrollmentVaccinationStep(
     fmdGiven: Boolean, onFmd: (Boolean) -> Unit,
     poxGiven: Boolean, onPox: (Boolean) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         VaccineStatusItem("PPR Vaccine", pprGiven) { onPpr(it) }
         VaccineStatusItem("ET + TT Vaccine", etttGiven) { onEtt(it) }
         VaccineStatusItem("FMD Vaccine", fmdGiven) { onFmd(it) }
@@ -3280,19 +3408,33 @@ fun EnrollmentPaymentStep(goatCount: Int = 1) {
     val total = 350 * goatCount.coerceAtLeast(1)
 
     Column {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8E9))
+        // Premium hero banner: rich green with the goat illustration bleeding off the right.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(Brush.linearGradient(listOf(Color(0xFF2E7D32), Color(0xFF15501C))))
         ) {
+            Image(
+                painter = painterResource(R.drawable.didi_banner_l),
+                contentDescription = null,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .fillMaxWidth(0.5f)
+                    .clip(RoundedCornerShape(topEnd = 18.dp, bottomEnd = 18.dp)),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                alignment = Alignment.CenterEnd,
+            )
             Column(
-                modifier = Modifier.padding(24.dp).fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                modifier = Modifier.align(Alignment.CenterStart).padding(start = 24.dp, end = 8.dp)
             ) {
-                Text(languageState.value.getT("Total Premium Amount", "कुल प्रीमियम राशि", "ମୋଟ ପ୍ରିମିୟମ ପରିମାଣ"), fontSize = 14.sp, color = Color.Gray)
-                Text("₹ $total", style = MaterialTheme.typography.headlineLarge, color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                Text(languageState.value.getT("Total Premium Amount", "कुल प्रीमियम राशि", "ମୋଟ ପ୍ରିମିୟମ ପରିମାଣ"), fontSize = 15.sp, color = Color.White)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("₹ $total", fontSize = 38.sp, color = Color.White, fontWeight = FontWeight.Bold)
                 if (goatCount > 1) {
-                    Text("$goatCount × ₹350", fontSize = 12.sp, color = Color.Gray)
+                    Text("$goatCount × ₹350", fontSize = 12.sp, color = Color.White.copy(alpha = 0.85f))
                 }
             }
         }
@@ -3338,7 +3480,7 @@ fun EnrollmentPaymentStep(goatCount: Int = 1) {
         }
         
         Spacer(modifier = Modifier.height(24.dp))
-        EnrollmentTextField(label = languageState.value.getT("Premium Amount (editable if needed)", "प्रीमियम राशि (यदि आवश्यक हो तो संपादन योग्य)", "ପ୍ରିମିୟମ ପରିମାଣ (ଆବଶ୍ୟକ ହେଲେ ସଂପାଦନ ଯୋଗ୍ୟ)"), value = "350", onValueChange = {}, prefix = "₹")
+        EnrollmentTextField(label = languageState.value.getT("Premium Amount (editable if needed)", "प्रीमियम राशि (यदि आवश्यक हो तो संपादन योग्य)", "ପ୍ରିମିୟମ ପରିମାଣ (ଆବଶ୍ୟକ ହେଲେ ସଂପାଦନ ଯୋଗ୍ୟ)"), value = "350", onValueChange = {}, prefix = "₹", trailingIcon = Icons.Default.Receipt)
         Spacer(modifier = Modifier.height(16.dp))
         EnrollmentTextField(label = languageState.value.getT("Receipt Number", "रसीद संख्या", "ରସିଦ ନମ୍ବର"), value = "RCP-240801-001", onValueChange = {}, leadingIcon = Icons.Default.Receipt)
     }
@@ -3401,22 +3543,39 @@ fun EnrollmentGoatsAddedStep(
 ) {
     val languageState = LocalAppLanguage.current
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // Total counter
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
-            shape = RoundedCornerShape(16.dp)
+        // Total counter — premium summary banner with illustration.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .background(Brush.horizontalGradient(listOf(Color(0xFFEFF6EC), Color(0xFFE3F0DB))))
         ) {
+            Image(
+                painter = painterResource(R.drawable.didi_banner_l),
+                contentDescription = null,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .fillMaxWidth(0.5f)
+                    .clip(RoundedCornerShape(topEnd = 18.dp, bottomEnd = 18.dp)),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                alignment = Alignment.CenterEnd,
+            )
             Row(
-                modifier = Modifier.fillMaxWidth().padding(20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.padding(18.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(languageState.value.getT("Total Goats Added", "जोड़ी गई कुल बकरियां", "ମୋଟ ଯୋଡ଼ାଯାଇଥିବା ଛେଳି"), fontSize = 13.sp, color = Color.Gray)
-                    Text("${goats.size}", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen)
+                Box(
+                    modifier = Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(PrimaryGreen),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Description, null, tint = Color.White, modifier = Modifier.size(24.dp))
                 }
-                Icon(painterResource(R.drawable.ic_ewe_custom), null, tint = PrimaryGreen, modifier = Modifier.size(40.dp))
+                Spacer(modifier = Modifier.width(14.dp))
+                Column {
+                    Text(languageState.value.getT("Total Goats Added", "जोड़ी गई कुल बकरियां", "ମୋଟ ଯୋଡ଼ାଯାଇଥିବା ଛେଳି"), fontSize = 13.sp, color = Color(0xFF5B6660))
+                    Text("${goats.size}", fontSize = 30.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen)
+                }
             }
         }
 
@@ -3424,45 +3583,64 @@ fun EnrollmentGoatsAddedStep(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.4f))
+                shape = RoundedCornerShape(18.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                border = BorderStroke(1.dp, Color(0xFFEDF0EA))
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val photo = goat.photos.getOrNull(2) ?: goat.photos.firstOrNull()
-                    Box(
-                        modifier = Modifier.size(56.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFF0F0F0)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (photo != null) {
-                            AsyncImage(model = photo, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-                        } else {
-                            Icon(painterResource(R.drawable.ic_ewe_custom), null, tint = Color.Gray, modifier = Modifier.size(28.dp))
+                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val photo = goat.photos.getOrNull(2) ?: goat.photos.firstOrNull()
+                        Box(
+                            modifier = Modifier.size(72.dp).clip(CircleShape).background(Color(0xFFF0F0F0)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (photo != null) {
+                                AsyncImage(model = photo, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                            } else {
+                                Icon(painterResource(R.drawable.ic_ewe_custom), null, tint = Color.Gray, modifier = Modifier.size(34.dp))
+                            }
                         }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(goat.earTag, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF14231A))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Label, null, tint = PrimaryGreen, modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    languageState.value.getT("Ear Tag: ", "कान का टैग: ", "କାନ ଟ୍ୟାଗ୍: "),
+                                    fontSize = 13.sp, color = Color.Gray
+                                )
+                                Text(goat.earTag, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen)
+                            }
+                        }
+                        // Edit / Delete as tinted badge buttons, matching the reference.
+                        GoatActionBadge(Icons.Default.Edit, languageState.value.getT("Edit", "संपादित करें", "ସମ୍ପାଦନା"), PrimaryGreen, Color(0xFFEAF3E7)) { onEdit(index) }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        GoatActionBadge(Icons.Default.Delete, languageState.value.getT("Delete", "हटाएं", "ବିଲୋପ"), Color(0xFFD32F2F), Color(0xFFFDECEC)) { onDelete(index) }
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(goat.earTag, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.Black)
-                        Text("${goat.breed} • ${goat.genderLabel} • ${goat.ageLabel}", fontSize = 12.sp, color = Color.Gray)
-                        Text("${goat.weightLabel} • ${goat.color}", fontSize = 12.sp, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(14.dp))
+                    HorizontalDivider(color = Color(0xFFEDF0EA))
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        GoatInfoCell(Icons.Default.Pets, languageState.value.getT("Breed", "नस्ल", "ପ୍ରଜାତି"), goat.breed, Modifier.weight(1f))
+                        GoatInfoCell(Icons.Default.Transgender, languageState.value.getT("Gender", "लिंग", "ଲିଙ୍ଗ"), goat.genderLabel, Modifier.weight(1f))
+                        GoatInfoCell(Icons.Default.Scale, languageState.value.getT("Weight", "वजन", "ଓଜନ"), goat.weightLabel, Modifier.weight(1f))
                     }
-                    IconButton(onClick = { onEdit(index) }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = PrimaryGreen, modifier = Modifier.size(20.dp))
-                    }
-                    IconButton(onClick = { onDelete(index) }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red, modifier = Modifier.size(20.dp))
-                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        "${languageState.value.getT("Age", "आयु", "ବୟସ")}: ${goat.ageLabel}   •   ${goat.color}",
+                        fontSize = 12.sp, color = Color.Gray
+                    )
                 }
             }
         }
 
         OutlinedButton(
             onClick = onAddAnother,
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-            shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(1.dp, PrimaryGreen)
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.5.dp, PrimaryGreen)
         ) {
             Icon(Icons.Default.Add, null, tint = PrimaryGreen)
             Spacer(modifier = Modifier.width(8.dp))
@@ -3473,13 +3651,41 @@ fun EnrollmentGoatsAddedStep(
             onClick = onContinue,
             enabled = goats.isNotEmpty(),
             modifier = Modifier.fillMaxWidth().height(56.dp),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(16.dp),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp, pressedElevation = 0.dp),
             colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f))
         ) {
             Text(languageState.value.getT("Continue to Vaccination", "टीकाकरण के लिए जारी रखें", "ଟୀକାକରଣକୁ ଜାରି ରଖନ୍ତୁ"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
         }
 
         Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+/** Tinted rounded-square action button with a label below (Edit / Delete on a goat card). */
+@Composable
+fun GoatActionBadge(icon: ImageVector, label: String, tint: Color, bg: Color, onClick: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Surface(onClick = onClick, shape = RoundedCornerShape(12.dp), color = bg, modifier = Modifier.size(44.dp)) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(22.dp))
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(label, fontSize = 11.sp, color = tint, fontWeight = FontWeight.Medium)
+    }
+}
+
+/** Icon + label/value cell used in the goat summary card's info row. */
+@Composable
+fun GoatInfoCell(icon: ImageVector, label: String, value: String, modifier: Modifier = Modifier) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = PrimaryGreen, modifier = Modifier.size(18.dp))
+        Spacer(modifier = Modifier.width(6.dp))
+        Column {
+            Text(label, fontSize = 11.sp, color = Color.Gray)
+            Text(value, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), maxLines = 1)
+        }
     }
 }
 
@@ -3607,19 +3813,19 @@ fun EnrollmentTextField(label: String, value: String, onValueChange: (String) ->
         }
     }
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(styledLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black, modifier = Modifier.padding(bottom = 8.dp))
+        Text(styledLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), modifier = Modifier.padding(bottom = 8.dp))
         Box {
             OutlinedTextField(
                 value = value,
                 onValueChange = onValueChange,
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text(placeholder, color = Color.Gray) },
-                shape = RoundedCornerShape(12.dp),
+                placeholder = { Text(placeholder, color = Color(0xFF9AA69B)) },
+                shape = RoundedCornerShape(16.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
                 singleLine = true,
                 readOnly = readOnly,
                 visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
-                leadingIcon = leadingIcon?.let { { Icon(it, null, tint = borderColor) } },
+                leadingIcon = leadingIcon?.let { { FieldLeadingBadge(it, borderColor) } },
                 trailingIcon = when {
                     isPassword -> {
                         {
@@ -3628,23 +3834,34 @@ fun EnrollmentTextField(label: String, value: String, onValueChange: (String) ->
                             }
                         }
                     }
-                    trailingIcon != null -> {
+                    trailingIcon != null && onTrailingIconClick != null -> {
+                        // Circular tinted action button (e.g. fetch-GPS), matching the reference.
                         {
-                            if (onTrailingIconClick != null) {
-                                IconButton(onClick = onTrailingIconClick) { Icon(trailingIcon, null, tint = Color.DarkGray) }
-                            } else {
-                                Icon(trailingIcon, null, tint = Color.DarkGray)
+                            Surface(
+                                onClick = onTrailingIconClick,
+                                shape = CircleShape,
+                                color = borderColor.copy(alpha = 0.12f),
+                                modifier = Modifier.padding(end = 6.dp).size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(trailingIcon, null, tint = borderColor, modifier = Modifier.size(20.dp))
+                                }
                             }
                         }
                     }
+                    trailingIcon != null -> {
+                        { Icon(trailingIcon, null, tint = Color.DarkGray) }
+                    }
                     else -> null
                 },
-                prefix = prefix?.let { { Text(it, color = Color.Black) } },
-                suffix = suffix?.let { { Text(it, color = Color.Black) } },
+                prefix = prefix?.let { { Text(it, color = Color.Black, fontWeight = FontWeight.Bold) } },
+                suffix = suffix?.let { { Text(it, color = Color.Black, fontWeight = FontWeight.SemiBold) } },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.Black,
                     unfocusedTextColor = Color.Black,
-                    unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),
+                    unfocusedContainerColor = Color(0xFFFBFCFA),
+                    focusedContainerColor = Color.White,
+                    unfocusedBorderColor = Color(0xFFE1E6DE),
                     focusedBorderColor = borderColor
                 )
             )
@@ -3656,7 +3873,7 @@ fun EnrollmentTextField(label: String, value: String, onValueChange: (String) ->
 }
 
 @Composable
-fun EnrollmentDropdownField(label: String, selectedValue: String, options: List<String>, onValueChange: (String) -> Unit, borderColor: Color = PrimaryGreen, placeholder: String? = null, leadingIcon: ImageVector? = null) {
+fun EnrollmentDropdownField(label: String, selectedValue: String, options: List<String>, onValueChange: (String) -> Unit, borderColor: Color = PrimaryGreen, placeholder: String? = null, leadingIcon: ImageVector? = null, leadingPainter: Painter? = null) {
     var expanded by remember { mutableStateOf(false) }
     val styledLabel = buildAnnotatedString {
         label.forEach { char ->
@@ -3671,26 +3888,32 @@ fun EnrollmentDropdownField(label: String, selectedValue: String, options: List<
     }
     
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(styledLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black, modifier = Modifier.padding(bottom = 8.dp))
+        Text(styledLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), modifier = Modifier.padding(bottom = 8.dp))
         Box {
             OutlinedTextField(
                 value = selectedValue,
                 onValueChange = {},
                 readOnly = true,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(16.dp),
                 singleLine = true,
                 // Shown only while nothing is selected, so an empty field reads as a
                 // prompt rather than as a value.
-                placeholder = placeholder?.let { { Text(it, color = Color.Gray) } },
-                leadingIcon = leadingIcon?.let { { Icon(it, null, tint = borderColor) } },
+                placeholder = placeholder?.let { { Text(it, color = Color(0xFF9AA69B)) } },
+                leadingIcon = when {
+                    leadingPainter != null -> { { FieldLeadingBadge(leadingPainter, borderColor) } }
+                    leadingIcon != null -> { { FieldLeadingBadge(leadingIcon, borderColor) } }
+                    else -> null
+                },
                 trailingIcon = {
                     Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.DarkGray)
                 },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.Black,
                     unfocusedTextColor = Color.Black,
-                    unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),
+                    unfocusedContainerColor = Color(0xFFFBFCFA),
+                    focusedContainerColor = Color.White,
+                    unfocusedBorderColor = Color(0xFFE1E6DE),
                     focusedBorderColor = borderColor
                 )
             )
@@ -3726,31 +3949,51 @@ fun EnrollmentDropdownField(label: String, selectedValue: String, options: List<
 
 @Composable
 fun PhotoCaptureBox(label: String, uri: Uri?, modifier: Modifier = Modifier, onCapture: () -> Unit) {
+    val dashColor = Color(0xFFC7D2C2)
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(
-            onClick = onCapture,
-            modifier = Modifier.aspectRatio(1.2f).fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = Color.White,
-            border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
+        Box(
+            modifier = Modifier
+                .aspectRatio(1.05f)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                // An empty slot shows a dashed outline; a captured photo fills the tile.
+                .then(
+                    if (uri == null) Modifier.drawBehind {
+                        drawRoundRect(
+                            color = dashColor,
+                            style = Stroke(
+                                width = 1.5.dp.toPx(),
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(16f, 12f), 0f)
+                            ),
+                            cornerRadius = CornerRadius(18.dp.toPx())
+                        )
+                    } else Modifier
+                )
+                .clickable { onCapture() },
+            contentAlignment = Alignment.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                if (uri != null) {
-                    AsyncImage(
-                        model = uri,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)),
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                    )
-                } else {
-                    Icon(Icons.Default.AddAPhoto, null, tint = Color.Gray, modifier = Modifier.size(32.dp))
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("Capture", fontSize = 11.sp, color = Color.Gray)
+            if (uri != null) {
+                AsyncImage(
+                    model = uri,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp)),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                )
+            } else {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier.size(64.dp).clip(CircleShape).background(PrimaryGreen.copy(alpha = 0.10f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.AddAPhoto, null, tint = PrimaryGreen, modifier = Modifier.size(30.dp))
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text("Capture", fontSize = 13.sp, color = Color(0xFF6B7280))
                 }
             }
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(label, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.Black)
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(label, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF14231A))
     }
 }
 
@@ -3760,32 +4003,34 @@ fun VaccineStatusItem(name: String, isGiven: Boolean, themeColor: Color = Primar
     Card(
         modifier = Modifier.fillMaxWidth(),
         onClick = { onToggle(!isGiven) },
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(1.dp, Color(0xFFEDF0EA))
     ) {
         Row(
-            modifier = Modifier.padding(16.dp), 
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = if (isGiven) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                 contentDescription = null,
-                tint = if (isGiven) themeColor else Color.Gray,
-                modifier = Modifier.size(24.dp)
+                tint = if (isGiven) themeColor else Color(0xFFBFC8BC),
+                modifier = Modifier.size(26.dp)
             )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(name, fontWeight = FontWeight.Bold, color = Color.Black, modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.width(14.dp))
+            Text(name, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF14231A), modifier = Modifier.weight(1f))
             Surface(
-                color = if (isGiven) themeColor.copy(alpha = 0.1f) else Color(0xFFFFF3E0),
-                shape = RoundedCornerShape(4.dp)
+                color = if (isGiven) themeColor.copy(alpha = 0.12f) else Color(0xFFFFF1E0),
+                shape = RoundedCornerShape(10.dp)
             ) {
                 Text(
-                    text = if (isGiven) languageState.value.getT("Given", "दिया गया", "ଦିଆଯାଇଛି") 
+                    text = if (isGiven) languageState.value.getT("Given", "दिया गया", "ଦିଆଯାଇଛି")
                            else languageState.value.getT("Pending", "लंबित", "ବାକି ଅଛି"),
                     color = if (isGiven) themeColor else AccentOrange,
-                    fontSize = 11.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
                 )
             }
         }
@@ -3796,13 +4041,14 @@ fun VaccineStatusItem(name: String, isGiven: Boolean, themeColor: Color = Primar
 fun PaymentMethodChip(label: String, isSelected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
         onClick = { onClick() },
-        modifier = modifier.height(48.dp),
-        shape = RoundedCornerShape(12.dp),
+        modifier = modifier.height(60.dp),
+        shape = RoundedCornerShape(16.dp),
         color = if (isSelected) PrimaryGreen else Color.White,
-        border = if (isSelected) null else BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f))
+        border = if (isSelected) null else BorderStroke(1.dp, Color(0xFFE1E6DE)),
+        shadowElevation = if (isSelected) 2.dp else 0.dp
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(label, color = if (isSelected) Color.White else Color.Black, fontWeight = FontWeight.Bold)
+            Text(label, color = if (isSelected) Color.White else Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         }
     }
 }
