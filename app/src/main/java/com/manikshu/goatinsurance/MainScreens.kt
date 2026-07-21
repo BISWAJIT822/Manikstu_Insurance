@@ -462,8 +462,8 @@ fun AppNavigation(navController: NavHostController, sessionManager: SessionManag
             val tag = backStackEntry.arguments?.getString("tag") ?: ""
             GoatDetailsScreen(navController = navController, tag = tag, userRole = userRole, onBack = { navController.popBackStack() })
         }
-        composable("earning_history") { 
-            EarningHistoryScreen(onBack = { navController.popBackStack() }) 
+        composable("earning_history") {
+            EarningHistoryScreen(navController = navController, onBack = { navController.popBackStack() })
         }
         composable("profile") { 
             ProfileScreen(
@@ -7857,7 +7857,6 @@ fun ClaimListContent(
             singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White, unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f))
         )
-
         val mockClaims = listOf(
             mapOf("id" to "CLM-240001-0021", "tag" to "ET-240001-0001", "status" to "Pending", "farmer" to "Ramesh Naik", "village" to "Pipili", "date" to "20 May 2024"),
             mapOf("id" to "CLM-1002", "tag" to "ET-240801-0002", "status" to "Approved", "farmer" to "Suresh Behera", "village" to "Balianta", "date" to "19 May 2024"),
@@ -10531,7 +10530,7 @@ fun ProfileSetupSection(title: String, icon: ImageVector, themeColor: Color, con
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EarningHistoryScreen(onBack: () -> Unit) {
+fun EarningHistoryScreen(navController: NavHostController, onBack: () -> Unit) {
     val languageState = LocalAppLanguage.current
     val context = LocalContext.current
     val backgroundColor = Color(0xFFF8F9F5)
@@ -10541,6 +10540,9 @@ fun EarningHistoryScreen(onBack: () -> Unit) {
     val earningsData = (earningsState as? UiState.Success)?.data
     val withdrawState by earningsVm.withdraw.collectAsState()
     var showWithdrawConfirm by remember { mutableStateOf(false) }
+    // null = every month; otherwise a "yyyy-MM" key taken from the earning dates.
+    var monthFilter by rememberSaveable { mutableStateOf<String?>(null) }
+    var showMonthMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(withdrawState) {
         when (val s = withdrawState) {
@@ -10581,10 +10583,11 @@ fun EarningHistoryScreen(onBack: () -> Unit) {
         )
     }
 
+    Box(Modifier.fillMaxSize()) {
     Column(
-        modifier = Modifier.fillMaxSize().background(backgroundColor).verticalScroll(rememberScrollState())
+        modifier = Modifier.fillMaxSize().background(backgroundColor)
     ) {
-        // Top bar
+        // Top bar — outside the scrolling section, so it stays put.
         Row(
             modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -10600,49 +10603,114 @@ fun EarningHistoryScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.width(40.dp))
         }
 
-        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-            Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-            // Hero card: this-month total, Withdraw, and real stats.
-            Box(
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
-                    .background(Brush.linearGradient(listOf(Color(0xFF2E7D32), Color(0xFF15501C))))
-                    .padding(20.dp)
-            ) {
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(languageState.value.getT("Total Earnings (This Month)", "कुल आय (इस महीने)", "ମୋଟ ଉପାର୍ଜନ (ଏହି ମାସ)"), color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text("₹ ${(earningsData?.thisMonth ?: 0.0).toInt()}", fontSize = 32.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                        Surface(onClick = { showWithdrawConfirm = true }, shape = RoundedCornerShape(14.dp), color = Color.White,
-                            enabled = withdrawState !is SubmitState.Submitting) {
-                            Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.AccountBalanceWallet, null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(languageState.value.getT("Withdraw", "निकालें", "ଉଠାନ୍ତୁ"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
-                            }
-                        }
+        // Hero card: this-month total, Withdraw, and real stats. Pinned above the
+        // scroll so the balance and Withdraw stay reachable from anywhere in the list.
+        Box(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(Brush.linearGradient(listOf(Color(0xFF2E7D32), Color(0xFF15501C))))
+                .padding(20.dp)
+        ) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(languageState.value.getT("Total Earnings", "कुल आय", "ମୋଟ ଉପାର୍ଜନ"), color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("₹ ${(earningsData?.total ?: 0.0).toInt()}", fontSize = 32.sp, color = Color.White, fontWeight = FontWeight.Bold)
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        EarningHeroStat(languageState.value.getT("Total Enrollments", "कुल नामांकन", "ମୋଟ ପଞ୍ଜିକରଣ"), "${earningsData?.totalEnrollments ?: 0}", Modifier.weight(1f))
-                        EarningHeroStat(languageState.value.getT("Total Earned", "कुल कमाई", "ମୋଟ ଉପାର୍ଜନ"), "₹ ${(earningsData?.total ?: 0.0).toInt()}", Modifier.weight(1f))
-                        EarningHeroStat(languageState.value.getT("Per Goat", "प्रति बकरी", "ପ୍ରତି ଛେଳି"), "₹ ${(earningsData?.perGoat ?: 52.0).toInt()}", Modifier.weight(1f))
+                    Surface(onClick = { showWithdrawConfirm = true }, shape = RoundedCornerShape(14.dp), color = Color.White,
+                        enabled = withdrawState !is SubmitState.Submitting) {
+                        Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.AccountBalanceWallet, null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(languageState.value.getT("Withdraw", "निकालें", "ଉଠାନ୍ତୁ"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    EarningHeroStat(languageState.value.getT("Earned This Month", "इस महीने कमाई", "ଏହି ମାସ ଉପାର୍ଜନ"), "₹ ${(earningsData?.thisMonth ?: 0.0).toInt()}", Modifier.weight(1f))
+                    EarningHeroStat(languageState.value.getT("Total Earned", "कुल कमाई", "ମୋଟ ଉପାର୍ଜନ"), "₹ ${(earningsData?.total ?: 0.0).toInt()}", Modifier.weight(1f))
+                }
             }
+        }
 
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(languageState.value.getT("Earnings Breakdown", "आय विवरण", "ଉପାର୍ଜନ ବିବରଣୀ"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color(0xFF14231A))
-            Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-            val items = earningsData?.items ?: emptyList()
+        val allItems = earningsData?.items ?: emptyList()
+        // This month plus the six before it, newest first, as "2026-07" keys. Fixed
+        // rather than derived from the data so a month with no earnings is still
+        // selectable — that is itself an answer.
+        val months = remember {
+            val cal = java.util.Calendar.getInstance()
+            (0..6).map {
+                val key = "%04d-%02d".format(
+                    cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH) + 1
+                )
+                cal.add(java.util.Calendar.MONTH, -1)
+                key
+            }
+        }
+        val items = monthFilter?.let { m -> allItems.filter { it.earnedOn?.take(7) == m } } ?: allItems
+
+        // Heading and filter stay put; only the rows below them scroll.
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+                Text(languageState.value.getT("Earnings Breakdown", "आय विवरण", "ଉପାର୍ଜନ ବିବରଣୀ"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color(0xFF14231A))
+                Spacer(modifier = Modifier.weight(1f))
+                Box {
+                    Surface(
+                        onClick = { showMonthMenu = true },
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color.White,
+                        border = BorderStroke(1.dp, Color(0xFFDDE3DA))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(start = 12.dp, end = 8.dp, top = 7.dp, bottom = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.CalendarToday, null, tint = PrimaryGreen, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                monthFilter?.let { monthLabel(it) }
+                                    ?: languageState.value.getT("All", "सभी", "ସମସ୍ତ"),
+                                fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A)
+                            )
+                            Icon(Icons.Default.ArrowDropDown, null, tint = Color(0xFF5B6660), modifier = Modifier.size(18.dp))
+                        }
+                    }
+                    DropdownMenu(expanded = showMonthMenu, onDismissRequest = { showMonthMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(languageState.value.getT("All", "सभी", "ସମସ୍ତ")) },
+                            onClick = { monthFilter = null; showMonthMenu = false }
+                        )
+                        months.forEach { m ->
+                            DropdownMenuItem(
+                                text = { Text(monthLabel(m)) },
+                                onClick = { monthFilter = m; showMonthMenu = false }
+                            )
+                        }
+                    }
+                }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Column(
+            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+        ) {
             if (items.isEmpty()) {
-                Text(languageState.value.getT("No earnings yet.", "अभी तक कोई आय नहीं।", "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ଉପାର୍ଜନ ନାହିଁ।"), color = Color.Gray, fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp))
+                Text(
+                    if (monthFilter == null) languageState.value.getT("No earnings yet.", "अभी तक कोई आय नहीं।", "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ଉପାର୍ଜନ ନାହିଁ।")
+                    else languageState.value.getT("No earnings this month.", "इस महीने कोई आय नहीं।", "ଏହି ମାସରେ କୌଣସି ଉପାର୍ଜନ ନାହିଁ।"),
+                    color = Color.Gray, fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp)
+                )
             }
             items.forEach { e ->
                 val isVacc = e.source == "vaccination"
@@ -10655,36 +10723,23 @@ fun EarningHistoryScreen(onBack: () -> Unit) {
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // About Earnings — the ₹52/goat explanation.
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF2F5F0)),
-                shape = RoundedCornerShape(14.dp)
-            ) {
-                Row(modifier = Modifier.padding(14.dp)) {
-                    Box(modifier = Modifier.size(38.dp).clip(CircleShape).background(PrimaryGreen), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Info, null, tint = Color.White, modifier = Modifier.size(20.dp))
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(languageState.value.getT("About Earnings", "आय के बारे में", "ଉପାର୍ଜନ ବିଷୟରେ"), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF14231A))
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            languageState.value.getT(
-                                "You earn ₹52 per enrolled goat — ₹8 for each vaccine given plus ₹20 for field services. This is built into the ₹350 premium, so the farmer pays nothing extra.",
-                                "आप प्रति नामांकित बकरी ₹52 कमाते हैं — प्रत्येक दिए गए टीके के लिए ₹8 और फील्ड सेवाओं के लिए ₹20। यह ₹350 प्रीमियम में शामिल है, इसलिए किसान कुछ अतिरिक्त नहीं देता।",
-                                "ଆପଣ ପ୍ରତି ପଞ୍ଜିକୃତ ଛେଳିରେ ₹52 ଉପାର୍ଜନ କରନ୍ତି — ପ୍ରତ୍ୟେକ ଦିଆଯାଇଥିବା ଟୀକା ପାଇଁ ₹8 ଏବଂ କ୍ଷେତ୍ର ସେବା ପାଇଁ ₹20। ଏହା ₹350 ପ୍ରିମିୟମରେ ଅନ୍ତର୍ଭୁକ୍ତ, ତେଣୁ କୃଷକ କିଛି ଅତିରିକ୍ତ ଦିଅନ୍ତି ନାହିଁ।"
-                            ),
-                            fontSize = 12.sp, color = Color(0xFF3D473E), lineHeight = 17.sp
-                        )
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(32.dp))
+            // Clears the bottom bar so the last row isn't trapped behind it.
+            Spacer(modifier = Modifier.height(104.dp))
         }
     }
+        Box(Modifier.align(Alignment.BottomCenter)) {
+            DidiBottomBar(navController)
+        }
+    }
+}
+
+/** "2026-07" -> "Jul 2026". Falls back to the raw key if it isn't in that shape. */
+private fun monthLabel(key: String): String {
+    val parts = key.split("-")
+    val month = parts.getOrNull(1)?.toIntOrNull() ?: return key
+    val names = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    return "${names.getOrNull(month - 1) ?: return key} ${parts[0]}"
 }
 
 @Composable
