@@ -7012,17 +7012,17 @@ fun VaccineListScreen(navController: NavHostController, onBack: () -> Unit, onRe
         compact = {
             Scaffold(
                 topBar = {
-                    TopAppBar(
+                    CenterAlignedTopAppBar(
                         title = { Text(languageState.value.getT("Vaccinations", "टीकाकरण", "ଟୀକାକରଣ"), fontWeight = FontWeight.Bold) },
                         navigationIcon = {
                             IconButton(onClick = onBack) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                             }
                         },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = PrimaryGreen,
-                            titleContentColor = Color.White,
-                            navigationIconContentColor = Color.White
+                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                            containerColor = Color.White,
+                            titleContentColor = PrimaryGreen,
+                            navigationIconContentColor = PrimaryGreen
                         )
                     )
                 },
@@ -7065,11 +7065,11 @@ fun VaccineListScreen(navController: NavHostController, onBack: () -> Unit, onRe
                 }
                 Scaffold(
                     topBar = {
-                        TopAppBar(
+                        CenterAlignedTopAppBar(
                             title = { Text(languageState.value.getT("Vaccinations", "टीकाकरण", "ଟୀକାକରଣ"), fontWeight = FontWeight.Bold) },
-                            colors = TopAppBarDefaults.topAppBarColors(
-                                containerColor = PrimaryGreen,
-                                titleContentColor = Color.White
+                            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                                containerColor = Color.White,
+                                titleContentColor = PrimaryGreen
                             )
                         )
                     },
@@ -7098,23 +7098,26 @@ fun VaccineListContent(
 ) {
     val languageState = LocalAppLanguage.current
     Column(modifier = Modifier.padding(padding)) {
-        // Search Bar
+        // Search Bar — soft, borderless, rounded (reference style).
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearchChange,
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            placeholder = { Text(languageState.value.getT("Search by ear tag or vaccine name", "कान के टैग या टीके के नाम से खोजें", "କାନ ଟ୍ୟାଗ୍ କିମ୍ବା ଟୀକା ନାମ ଅନୁସାରେ ଖୋଜନ୍ତୁ")) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
-            shape = RoundedCornerShape(24.dp),
+            placeholder = { Text(languageState.value.getT("Search by ear tag or vaccine name", "कान के टैग या टीके के नाम से खोजें", "କାନ ଟ୍ୟାଗ୍ କିମ୍ବା ଟୀକା ନାମ ଅନୁସାରେ ଖୋଜନ୍ତୁ"), color = Color(0xFF9AA69B)) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF9AA69B)) },
+            shape = RoundedCornerShape(16.dp),
             singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White, unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f))
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color(0xFFF1F4EF), unfocusedContainerColor = Color(0xFFF1F4EF),
+                focusedBorderColor = Color.Transparent, unfocusedBorderColor = Color.Transparent
+            )
         )
 
-        // Tabs
+        // Tabs — premium pills.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             tabs.forEachIndexed { index, title ->
@@ -7124,14 +7127,15 @@ fun VaccineListContent(
                     modifier = Modifier.weight(1f),
                     color = if (isSelected) PrimaryGreen else Color.White,
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, if (isSelected) PrimaryGreen else Color.LightGray.copy(alpha = 0.5f))
+                    border = if (isSelected) null else BorderStroke(1.dp, Color(0xFFE1E6DE)),
+                    shadowElevation = if (isSelected) 2.dp else 0.dp
                 ) {
                     Text(
                         text = title,
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        color = if (isSelected) Color.White else Color.Black,
+                        modifier = Modifier.padding(vertical = 10.dp),
+                        color = if (isSelected) Color.White else Color(0xFF5B6660),
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -7139,7 +7143,7 @@ fun VaccineListContent(
         }
 
         if (isLoading) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = PrimaryGreen)
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), color = PrimaryGreen)
         }
         errorMsg?.let {
             Text(it, color = Color.Red, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
@@ -7160,21 +7164,21 @@ fun VaccineListContent(
         val expandedFarmers = remember { mutableStateMapOf<String, Boolean>() }
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize(), 
-            contentPadding = PaddingValues(16.dp), 
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             groupedVaccines.forEach { (farmerName, vaccines) ->
                 item {
                     val village = vaccines.firstOrNull()?.get("village") ?: ""
                     val isExpanded = expandedFarmers[farmerName] ?: false
-                    
+
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RoundedCornerShape(24.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
+                        shape = RoundedCornerShape(20.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                        border = BorderStroke(1.dp, Color(0xFFEDF0EA))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             // Farmer Info Header
@@ -7187,7 +7191,8 @@ fun VaccineListContent(
                                 Surface(
                                     modifier = Modifier.size(52.dp),
                                     shape = CircleShape,
-                                    color = PrimaryGreen.copy(alpha = 0.1f)
+                                    color = PrimaryGreen.copy(alpha = 0.12f),
+                                    border = BorderStroke(1.5.dp, PrimaryGreen.copy(alpha = 0.4f))
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(Icons.Default.Person, null, tint = PrimaryGreen, modifier = Modifier.size(28.dp))
@@ -7195,65 +7200,89 @@ fun VaccineListContent(
                                 }
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(farmerName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = Color.Black)
-                                    Text(village, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                                    Text(farmerName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen)
+                                    if (village.isNotBlank()) Text(village, fontSize = 13.sp, color = Color.Gray)
                                 }
                                 Icon(
                                     imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                     contentDescription = null,
-                                    tint = Color.Gray
+                                    tint = PrimaryGreen
                                 )
                             }
-                            
+
                             if (isExpanded) {
-                                Spacer(modifier = Modifier.height(16.dp))
-                                HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(14.dp))
+                                HorizontalDivider(color = Color(0xFFEDF0EA))
+                                Spacer(modifier = Modifier.height(12.dp))
 
                                 vaccines.forEachIndexed { index, vaccine ->
                                     val isCompleted = vaccine["status"] == "done"
-                                    Surface(
-                                        onClick = { onRecord(vaccine["goatId"] ?: "") },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        color = Color.Transparent,
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(vertical = 8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        // Timeline dot + connector (reference style).
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(16.dp)) {
+                                            Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(PrimaryGreen))
+                                            if (index < vaccines.size - 1) {
+                                                Box(modifier = Modifier.width(2.dp).height(52.dp).background(Color(0xFFD8E0D4)))
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Surface(
+                                            onClick = { onRecord(vaccine["goatId"] ?: "") },
+                                            modifier = Modifier.weight(1f),
+                                            color = Color.Transparent,
+                                            shape = RoundedCornerShape(12.dp)
                                         ) {
-                                            Surface(modifier = Modifier.size(44.dp), shape = RoundedCornerShape(10.dp), color = Color(0xFFF5F5F5)) {
-                                                Box(contentAlignment = Alignment.Center) { Icon(painterResource(R.drawable.ic_ewe_custom), null, tint = Color.Gray, modifier = Modifier.size(20.dp)) }
-                                            }
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(vaccine["tag"] ?: "", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                                                Text("${vaccine["name"]} • ${if (isCompleted) "Done" else "Due"}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = if (isCompleted) SuccessGreen else AccentOrange)
-                                                Text(vaccine["date"] ?: "", fontSize = 12.sp, color = Color.Black)
-                                            }
-                                            OutlinedButton(
-                                                onClick = { onRecord(vaccine["goatId"] ?: "") },
-                                                modifier = Modifier.height(32.dp),
-                                                shape = RoundedCornerShape(8.dp),
-                                                border = BorderStroke(1.dp, PrimaryGreen),
-                                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+                                            Row(
+                                                modifier = Modifier.padding(vertical = 8.dp),
+                                                verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Text(languageState.value.getT("Record", "रिकॉर्ड", "ରେକର୍ଡ"), color = PrimaryGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                Surface(modifier = Modifier.size(44.dp), shape = CircleShape, color = PrimaryGreen.copy(alpha = 0.10f)) {
+                                                    Box(contentAlignment = Alignment.Center) { Icon(painterResource(R.drawable.ic_ewe_custom), null, tint = PrimaryGreen, modifier = Modifier.size(22.dp)) }
+                                                }
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(vaccine["tag"] ?: "", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF14231A))
+                                                    Spacer(modifier = Modifier.height(2.dp))
+                                                    Surface(
+                                                        color = if (isCompleted) SuccessGreen.copy(alpha = 0.12f) else AccentOrange.copy(alpha = 0.14f),
+                                                        shape = RoundedCornerShape(8.dp)
+                                                    ) {
+                                                        Text(
+                                                            "${vaccine["name"]} • ${if (isCompleted) "Done" else "Due"}",
+                                                            fontWeight = FontWeight.Bold, fontSize = 11.sp,
+                                                            color = if (isCompleted) SuccessGreen else AccentOrange,
+                                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                        )
+                                                    }
+                                                    if ((vaccine["date"] ?: "").isNotBlank()) {
+                                                        Text(vaccine["date"] ?: "", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 2.dp))
+                                                    }
+                                                }
+                                                OutlinedButton(
+                                                    onClick = { onRecord(vaccine["goatId"] ?: "") },
+                                                    modifier = Modifier.height(34.dp),
+                                                    shape = RoundedCornerShape(10.dp),
+                                                    border = BorderStroke(1.dp, PrimaryGreen),
+                                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+                                                ) {
+                                                    Text(languageState.value.getT("Record", "रिकॉर्ड", "ରେକର୍ଡ"), color = PrimaryGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                }
                                             }
                                         }
                                     }
-                                    if (index < vaccines.size - 1) {
-                                        HorizontalDivider(modifier = Modifier.padding(start = 56.dp, top = 4.dp, bottom = 4.dp), color = Color.LightGray.copy(alpha = 0.2f))
-                                    }
                                 }
                             } else {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "${vaccines.size} " + languageState.value.getT("Vaccinations Pending/Scheduled", "टीकाकरण लंबित/निर्धारित", "ଟୀକାକରଣ ବାକି ଅଛି"),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = PrimaryGreen,
-                                    fontWeight = FontWeight.Medium
-                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(painterResource(R.drawable.ic_ewe_custom), null, tint = PrimaryGreen, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "${vaccines.size} " + languageState.value.getT("Vaccinations Pending/Scheduled", "टीकाकरण लंबित/निर्धारित", "ଟୀକାକରଣ ବାକି ଅଛି"),
+                                        fontSize = 13.sp,
+                                        color = PrimaryGreen,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                             }
                         }
                     }
