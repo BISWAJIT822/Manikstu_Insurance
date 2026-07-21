@@ -1554,20 +1554,29 @@ fun DidiHomeHeader(userName: String, unread: Int, onProfileClick: () -> Unit, on
 }
 
 @Composable
-fun HeroAssignedFarmersCard(count: Int?, onViewAll: () -> Unit) {
+fun HeroAssignedFarmersCard(count: Int?, showViewAll: Boolean = true, onViewAll: () -> Unit = {}) {
     val languageState = LocalAppLanguage.current
     Card(shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth().height(138.dp), elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
         Box(Modifier.fillMaxSize()) {
-            Image(painterResource(R.drawable.ic_bg_login), null, modifier = Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+            Image(
+                painterResource(R.drawable.farmer_banner), null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                alignment = Alignment.TopEnd
+            )
             Box(Modifier.fillMaxSize().background(
-                Brush.horizontalGradient(0.0f to Color(0xE61B5230), 0.45f to Color(0xB31B5230), 1.0f to Color(0x111B5230))
+                Brush.horizontalGradient(0.0f to Color(0x661B5230), 0.45f to Color(0x331B5230), 1.0f to Color(0x001B5230))
             ))
             Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.SpaceBetween) {
                 Text(languageState.value.getT("My Assigned Farmers", "मेरे सौंपे गए किसान", "ମୋର ନ୍ୟସ୍ତ କୃଷକ"), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text(count?.toString() ?: "…", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Bold)
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onViewAll() }) {
-                    Text(languageState.value.getT("View all", "सभी देखें", "ସବୁ ଦେଖନ୍ତୁ"), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                    Icon(Icons.Default.ChevronRight, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                if (showViewAll) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onViewAll() }) {
+                        Text(languageState.value.getT("View all", "सभी देखें", "ସବୁ ଦେଖନ୍ତୁ"), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        Icon(Icons.Default.ChevronRight, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
+                } else {
+                    Spacer(Modifier.height(2.dp))
                 }
             }
         }
@@ -5709,6 +5718,7 @@ fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack
     var isLoading by remember { mutableStateOf(true) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
     var goats by remember { mutableStateOf<List<Triple<String, String, String>>>(emptyList()) }
+    var assignedFarmers by remember { mutableStateOf<Int?>(null) }
     var statusByTag by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var clickIdByTag by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var counts by remember { mutableStateOf(mapOf("all" to 0, "active" to 0, "expired" to 0, "claimed" to 0)) }
@@ -5736,6 +5746,10 @@ fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack
             }
         }
     } else {
+        val dashVm: DidiDashboardViewModel = hiltViewModel()
+        val dashState by dashVm.state.collectAsState()
+        assignedFarmers = (dashState as? UiState.Success)?.data?.assignedFarmers
+
         val goatVm: GoatListViewModel = hiltViewModel()
         val goatState by goatVm.state.collectAsState()
         LaunchedEffect(searchQuery) { goatVm.setSearch(searchQuery) }
@@ -5801,7 +5815,7 @@ fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack
             ) { padding ->
                 Box(Modifier.fillMaxSize()) {
                     val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                    GoatListContent(PaddingValues(top = padding.calculateTopPadding(), bottom = 74.dp + navInset), tabs, searchQuery, { searchQuery = it }, selectedTab, { selectedTab = it }, themeColor, isFarmer, goats, statusByTag, clickIdByTag, isLoading, errorMsg, onReportDeath = { navController.navigate("farmer_report_death") }) { id ->
+                    GoatListContent(PaddingValues(top = padding.calculateTopPadding(), bottom = 74.dp + navInset), tabs, searchQuery, { searchQuery = it }, selectedTab, { selectedTab = it }, themeColor, isFarmer, goats, statusByTag, clickIdByTag, isLoading, errorMsg, assignedFarmers, onReportDeath = { navController.navigate("farmer_report_death") }) { id ->
                         navController.navigate("goat_details/$id")
                     }
                     Box(Modifier.align(Alignment.BottomCenter)) {
@@ -5860,7 +5874,7 @@ fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack
                     },
                     containerColor = PageBackground
                 ) { padding ->
-                    GoatListContent(padding, tabs, searchQuery, { searchQuery = it }, selectedTab, { selectedTab = it }, themeColor, isFarmer, goats, statusByTag, clickIdByTag, isLoading, errorMsg, onReportDeath = { navController.navigate("farmer_report_death") }) { id ->
+                    GoatListContent(padding, tabs, searchQuery, { searchQuery = it }, selectedTab, { selectedTab = it }, themeColor, isFarmer, goats, statusByTag, clickIdByTag, isLoading, errorMsg, assignedFarmers, onReportDeath = { navController.navigate("farmer_report_death") }) { id ->
                         navController.navigate("goat_details/$id")
                     }
                 }
@@ -5885,12 +5899,20 @@ fun GoatListContent(
     clickIdByTag: Map<String, String>,
     isLoading: Boolean,
     errorMsg: String?,
+    assignedFarmers: Int? = null,
     onReportDeath: (String) -> Unit,
     onGoatClick: (String) -> Unit
 ) {
     val languageState = LocalAppLanguage.current
     val context = LocalContext.current
     Column(modifier = Modifier.padding(padding)) {
+        // The same hero the dashboard shows. No View all link here - this is that list.
+        if (!isFarmer) {
+            Spacer(Modifier.height(12.dp))
+            Box(Modifier.padding(horizontal = 16.dp)) {
+                HeroAssignedFarmersCard(count = assignedFarmers, showViewAll = false)
+            }
+        }
         // Search Bar
         OutlinedTextField(
             value = searchQuery,
@@ -6490,8 +6512,16 @@ fun PolicyDetailsScreen(navController: NavHostController, tag: String, userRole:
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFEDF4E4)),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
+                  Box(Modifier.fillMaxWidth()) {
+                    Image(
+                        painter = painterResource(R.drawable.policy_banner),
+                        contentDescription = null,
+                        modifier = Modifier.matchParentSize(),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        alignment = Alignment.CenterEnd
+                    )
                     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
+                        Column(Modifier.fillMaxWidth(0.62f)) {
                             Text(
                                 lang.getT("Policy Number", "पॉलिसी संख्या", "ପଲିସି ନମ୍ବର"),
                                 fontSize = 12.sp, color = Color(0xFF5B6660)
@@ -6499,7 +6529,8 @@ fun PolicyDetailsScreen(navController: NavHostController, tag: String, userRole:
                             Spacer(Modifier.height(2.dp))
                             Text(
                                 policyNumber ?: "—",
-                                fontSize = 20.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen, maxLines = 1
+                                fontSize = 18.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen,
+                                lineHeight = 22.sp, maxLines = 2
                             )
                             Spacer(Modifier.height(8.dp))
                             PolicyStatusChip(status, lang)
@@ -6509,12 +6540,8 @@ fun PolicyDetailsScreen(navController: NavHostController, tag: String, userRole:
                                 fontSize = 12.sp, color = Color(0xFF5B6660), lineHeight = 17.sp
                             )
                         }
-                        Icon(
-                            Icons.Default.VerifiedUser, null,
-                            tint = PrimaryGreen.copy(alpha = 0.35f),
-                            modifier = Modifier.size(72.dp)
-                        )
                     }
+                  }
                 }
 
                 // ---- policy information ----
@@ -7529,23 +7556,25 @@ fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBac
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(lang.getT("My Claims", "मेरे दावे", "ମୋର ଦାବି"), fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                        Text(lang.getT("Track and manage your goat insurance claims", "अपनी बकरी बीमा दावों को ट्रैक और प्रबंधित करें", "ଆପଣଙ୍କ ଛେଳି ବୀମା ଦାବିଗୁଡିକୁ ଟ୍ରାକ୍ ଏବଂ ପରିଚାଳନା କରନ୍ତୁ"), fontSize = 11.sp, color = Color.Gray)
-                    }
+                    Text(lang.getT("My Claims", "मेरे दावे", "ମୋର ଦାବି"), fontWeight = FontWeight.Bold, fontSize = 20.sp)
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White,
+                    titleContentColor = Color(0xFF14231A),
+                    navigationIconContentColor = Color(0xFF14231A)
+                )
             )
         },
-        bottomBar = { if (userRole == UserRole.FARMER) FarmerBottomBar(navController) else DidiBottomBar(navController) },
-        containerColor = Color(0xFFF8F9F5)
+        containerColor = PageBackground
     ) { padding ->
+      Box(Modifier.fillMaxSize()) {
+        val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         Column(
             modifier = Modifier
-                .padding(padding)
+                .padding(top = padding.calculateTopPadding(), bottom = 74.dp + navInset)
                 .fillMaxSize()
         ) {
             // Summary Card
@@ -7558,17 +7587,16 @@ fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBac
                 colors = CardDefaults.cardColors(containerColor = themeColor)
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    // Background Goat Illustration (Simplified positioning)
                     Image(
-                        painter = painterResource(R.drawable.ic_ewe_custom),
+                        painter = painterResource(R.drawable.claim_banner),
                         contentDescription = null,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(top = 10.dp, end = 10.dp)
-                            .size(140.dp)
-                            .alpha(0.6f),
-                        contentScale = ContentScale.Fit
+                        modifier = Modifier.matchParentSize(),
+                        contentScale = ContentScale.Crop,
+                        alignment = Alignment.CenterEnd
                     )
+                    Box(Modifier.matchParentSize().background(
+                        Brush.horizontalGradient(0.0f to Color(0xCC12401F), 0.55f to Color(0x8012401F), 1.0f to Color(0x3312401F))
+                    ))
                     
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text(lang.getT("Total Claims", "कुल दावे", "ମୋଟ ଦାବି"), color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
@@ -7641,18 +7669,6 @@ fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBac
                         unfocusedBorderColor = Color.LightGray.copy(alpha = 0.4f)
                     )
                 )
-                Spacer(modifier = Modifier.width(10.dp))
-                Surface(
-                    onClick = { /* Filter */ },
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color.White,
-                    border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.4f)),
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.FilterList, null, tint = themeColor)
-                    }
-                }
             }
 
             val filtered = claims.filter {
@@ -7707,6 +7723,10 @@ fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBac
                 }
             }
         }
+        Box(Modifier.align(Alignment.BottomCenter)) {
+            if (userRole == UserRole.FARMER) FarmerBottomBar(navController) else DidiBottomBar(navController)
+        }
+      }
     }
 }
 
@@ -7738,12 +7758,12 @@ fun DidiClaimCard(claim: Map<String, String>, themeColor: Color, onClick: () -> 
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             // Leading Doc Icon
             Surface(
-                color = Color(0xFFF1F8E9),
-                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFFF2F4EE),
+                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.size(56.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.AutoMirrored.Filled.Assignment, null, tint = Color(0xFFC79A3B), modifier = Modifier.size(28.dp))
+                    Icon(Icons.Default.Description, null, tint = Color(0xFFD9A441), modifier = Modifier.size(28.dp))
                 }
             }
             
@@ -7759,15 +7779,15 @@ fun DidiClaimCard(claim: Map<String, String>, themeColor: Color, onClick: () -> 
                         "approved", "claimed" -> Triple(lang.getT("Approved", "स्वीकृत", "ଅନୁମୋଦିତ"), Color(0xFFE8F5E9), Color(0xFF2E7D32))
                         "rejected" -> Triple(lang.getT("Rejected", "अस्वीकृत", "ପ୍ରତ୍ୟାଖ୍ୟାନ"), Color(0xFFFFEBEE), Color(0xFFC62828))
                         "hold" -> Triple(lang.getT("On Hold", "होल्ड पर", "ହୋଲ୍ଡ"), Color(0xFFE3F2FD), Color(0xFF1565C0))
-                        else -> Triple(lang.getT("Pending", "लंबित", "ବାକି"), Color(0xFFFFF3E0), Color(0xFFE65100))
+                        else -> Triple(lang.getT("Pending", "लंबित", "ବାକି"), Color(0xFFFCEEDA), Color(0xFFC68A2E))
                     }
                     
-                    Surface(color = statusBg, shape = RoundedCornerShape(8.dp)) {
+                    Surface(color = statusBg, shape = RoundedCornerShape(50)) {
                         Text(
                             text = statusText,
                             color = statusColor,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                            fontSize = 10.sp,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -7776,9 +7796,10 @@ fun DidiClaimCard(claim: Map<String, String>, themeColor: Color, onClick: () -> 
                 Spacer(modifier = Modifier.height(6.dp))
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(lang.getT("Goat ID: ", "बकरी आईडी: ", "ଛେଳି ID: ") + (claim["tag"] ?: ""), fontSize = 12.sp, color = Color.Black, fontWeight = FontWeight.Medium)
-                    Text("  |  ", color = Color.LightGray)
-                    Text(lang.getT("Farmer: ", "किसान: ", "କୃଷକ: ") + (claim["farmer"] ?: ""), fontSize = 12.sp, color = Color.Gray)
+                    Text(lang.getT("Goat ID: ", "बकरी आईडी: ", "ଛେଳି ID: "), fontSize = 12.sp, color = Color(0xFF7A8078))
+                    Text(claim["tag"] ?: "", fontSize = 12.sp, color = Color(0xFF14231A), fontWeight = FontWeight.Bold)
+                    Text("  |  ", color = Color(0xFFD5D8D2), fontSize = 12.sp)
+                    Text(lang.getT("Farmer: ", "किसान: ", "କୃଷକ: ") + (claim["farmer"] ?: ""), fontSize = 12.sp, color = Color(0xFF7A8078), maxLines = 1)
                 }
                 
                 Spacer(modifier = Modifier.height(6.dp))
