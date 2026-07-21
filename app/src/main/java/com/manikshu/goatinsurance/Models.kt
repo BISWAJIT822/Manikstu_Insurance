@@ -310,6 +310,9 @@ data class GoatDetail(
 data class VaccinationItem(
     @SerialName("goat_id") val goatId: Int,
     @SerialName("ear_tag") val earTag: String? = null,
+    @SerialName("farmer_id") val farmerId: Int? = null,
+    val farmer: String? = null,
+    val village: String? = null,
     @SerialName("vaccine_type") val vaccineType: String,
     @SerialName("next_vaccination_date") val nextVaccinationDate: String? = null,
     val status: String,

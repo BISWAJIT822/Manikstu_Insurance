@@ -2873,6 +2873,9 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
     var weight by rememberSaveable { mutableStateOf("") }
     var colorMarks by rememberSaveable { mutableStateOf("") }
     var earTagNumber by rememberSaveable { mutableStateOf("") }
+    // Premium per goat, editable on step 6 and sent with the batch.
+    var premiumAmount by rememberSaveable { mutableStateOf("350") }
+    var paymentMode by rememberSaveable { mutableStateOf("Cash") }
 
     // Photo State (current goat)
     var leftPhotoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
@@ -2937,7 +2940,9 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
     )
 
     Scaffold(
-        modifier = Modifier.fillMaxSize().navigationBarsPadding(),
+        // background before the inset padding, so white also covers the area behind
+        // the transparent system nav bar instead of leaving the window showing.
+        modifier = Modifier.fillMaxSize().background(Color.White).navigationBarsPadding(),
         containerColor = Color.White,
         topBar = {
             CenterAlignedTopAppBar(
@@ -2994,7 +2999,13 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                         onDelete = { i -> goats.removeAt(i) },
                         onContinue = { currentStep = 6 }
                     )
-                    6 -> EnrollmentPaymentStep(goats.size)
+                    6 -> EnrollmentPaymentStep(
+                        goatCount = goats.size,
+                        amount = premiumAmount,
+                        onAmountChange = { premiumAmount = it.filter { c -> c.isDigit() }.take(6) },
+                        selectedMethod = paymentMode,
+                        onMethodChange = { paymentMode = it },
+                    )
                     7 -> EnrollmentPoliciesStep(farmerName, enrollResults, goats, onFinish = onComplete)
                 }
             }
@@ -3005,6 +3016,7 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                 1 -> farmerName.isNotBlank() && mobileNumber.length == 10 && village.isNotBlank() && location.isNotBlank() && aadhaar.length == 12
                 2 -> breed.isNotBlank() && gender.isNotBlank() && age.isNotBlank() && weight.isNotBlank() && colorMarks.isNotBlank() && earTagNumber.isNotBlank() && tagIsUnique
                 3 -> leftPhotoUri != null && rightPhotoUri != null && frontPhotoUri != null && tagPhotoUri != null
+                6 -> (premiumAmount.toIntOrNull() ?: 0) > 0
                 else -> true
             }
 
@@ -3051,7 +3063,8 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                                         village = village.ifBlank { null }, gpsLocation = location.ifBlank { null },
                                         aadhaarId = aadhaar.ifBlank { null },
                                         goats = goats.toList(),
-                                        paymentMode = "cash", amount = 350.0,
+                                        paymentMode = paymentMode.lowercase(),
+                                        amount = premiumAmount.toDoubleOrNull() ?: 350.0,
                                     )
                                 }
                                 7 -> onComplete()
@@ -3068,7 +3081,7 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                             text = when {
                                 isSubmitting -> enrollProgress ?: languageState.value.getT("Submitting…", "प्रस्तुत हो रहा है…", "ଦାଖଲ ହେଉଛି…")
                                 currentStep == 7 -> languageState.value.getT("Finish Enrollment", "नामांकन पूरा करें", "ପଞ୍ଜିକରଣ ଶେଷ କରନ୍ତୁ")
-                                currentStep == 6 -> languageState.value.getT("Submit & Generate Policy", "जमा करें और पॉलिसी बनाएं", "ଦାଖଲ କରି ପଲିସି ପ୍ରସ୍ତୁତ କରନ୍ତୁ")
+                                currentStep == 6 -> languageState.value.getT("Submit", "जमा करें", "ଦାଖଲ କରନ୍ତୁ")
                                 currentStep == 3 -> languageState.value.getT("Save Photos", "तस्वीरें सहेजें", "ଫଟୋ ସେଭ୍ କରନ୍ତୁ")
                                 else -> languageState.value.getT("Next", "अगला", "ପରବର୍ତ୍ତୀ")
                             },
@@ -3087,18 +3100,19 @@ fun EnrollmentFarmerStep(name: String, onNameChange: (String) -> Unit, phone: St
     val languageState = LocalAppLanguage.current
     val fetchGps = rememberGpsFetcher(onResult = { onLocationChange(it) })
     Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-        EnrollmentTextField(label = languageState.value.getT("Farmer Name *", "किसान का नाम *", "କୃଷକଙ୍କ ନାମ *"), value = name, onValueChange = onNameChange, placeholder = "Full Name", leadingIcon = Icons.Default.Person)
-        EnrollmentTextField(label = languageState.value.getT("Mobile Number *", "मोबाइल नंबर *", "ମୋବାଇଲ୍ ନମ୍ବର *"), value = phone, onValueChange = onPhoneChange, placeholder = "10-digit number", keyboardType = KeyboardType.Phone, prefix = "+91 ", leadingIcon = Icons.Default.Phone)
-        EnrollmentTextField(label = languageState.value.getT("Village *", "गाँव *", "ଗ୍ରାମ *"), value = village, onValueChange = onVillageChange, placeholder = "Village Name", leadingIcon = Icons.Default.Home)
+        EnrollmentTextField(label = languageState.value.getT("Farmer Name *", "किसान का नाम *", "କୃଷକଙ୍କ ନାମ *"), value = name, onValueChange = onNameChange, placeholder = "Full Name", leadingIcon = Icons.Default.Person, iconTint = IconGreen)
+        EnrollmentTextField(label = languageState.value.getT("Mobile Number *", "मोबाइल नंबर *", "ମୋବାଇଲ୍ ନମ୍ବର *"), value = phone, onValueChange = onPhoneChange, placeholder = "10-digit number", keyboardType = KeyboardType.Phone, prefix = "+91 ", leadingIcon = Icons.Default.Phone, iconTint = IconBlue)
+        EnrollmentTextField(label = languageState.value.getT("Village *", "गाँव *", "ଗ୍ରାମ *"), value = village, onValueChange = onVillageChange, placeholder = "Village Name", leadingIcon = Icons.Default.Home, iconTint = IconAmber)
         EnrollmentTextField(
             label = languageState.value.getT("GPS Location *", "जीपीएस स्थान *", "GPS ଅବସ୍ଥାନ *"),
             value = location, onValueChange = onLocationChange,
             placeholder = languageState.value.getT("Tap the icon to fetch GPS", "जीपीएस लाने के लिए आइकन दबाएं", "GPS ଆଣିବାକୁ ଆଇକନ୍ ଦବାନ୍ତୁ"),
             leadingIcon = Icons.Default.LocationOn,
+            iconTint = IconTeal,
             trailingIcon = Icons.Default.MyLocation,
             onTrailingIconClick = { fetchGps() }
         )
-        EnrollmentTextField(label = languageState.value.getT("Aadhaar / Gov ID *", "आधार / सरकारी आईडी *", "ଆଧାର / ସରକାରୀ ID *"), value = aadhaar, onValueChange = onAadhaarChange, placeholder = "12-digit number", keyboardType = KeyboardType.Number, leadingIcon = Icons.Default.Badge)
+        EnrollmentTextField(label = languageState.value.getT("Aadhaar / Gov ID *", "आधार / सरकारी आईडी *", "ଆଧାର / ସରକାରୀ ID *"), value = aadhaar, onValueChange = onAadhaarChange, placeholder = "12-digit number", keyboardType = KeyboardType.Number, leadingIcon = Icons.Default.Badge, iconTint = IconIndigo)
     }
 }
 
@@ -3116,7 +3130,8 @@ fun EnrollmentGoatStep(breed: String, onBreedChange: (String) -> Unit, gender: S
             placeholder = languageState.value.getT("Select Breed", "नस्ल चुनें", "ପ୍ରଜାତି ବାଛନ୍ତୁ"),
             options = listOf("Black Bengal", "Jamunapari", "Sirohi", "Barbari", "Beetal", "Ganjam", "Osmanabadi", "Anjori"),
             onValueChange = onBreedChange,
-            leadingPainter = painterResource(R.drawable.ic_ewe_custom)
+            leadingPainter = painterResource(R.drawable.ic_ewe_custom),
+            iconTint = IconRose
         )
         EnrollmentDropdownField(
             label = languageState.value.getT("Gender *", "लिंग *", "ଲିଙ୍ଗ *"),
@@ -3127,7 +3142,8 @@ fun EnrollmentGoatStep(breed: String, onBreedChange: (String) -> Unit, gender: S
                 languageState.value.getT("Male", "नर", "ଅଣ୍ଡିରା")
             ),
             onValueChange = onGenderChange,
-            leadingIcon = Icons.Default.Transgender
+            leadingIcon = Icons.Default.Transgender,
+            iconTint = IconPurple
         )
 
         Row(
@@ -3136,7 +3152,7 @@ fun EnrollmentGoatStep(breed: String, onBreedChange: (String) -> Unit, gender: S
             verticalAlignment = Alignment.Bottom
         ) {
             Box(modifier = Modifier.weight(0.6f)) {
-                EnrollmentTextField(label = languageState.value.getT("Age (Approx) *", "आयु (लगभग) *", "ବୟସ (ପ୍ରାୟ) *"), value = age, onValueChange = onAgeChange, placeholder = "12", keyboardType = KeyboardType.Number, leadingIcon = Icons.Default.CalendarToday)
+                EnrollmentTextField(label = languageState.value.getT("Age (Approx) *", "आयु (लगभग) *", "ବୟସ (ପ୍ରାୟ) *"), value = age, onValueChange = onAgeChange, placeholder = "12", keyboardType = KeyboardType.Number, leadingIcon = Icons.Default.CalendarToday, iconTint = IconAmber)
             }
             Box(modifier = Modifier.weight(0.4f)) {
                 EnrollmentDropdownField(
@@ -3151,13 +3167,14 @@ fun EnrollmentGoatStep(breed: String, onBreedChange: (String) -> Unit, gender: S
             }
         }
 
-        EnrollmentTextField(label = languageState.value.getT("Weight (Approx) *", "वजन (लगभग) *", "ଓଜନ (ପ୍ରୟ) *"), value = weight, onValueChange = onWeightChange, placeholder = "18", keyboardType = KeyboardType.Number, suffix = "KG", leadingIcon = Icons.Default.Scale)
-        EnrollmentTextField(label = languageState.value.getT("Color / Marks *", "रंग / निशान *", "ରଙ୍ଗ / ଚିହ୍ନ *"), value = color, onValueChange = onColorChange, placeholder = "Black with White Spots", leadingIcon = Icons.Default.Palette)
+        EnrollmentTextField(label = languageState.value.getT("Weight (Approx) *", "वजन (लगभग) *", "ଓଜନ (ପ୍ରୟ) *"), value = weight, onValueChange = onWeightChange, placeholder = "18", keyboardType = KeyboardType.Number, suffix = "KG", leadingIcon = Icons.Default.Scale, iconTint = IconTeal)
+        EnrollmentTextField(label = languageState.value.getT("Color / Marks *", "रंग / निशान *", "ରଙ୍ଗ / ଚିହ୍ନ *"), value = color, onValueChange = onColorChange, placeholder = "Black with White Spots", leadingIcon = Icons.Default.Palette, iconTint = IconIndigo)
 
         EnrollmentTextField(
             label = languageState.value.getT("Ear Tag Number *", "कान का टैग नंबर *", "କାନ ଟ୍ୟାଗ୍ ନମ୍ବର *"),
             value = earTag, onValueChange = onTagChange, placeholder = "e.g. ET-240801",
             leadingIcon = Icons.Default.Label,
+            iconTint = IconBlue,
             trailingIcon = Icons.Default.QrCodeScanner,
             onTrailingIconClick = {
                 val options = com.journeyapps.barcodescanner.ScanOptions()
@@ -3349,9 +3366,9 @@ fun EnrollmentTaggingStep(earTag: String, onTagChange: (String) -> Unit) {
                 verticalArrangement = Arrangement.Center
             ) {
                 Icon(
-                    Icons.Default.QrCodeScanner, 
-                    contentDescription = null, 
-                    tint = Color.Black, 
+                    Icons.Default.QrCodeScanner,
+                    contentDescription = null,
+                    tint = PrimaryGreen,
                     modifier = Modifier.size(64.dp)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -3400,10 +3417,15 @@ fun EnrollmentVaccinationStep(
 }
 
 @Composable
-fun EnrollmentPaymentStep(goatCount: Int = 1) {
+fun EnrollmentPaymentStep(
+    goatCount: Int = 1,
+    amount: String = "350",
+    onAmountChange: (String) -> Unit = {},
+    selectedMethod: String = "Cash",
+    onMethodChange: (String) -> Unit = {},
+) {
     val languageState = LocalAppLanguage.current
-    var selectedMethod by remember { mutableStateOf("Cash") }
-    val total = 350 * goatCount.coerceAtLeast(1)
+    val total = (amount.toIntOrNull() ?: 0) * goatCount.coerceAtLeast(1)
 
     Column {
         // Premium hero banner: rich green, with the amount centred on it.
@@ -3423,7 +3445,7 @@ fun EnrollmentPaymentStep(goatCount: Int = 1) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("₹ $total", fontSize = 38.sp, color = Color.White, fontWeight = FontWeight.Bold)
                 if (goatCount > 1) {
-                    Text("$goatCount × ₹350", fontSize = 12.sp, color = Color.White.copy(alpha = 0.85f))
+                    Text("$goatCount × ₹${amount.ifBlank { "0" }}", fontSize = 12.sp, color = Color.White.copy(alpha = 0.85f))
                 }
             }
         }
@@ -3432,8 +3454,8 @@ fun EnrollmentPaymentStep(goatCount: Int = 1) {
         Text(languageState.value.getT("Select Payment Method", "भुगतान विधि चुनें", "ଦେୟ ପଦ୍ଧତି ଚୟନ କରନ୍ତୁ"), fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PaymentMethodChip("Cash", selectedMethod == "Cash", modifier = Modifier.weight(1f)) { selectedMethod = "Cash" }
-            PaymentMethodChip("UPI", selectedMethod == "UPI", modifier = Modifier.weight(1f)) { selectedMethod = "UPI" }
+            PaymentMethodChip("Cash", selectedMethod == "Cash", modifier = Modifier.weight(1f)) { onMethodChange("Cash") }
+            PaymentMethodChip("UPI", selectedMethod == "UPI", modifier = Modifier.weight(1f)) { onMethodChange("UPI") }
         }
 
         if (selectedMethod == "UPI") {
@@ -3469,9 +3491,9 @@ fun EnrollmentPaymentStep(goatCount: Int = 1) {
         }
         
         Spacer(modifier = Modifier.height(24.dp))
-        EnrollmentTextField(label = languageState.value.getT("Premium Amount", "प्रीमियम राशि", "ପ୍ରିମିୟମ ପରିମାଣ"), value = "350", onValueChange = {}, prefix = "₹", trailingIcon = Icons.Default.Receipt)
+        EnrollmentTextField(label = languageState.value.getT("Premium Amount", "प्रीमियम राशि", "ପ୍ରିମିୟମ ପରିମାଣ"), value = amount, onValueChange = onAmountChange, keyboardType = KeyboardType.Number, prefix = "₹", leadingIcon = Icons.Default.Payments, iconTint = IconGreen)
         Spacer(modifier = Modifier.height(16.dp))
-        EnrollmentTextField(label = languageState.value.getT("Receipt Number", "रसीद संख्या", "ରସିଦ ନମ୍ବର"), value = "RCP-240801-001", onValueChange = {}, leadingIcon = Icons.Default.Receipt)
+        EnrollmentTextField(label = languageState.value.getT("Receipt Number", "रसीद संख्या", "ରସିଦ ନମ୍ବର"), value = "RCP-240801-001", onValueChange = {}, leadingIcon = Icons.Default.Receipt, iconTint = IconAmber)
     }
 }
 
@@ -3532,23 +3554,18 @@ fun EnrollmentGoatsAddedStep(
 ) {
     val languageState = LocalAppLanguage.current
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // Total counter — premium summary banner with illustration.
+        // Total counter — the banner fills the card, with the count sitting on the
+        // artwork's open left side. matchParentSize means the Row still sets the height.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(18.dp))
-                .background(Brush.horizontalGradient(listOf(Color(0xFFEFF6EC), Color(0xFFE3F0DB))))
         ) {
             Image(
-                painter = painterResource(R.drawable.didi_banner_l),
+                painter = painterResource(R.drawable.add_goat),
                 contentDescription = null,
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .fillMaxHeight()
-                    .fillMaxWidth(0.5f)
-                    .clip(RoundedCornerShape(topEnd = 18.dp, bottomEnd = 18.dp)),
+                modifier = Modifier.matchParentSize(),
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                alignment = Alignment.CenterEnd,
             )
             Row(
                 modifier = Modifier.padding(18.dp),
@@ -3644,7 +3661,7 @@ fun EnrollmentGoatsAddedStep(
             elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp, pressedElevation = 0.dp),
             colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f))
         ) {
-            Text(languageState.value.getT("Continue to Vaccination", "टीकाकरण के लिए जारी रखें", "ଟୀକାକରଣକୁ ଜାରି ରଖନ୍ତୁ"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Text(languageState.value.getT("Continue", "जारी रखें", "ଜାରି ରଖନ୍ତୁ"), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -3788,7 +3805,7 @@ fun EnrollmentPoliciesStep(farmer: String, results: List<EnrollGoatResponse>, go
 // --- ENROLLMENT HELPERS ---
 
 @Composable
-fun EnrollmentTextField(label: String, value: String, onValueChange: (String) -> Unit, placeholder: String = "", keyboardType: KeyboardType = KeyboardType.Text, prefix: String? = null, suffix: String? = null, leadingIcon: ImageVector? = null, trailingIcon: ImageVector? = null, onTrailingIconClick: (() -> Unit)? = null, readOnly: Boolean = false, borderColor: Color = PrimaryGreen, isPassword: Boolean = false) {
+fun EnrollmentTextField(label: String, value: String, onValueChange: (String) -> Unit, placeholder: String = "", keyboardType: KeyboardType = KeyboardType.Text, prefix: String? = null, suffix: String? = null, leadingIcon: ImageVector? = null, trailingIcon: ImageVector? = null, onTrailingIconClick: (() -> Unit)? = null, readOnly: Boolean = false, borderColor: Color = PrimaryGreen, iconTint: Color = borderColor, isPassword: Boolean = false) {
     var passwordVisible by remember { mutableStateOf(false) }
     val styledLabel = buildAnnotatedString {
         label.forEach { char ->
@@ -3814,7 +3831,7 @@ fun EnrollmentTextField(label: String, value: String, onValueChange: (String) ->
                 singleLine = true,
                 readOnly = readOnly,
                 visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
-                leadingIcon = leadingIcon?.let { { FieldLeadingBadge(it, borderColor) } },
+                leadingIcon = leadingIcon?.let { { FieldLeadingBadge(it, iconTint) } },
                 trailingIcon = when {
                     isPassword -> {
                         {
@@ -3862,7 +3879,7 @@ fun EnrollmentTextField(label: String, value: String, onValueChange: (String) ->
 }
 
 @Composable
-fun EnrollmentDropdownField(label: String, selectedValue: String, options: List<String>, onValueChange: (String) -> Unit, borderColor: Color = PrimaryGreen, placeholder: String? = null, leadingIcon: ImageVector? = null, leadingPainter: Painter? = null) {
+fun EnrollmentDropdownField(label: String, selectedValue: String, options: List<String>, onValueChange: (String) -> Unit, borderColor: Color = PrimaryGreen, iconTint: Color = borderColor, placeholder: String? = null, leadingIcon: ImageVector? = null, leadingPainter: Painter? = null) {
     var expanded by remember { mutableStateOf(false) }
     val styledLabel = buildAnnotatedString {
         label.forEach { char ->
@@ -3890,8 +3907,8 @@ fun EnrollmentDropdownField(label: String, selectedValue: String, options: List<
                 // prompt rather than as a value.
                 placeholder = placeholder?.let { { Text(it, color = Color(0xFF9AA69B)) } },
                 leadingIcon = when {
-                    leadingPainter != null -> { { FieldLeadingBadge(leadingPainter, borderColor) } }
-                    leadingIcon != null -> { { FieldLeadingBadge(leadingIcon, borderColor) } }
+                    leadingPainter != null -> { { FieldLeadingBadge(leadingPainter, iconTint) } }
+                    leadingIcon != null -> { { FieldLeadingBadge(leadingIcon, iconTint) } }
                     else -> null
                 },
                 trailingIcon = {
@@ -6996,8 +7013,10 @@ fun VaccineListScreen(navController: NavHostController, onBack: () -> Unit, onRe
         }
         mapOf(
             "name" to name, "tag" to (it.earTag ?: "—"),
-            "date" to (it.nextVaccinationDate ?: ""), "farmer" to (it.earTag ?: "—"),
-            "village" to "", "status" to it.status, "goatId" to it.goatId.toString(),
+            "date" to (it.nextVaccinationDate ?: ""),
+            "farmer" to (it.farmer ?: languageState.value.getT("Unknown farmer", "अज्ञात किसान", "ଅଜ୍ଞାତ କୃଷକ")),
+            "village" to (it.village ?: ""),
+            "status" to it.status, "goatId" to it.goatId.toString(),
         )
     }
 
@@ -7098,12 +7117,21 @@ fun VaccineListContent(
 ) {
     val languageState = LocalAppLanguage.current
     Column(modifier = Modifier.padding(padding)) {
+        Image(
+            painter = painterResource(R.drawable.vaccine),
+            contentDescription = null,
+            modifier = Modifier.fillMaxWidth().height(140.dp)
+                .padding(horizontal = 16.dp).padding(top = 12.dp)
+                .clip(RoundedCornerShape(18.dp)),
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+        )
+
         // Search Bar — soft, borderless, rounded (reference style).
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearchChange,
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            placeholder = { Text(languageState.value.getT("Search by ear tag or vaccine name", "कान के टैग या टीके के नाम से खोजें", "କାନ ଟ୍ୟାଗ୍ କିମ୍ବା ଟୀକା ନାମ ଅନୁସାରେ ଖୋଜନ୍ତୁ"), color = Color(0xFF9AA69B)) },
+            placeholder = { Text(languageState.value.getT("Search by farmer or ear tag", "किसान या कान के टैग से खोजें", "କୃଷକ କିମ୍ବା କାନ ଟ୍ୟାଗ୍ ଅନୁସାରେ ଖୋଜନ୍ତୁ"), color = Color(0xFF9AA69B)) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF9AA69B)) },
             shape = RoundedCornerShape(16.dp),
             singleLine = true,
@@ -7150,7 +7178,9 @@ fun VaccineListContent(
         }
 
         val filteredVaccines = vaccinations.filter {
-            (it["name"] ?: "").contains(searchQuery, ignoreCase = true) || (it["tag"] ?: "").contains(searchQuery, ignoreCase = true)
+            (it["name"] ?: "").contains(searchQuery, ignoreCase = true) ||
+                (it["tag"] ?: "").contains(searchQuery, ignoreCase = true) ||
+                (it["farmer"] ?: "").contains(searchQuery, ignoreCase = true)
         }.filter { vaccine ->
             val isCompleted = vaccine["status"] == "done"
             when (selectedTab) {
@@ -10612,7 +10642,9 @@ fun EarningHistoryScreen(navController: NavHostController, onBack: () -> Unit) {
         )
     }
 
-    Box(Modifier.fillMaxSize()) {
+    // White root: the window shows through under the transparent system nav bar,
+    // which reads as a black band unless the screen paints that area itself.
+    Box(Modifier.fillMaxSize().background(Color.White)) {
     Column(
         modifier = Modifier.fillMaxSize().background(backgroundColor)
     ) {
