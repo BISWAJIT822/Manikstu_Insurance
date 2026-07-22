@@ -24,6 +24,15 @@ sealed interface SubmitState {
     data class Error(val message: String) : SubmitState
 }
 
+/** Result of the enrollment step-1 farmer-mobile check. */
+sealed interface FarmerLookup {
+    data object Idle : FarmerLookup
+    data object Loading : FarmerLookup
+    data class Found(val farmer: FarmerLookupResponse) : FarmerLookup
+    data object NotFound : FarmerLookup
+    data class Error(val message: String) : FarmerLookup
+}
+
 /** Force-update gate: checks the app version against the backend on launch. */
 sealed interface UpdateState {
     data object Checking : UpdateState
@@ -492,6 +501,28 @@ class EnrollmentViewModel @Inject constructor(
     // Consolidated policy-certificate download (Idle -> Submitting -> Success(path)/Error).
     private val _certificate = MutableStateFlow<SubmitState>(SubmitState.Idle)
     val certificate = _certificate.asStateFlow()
+
+    // Step 1 farmer-mobile check: the farmer must be registered before enrollment.
+    private val _farmerLookup = MutableStateFlow<FarmerLookup>(FarmerLookup.Idle)
+    val farmerLookup = _farmerLookup.asStateFlow()
+    private var lookupJob: kotlinx.coroutines.Job? = null
+
+    /** Look up a farmer by [mobile]; only a 10-digit number is checked. */
+    fun lookupFarmer(mobile: String) {
+        lookupJob?.cancel()
+        if (mobile.length != 10) {
+            _farmerLookup.value = FarmerLookup.Idle
+            return
+        }
+        lookupJob = viewModelScope.launch {
+            _farmerLookup.value = FarmerLookup.Loading
+            repo.safeCall { farmerLookup(mobile) }
+                .onSuccess { _farmerLookup.value = if (it.found) FarmerLookup.Found(it) else FarmerLookup.NotFound }
+                .onFailure { _farmerLookup.value = FarmerLookup.Error(it.message ?: "Could not verify the number") }
+        }
+    }
+
+    fun resetFarmerLookup() { _farmerLookup.value = FarmerLookup.Idle }
 
     fun reset() {
         _submit.value = SubmitState.Idle

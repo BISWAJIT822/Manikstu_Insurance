@@ -239,6 +239,18 @@ data class EnrollGoatResponse(
     val reason: String? = null,
 )
 
+/** Enrollment step 1: confirm the farmer's mobile is registered and pull their details. */
+@Serializable
+data class FarmerLookupResponse(
+    val found: Boolean = false,
+    @SerialName("full_name") val fullName: String? = null,
+    val village: String? = null,
+    val block: String? = null,
+    val district: String? = null,
+    val state: String? = null,
+    @SerialName("aadhaar_id") val aadhaarId: String? = null,
+)
+
 @Serializable
 data class GoatListItem(
     val id: Int,
