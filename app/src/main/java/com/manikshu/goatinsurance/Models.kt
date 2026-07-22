@@ -205,6 +205,9 @@ data class EnrollGoatRequest(
     @SerialName("farmer_name") val farmerName: String,
     @SerialName("farmer_mobile") val farmerMobile: String,
     val village: String? = null,
+    val block: String? = null,
+    val district: String? = null,
+    val state: String? = null,
     @SerialName("gps_location") val gpsLocation: String? = null,
     @SerialName("aadhaar_id") val aadhaarId: String? = null,
     // goat

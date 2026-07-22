@@ -607,11 +607,11 @@ fun MortalityDetailScreen(
 
                     Button(
                         onClick = {
-                            if (goatPhotoUri != null) {
-                                vm.completeReport(d.id, cause.trim(), notes.ifBlank { null }, goatPhotoUri!!, true)
+                            if (goatPhotoUri != null && tagPhotoUri != null && sideVisitPhotoUri != null && documentPhotoUri != null) {
+                                vm.completeReport(d.id, cause.trim(), notes.ifBlank { null }, goatPhotoUri!!, tagPhotoUri!!, sideVisitPhotoUri!!, documentPhotoUri!!, true)
                             }
                         },
-                        enabled = !alreadyClaimed && cause.isNotBlank() && goatPhotoUri != null && tagPhotoUri != null && sideVisitPhotoUri != null && siteVisitVerified && complete !is SubmitState.Submitting,
+                        enabled = !alreadyClaimed && cause.isNotBlank() && goatPhotoUri != null && tagPhotoUri != null && sideVisitPhotoUri != null && documentPhotoUri != null && siteVisitVerified && complete !is SubmitState.Submitting,
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)

@@ -2333,32 +2333,9 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
                     }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), false).show()
                 },
                 cause = cause,
-                onCauseClick = { expandedCause = true },
+                onCauseChange = { cause = it },
                 description = description,
                 onDescriptionChange = { description = it }
-            )
-
-            DropdownMenu(expanded = expandedCause, onDismissRequest = { expandedCause = false }, modifier = Modifier.fillMaxWidth(0.9f)) {
-                listOf("PPR", "ET", "FMD", "Goat Pox", "Accident", "Other").forEach { c ->
-                    DropdownMenuItem(text = { Text(c) }, onClick = { cause = c; expandedCause = false })
-                }
-            }
-
-            // Upload Photos Section
-            DeathPhotoUploadSection(
-                languageState = languageState,
-                goatPhotoUri = goatPhotoUri,
-                tagPhotoUri = tagPhotoUri,
-                sideVisitPhotoUri = sideVisitPhotoUri,
-                documentPhotoUri = documentPhotoUri,
-                onCapture = { launchCamera(it) }
-            )
-
-            // Verification Confirmation
-            VerificationConfirmSection(
-                languageState = languageState,
-                isConfirmed = isConfirmed,
-                onConfirmedChange = { isConfirmed = it }
             )
 
             Button(
@@ -2366,11 +2343,11 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
                     val goatId = policies.getOrNull(selectedIndex)?.goatId
                     if (goatId != null) {
                         val iso = if (deathDateIso.isNotBlank()) "${deathDateIso}T00:00:00" else ""
-                        claimsVm.reportDeath(goatId, iso)
+                        claimsVm.reportDeath(goatId, iso, cause.ifBlank { null })
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
-                enabled = isConfirmed && deathDate.isNotBlank() && deathTime.isNotBlank() && cause.isNotBlank() && goatPhotoUri != null && !isSubmitting,
+                enabled = deathDate.isNotBlank() && deathTime.isNotBlank() && cause.isNotBlank() && !isSubmitting,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
             ) {
@@ -2407,7 +2384,7 @@ fun DeathInfoSection(
     deathTime: String,
     onTimeClick: () -> Unit,
     cause: String,
-    onCauseClick: () -> Unit,
+    onCauseChange: (String) -> Unit,
     description: String,
     onDescriptionChange: (String) -> Unit
 ) {
@@ -2424,13 +2401,11 @@ fun DeathInfoSection(
         }
         
         DeathFormField(
-            label = languageState.value.getT("Probable Cause of Death *", "मृत्यु का संभावित कारण *", "ମୃତ୍ୟୁର ସମ୍ଭାବ୍ୟ କାରଣ *"), 
-            value = cause, 
-            placeholder = languageState.value.getT("Select or enter cause of death", "चुनें या मृत्यु का कारण दर्ज करें", "ବାଛନ୍ତୁ କିମ୍ବା ମୃତ୍ୟୁର କାରଣ ଲେଖନ୍ତୁ"), 
+            label = languageState.value.getT("Probable Cause of Death *", "मृत्यु का संभावित कारण *", "ମୃତ୍ୟୁର ସମ୍ଭାବ୍ୟ କାରଣ *"),
+            value = cause,
+            placeholder = languageState.value.getT("Enter cause of death", "मृत्यु का कारण दर्ज करें", "ମୃତ୍ୟୁର କାରଣ ଲେଖନ୍ତୁ"),
             icon = Icons.Default.Warning,
-            trailingIcon = Icons.Default.KeyboardArrowDown,
-            readOnly = true,
-            onClick = onCauseClick
+            onValueChange = onCauseChange
         )
         
         DeathFormField(
@@ -2464,27 +2439,40 @@ fun DeathFormField(
             else append(char)
         }
     }
+    // Picker fields (date/time) pass an onClick. A read-only-but-enabled text field
+    // swallows the tap, so those are rendered disabled with a transparent clickable
+    // overlay on top - that reliably opens the dialog. Plain text fields (no onClick)
+    // stay enabled and editable.
+    val isPicker = onClick != null
     Column(modifier = modifier) {
         Text(styledLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black, modifier = Modifier.padding(bottom = 8.dp))
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth().clickable(enabled = onClick != null) { onClick?.invoke() },
-            placeholder = { Text(placeholder, color = Color.Gray, fontSize = 13.sp) },
-            leadingIcon = { Icon(icon, null, tint = Color.Gray, modifier = Modifier.size(20.dp)) },
-            trailingIcon = if (trailingIcon != null) { { Icon(trailingIcon, null, tint = Color.Gray) } } else null,
-            shape = RoundedCornerShape(12.dp),
-            readOnly = readOnly,
-            enabled = !readOnly || onClick != null,
-            singleLine = singleLine,
-            minLines = if (singleLine) 1 else 3,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = PrimaryGreen,
-                unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),
-                disabledBorderColor = Color.LightGray.copy(alpha = 0.5f),
-                disabledTextColor = Color.Black
+        Box {
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text(placeholder, color = Color.Gray, fontSize = 13.sp) },
+                leadingIcon = { Icon(icon, null, tint = Color.Gray, modifier = Modifier.size(20.dp)) },
+                trailingIcon = if (trailingIcon != null) { { Icon(trailingIcon, null, tint = Color.Gray) } } else null,
+                shape = RoundedCornerShape(12.dp),
+                readOnly = readOnly,
+                enabled = !isPicker,
+                singleLine = singleLine,
+                minLines = if (singleLine) 1 else 3,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = PrimaryGreen,
+                    unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),
+                    disabledBorderColor = Color.LightGray.copy(alpha = 0.5f),
+                    disabledTextColor = Color.Black,
+                    disabledLeadingIconColor = Color.Gray,
+                    disabledTrailingIconColor = Color.Gray,
+                    disabledPlaceholderColor = Color.Gray
+                )
             )
-        )
+            if (isPicker) {
+                Box(Modifier.matchParentSize().clip(RoundedCornerShape(12.dp)).clickable { onClick?.invoke() })
+            }
+        }
     }
 }
 
@@ -2894,9 +2882,20 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
     // Form State
     var farmerName by rememberSaveable { mutableStateOf("") }
     var mobileNumber by rememberSaveable { mutableStateOf("") }
+    var farmerState by rememberSaveable { mutableStateOf("") }
+    var farmerDistrict by rememberSaveable { mutableStateOf("") }
+    var farmerBlock by rememberSaveable { mutableStateOf("") }
     var village by rememberSaveable { mutableStateOf("") }
     var location by rememberSaveable { mutableStateOf("") }
     var aadhaar by rememberSaveable { mutableStateOf("") }
+
+    // Cascading location dropdowns (State -> District -> Block), served by the backend.
+    val locationVm: LocationViewModel = hiltViewModel()
+    val stateOptions by locationVm.states.collectAsState()
+    val districtOptions by locationVm.districts.collectAsState()
+    val blockOptions by locationVm.blocks.collectAsState()
+    LaunchedEffect(farmerState) { farmerDistrict = ""; farmerBlock = ""; locationVm.loadDistricts(farmerState) }
+    LaunchedEffect(farmerDistrict) { farmerBlock = ""; locationVm.loadBlocks(farmerState, farmerDistrict) }
     
     // Current goat form (one goat being added/edited).
     // Breed and gender start empty so the Didi has to choose: a pre-filled default
@@ -3015,7 +3014,16 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                 Spacer(modifier = Modifier.height(20.dp))
                 
                 when(currentStep) {
-                    1 -> EnrollmentFarmerStep(farmerName, { if (it.all { char -> char.isLetter() || char.isWhitespace() }) farmerName = it }, mobileNumber, { if (it.length <= 10) mobileNumber = it }, village, { if (it.all { char -> char.isLetter() || char.isWhitespace() }) village = it }, location, { location = it }, aadhaar, { if (it.length <= 12) aadhaar = it })
+                    1 -> EnrollmentFarmerStep(
+                        farmerName, { if (it.all { char -> char.isLetter() || char.isWhitespace() }) farmerName = it },
+                        mobileNumber, { if (it.length <= 10) mobileNumber = it },
+                        farmerState, { farmerState = it }, stateOptions,
+                        farmerDistrict, { farmerDistrict = it }, districtOptions,
+                        farmerBlock, { farmerBlock = it }, blockOptions,
+                        village, { if (it.all { char -> char.isLetter() || char.isWhitespace() }) village = it },
+                        location, { location = it },
+                        aadhaar, { if (it.length <= 12) aadhaar = it }
+                    )
                     2 -> EnrollmentGoatStep(breed, { breed = it }, gender, { gender = it }, age, { age = it }, ageUnit, { ageUnit = it }, weight, { weight = it }, colorMarks, { colorMarks = it }, earTagNumber, { earTagNumber = it })
                     3 -> EnrollmentPhotoStep(
                         leftUri = leftPhotoUri, onLeftCapture = { leftPhotoUri = it },
@@ -3048,7 +3056,7 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
             val tagIsUnique = goats.filterIndexed { i, _ -> i != editingIndex }
                 .none { it.earTag.equals(earTagNumber.trim(), ignoreCase = true) }
             val isStepValid = when(currentStep) {
-                1 -> farmerName.isNotBlank() && mobileNumber.length == 10 && village.isNotBlank() && location.isNotBlank() && aadhaar.length == 12
+                1 -> farmerName.isNotBlank() && mobileNumber.length == 10 && farmerState.isNotBlank() && farmerDistrict.isNotBlank() && farmerBlock.isNotBlank() && village.isNotBlank() && location.isNotBlank() && aadhaar.length == 12
                 2 -> breed.isNotBlank() && gender.isNotBlank() && age.isNotBlank() && weight.isNotBlank() && colorMarks.isNotBlank() && earTagNumber.isNotBlank() && tagIsUnique
                 3 -> leftPhotoUri != null && rightPhotoUri != null && frontPhotoUri != null && tagPhotoUri != null
                 6 -> (premiumAmount.toIntOrNull() ?: 0) > 0
@@ -3095,7 +3103,11 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                                     // Submit the whole batch: each goat carries its own vaccines now.
                                     enrollVm.enrollBatch(
                                         farmerName = farmerName, farmerMobile = mobileNumber,
-                                        village = village.ifBlank { null }, gpsLocation = location.ifBlank { null },
+                                        village = village.ifBlank { null },
+                                        block = farmerBlock.ifBlank { null },
+                                        district = farmerDistrict.ifBlank { null },
+                                        state = farmerState.ifBlank { null },
+                                        gpsLocation = location.ifBlank { null },
                                         aadhaarId = aadhaar.ifBlank { null },
                                         goats = goats.toList(),
                                         paymentMode = paymentMode.lowercase(),
@@ -3131,12 +3143,24 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
 }
 
 @Composable
-fun EnrollmentFarmerStep(name: String, onNameChange: (String) -> Unit, phone: String, onPhoneChange: (String) -> Unit, village: String, onVillageChange: (String) -> Unit, location: String, onLocationChange: (String) -> Unit, aadhaar: String, onAadhaarChange: (String) -> Unit) {
+fun EnrollmentFarmerStep(
+    name: String, onNameChange: (String) -> Unit,
+    phone: String, onPhoneChange: (String) -> Unit,
+    state: String, onStateChange: (String) -> Unit, stateOptions: List<String>,
+    district: String, onDistrictChange: (String) -> Unit, districtOptions: List<String>,
+    block: String, onBlockChange: (String) -> Unit, blockOptions: List<String>,
+    village: String, onVillageChange: (String) -> Unit,
+    location: String, onLocationChange: (String) -> Unit,
+    aadhaar: String, onAadhaarChange: (String) -> Unit
+) {
     val languageState = LocalAppLanguage.current
     val fetchGps = rememberGpsFetcher(onResult = { onLocationChange(it) })
     Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
         EnrollmentTextField(label = languageState.value.getT("Farmer Name *", "किसान का नाम *", "କୃଷକଙ୍କ ନାମ *"), value = name, onValueChange = onNameChange, placeholder = "Full Name", leadingIcon = Icons.Default.Person, iconTint = IconGreen)
         EnrollmentTextField(label = languageState.value.getT("Mobile Number *", "मोबाइल नंबर *", "ମୋବାଇଲ୍ ନମ୍ବର *"), value = phone, onValueChange = onPhoneChange, placeholder = "10-digit number", keyboardType = KeyboardType.Phone, prefix = "+91 ", leadingIcon = Icons.Default.Phone, iconTint = IconBlue)
+        EnrollmentDropdownField(label = languageState.value.getT("State *", "राज्य *", "ରାଜ୍ୟ *"), selectedValue = state, options = stateOptions, onValueChange = onStateChange, placeholder = languageState.value.getT("Select State", "राज्य चुनें", "ରାଜ୍ୟ ବାଛନ୍ତୁ"), leadingIcon = Icons.Default.Public, iconTint = IconIndigo)
+        EnrollmentDropdownField(label = languageState.value.getT("District *", "जिला *", "ଜିଲ୍ଲା *"), selectedValue = district, options = districtOptions, onValueChange = onDistrictChange, placeholder = languageState.value.getT("Select District", "जिला चुनें", "ଜିଲ୍ଲା ବାଛନ୍ତୁ"), leadingIcon = Icons.Default.LocationCity, iconTint = IconBlue)
+        EnrollmentDropdownField(label = languageState.value.getT("Block *", "ब्लॉक *", "ବ୍ଲକ୍ *"), selectedValue = block, options = blockOptions, onValueChange = onBlockChange, placeholder = languageState.value.getT("Select Block", "ब्लॉक चुनें", "ବ୍ଲକ୍ ବାଛନ୍ତୁ"), leadingIcon = Icons.Default.Business, iconTint = IconTeal)
         EnrollmentTextField(label = languageState.value.getT("Village *", "गाँव *", "ଗ୍ରାମ *"), value = village, onValueChange = onVillageChange, placeholder = "Village Name", leadingIcon = Icons.Default.Home, iconTint = IconAmber)
         EnrollmentTextField(
             label = languageState.value.getT("GPS Location *", "जीपीएस स्थान *", "GPS ଅବସ୍ଥାନ *"),
