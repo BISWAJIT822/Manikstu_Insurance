@@ -768,28 +768,43 @@ class MortalityQueueViewModel @Inject constructor(
      * The screen only enables this once cause, photo and the verification tick are
      * all present, so a failure here is a transport problem, not a validation one.
      */
-    fun completeReport(id: Int, cause: String, notes: String?, photoUri: Uri, siteVisitDone: Boolean) {
+    fun completeReport(
+        id: Int, cause: String, notes: String?,
+        goatPhoto: Uri, tagPhoto: Uri, sideVisitPhoto: Uri, documentPhoto: Uri,
+        siteVisitDone: Boolean,
+    ) {
         viewModelScope.launch {
             _complete.value = SubmitState.Submitting
 
-            // Upload first: the review call stores the returned URL, so a failed
-            // upload must not leave the report completed without its photo.
-            val bytes = photoUploader.readBytes(photoUri)
-            if (bytes == null) {
-                _complete.value = SubmitState.Error("Could not read the photo. Capture it again.")
-                return@launch
-            }
-            val url = runCatching { repo.uploadPhoto(bytes, "carcass_${id}.jpg") }.getOrNull()
-            if (url == null) {
-                _complete.value = SubmitState.Error("Photo upload failed. Check your connection and retry.")
-                return@launch
+            // Upload all four carcass photos first: the review call stores their URLs,
+            // so a failed upload must not leave the report completed without evidence.
+            // Each slot maps to the carcass photo type the claim screen renders.
+            val slots = listOf(
+                "full_body" to goatPhoto,
+                "ear_tag" to tagPhoto,
+                "close_up" to sideVisitPhoto,
+                "location" to documentPhoto,
+            )
+            val photos = mutableListOf<MortalityPhotoIn>()
+            for ((type, uri) in slots) {
+                val bytes = photoUploader.readBytes(uri)
+                if (bytes == null) {
+                    _complete.value = SubmitState.Error("Could not read a photo. Capture it again.")
+                    return@launch
+                }
+                val url = runCatching { repo.uploadPhoto(bytes, "carcass_${id}_${type}_${System.currentTimeMillis()}.jpg") }.getOrNull()
+                if (url == null) {
+                    _complete.value = SubmitState.Error("Photo upload failed. Check your connection and retry.")
+                    return@launch
+                }
+                photos.add(MortalityPhotoIn(type, url))
             }
 
             val review = repo.safeCall {
                 mortalityReview(id, MortalityReviewRequest(
                     causeOfDeath = cause, notes = notes,
                     siteVisitDone = siteVisitDone, carcassVerified = true,
-                    photos = listOf(MortalityPhotoIn("full_body", url)),
+                    photos = photos,
                 ))
             }
             if (review.isFailure) {
