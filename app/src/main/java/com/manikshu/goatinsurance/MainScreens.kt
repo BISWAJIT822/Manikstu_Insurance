@@ -4359,7 +4359,17 @@ private fun FarmerGoatCard(
                     modifier = Modifier.size(56.dp).clip(CircleShape).background(Color(0xFFEDF4E4)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.VerifiedUser, null, tint = PrimaryGreen, modifier = Modifier.size(28.dp))
+                    val goatPhoto = policy.photo?.takeIf { it.isNotBlank() }?.let { absoluteMediaUrl(it) }
+                    if (goatPhoto != null) {
+                        AsyncImage(
+                            model = goatPhoto,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    } else {
+                        Icon(Icons.Default.VerifiedUser, null, tint = PrimaryGreen, modifier = Modifier.size(28.dp))
+                    }
                 }
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
