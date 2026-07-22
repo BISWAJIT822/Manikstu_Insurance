@@ -225,6 +225,19 @@ fun SyncRemoteProfilePhoto(photo: String?) {
         }
     }
 }
+
+/**
+ * The avatar a dashboard header should render: the image the user picked this session
+ * if there is one, otherwise the photo stored on the server. Mirrors the ProfileScreen
+ * fallback so every surface agrees even when [SyncRemoteProfilePhoto] has not yet bridged
+ * the remote photo into the shared state (stale/failed profile fetch, a leftover pick from
+ * a previous login). Returns a Coil-loadable model (Uri or absolute URL String) or null.
+ */
+@Composable
+fun rememberHeaderAvatar(remotePhoto: String?): Any? {
+    val localPick = LocalProfileImage.current.value
+    return localPick ?: remotePhoto?.takeIf { it.isNotBlank() }?.let { absoluteMediaUrl(it) }
+}
 // Unified theme: farmer/coordinator dashboards use the same green as the rest.
 private val PrimaryBlue = PrimaryGreen
 
@@ -234,6 +247,7 @@ fun AppNavigation(navController: NavHostController, sessionManager: SessionManag
     val userRole by sessionManager.userRole.collectAsState(initial = null)
     val context = LocalContext.current
     val languageState = LocalAppLanguage.current
+    val profileImageState = LocalProfileImage.current
     
     var showExitDialog by remember { mutableStateOf(false) }
 
@@ -478,12 +492,16 @@ fun AppNavigation(navController: NavHostController, sessionManager: SessionManag
                 navController = navController,
                 userRole = userRole,
                 sessionManager = sessionManager,
-                onLogout = { 
-                    scope.launch { 
+                onLogout = {
+                    scope.launch {
                         sessionManager.clearSession()
-                        navController.navigate("login") { 
+                        // Drop the in-memory avatar too; otherwise the next user who logs in
+                        // on this device inherits the previous user's picked photo, which also
+                        // blocks their own server photo from being bridged in.
+                        profileImageState.value = null
+                        navController.navigate("login") {
                             popUpTo(0) { inclusive = true }
-                        } 
+                        }
                     }
                 },
                 onBack = { navController.popBackStack() }
@@ -1352,7 +1370,7 @@ fun DidiDashboard(navController: NavHostController, sessionManager: SessionManag
         compact = {
             val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
             Box(modifier = Modifier.fillMaxSize().background(PageBackground)) {
-                DidiContent(PaddingValues(bottom = 74.dp + navInset), navController, userName, stats) { showNotifications = true }
+                DidiContent(PaddingValues(bottom = 74.dp + navInset), navController, userName, stats, dbProfile?.photo) { showNotifications = true }
                 Box(modifier = Modifier.align(Alignment.BottomCenter)) {
                     DidiBottomBar(navController)
                 }
@@ -1425,14 +1443,14 @@ fun DidiDashboard(navController: NavHostController, sessionManager: SessionManag
                         )
                     )
                 }
-                DidiContent(PaddingValues(0.dp), navController, userName, stats) { showNotifications = true }
+                DidiContent(PaddingValues(0.dp), navController, userName, stats, dbProfile?.photo) { showNotifications = true }
             }
         }
     )
 }
 
 @Composable
-fun DidiContent(padding: PaddingValues, navController: NavHostController, userName: String, stats: SdDashboard?, onNotificationClick: () -> Unit) {
+fun DidiContent(padding: PaddingValues, navController: NavHostController, userName: String, stats: SdDashboard?, profilePhoto: String? = null, onNotificationClick: () -> Unit) {
     val languageState = LocalAppLanguage.current
     val context = LocalContext.current
     val notifVm: NotificationsViewModel = androidx.hilt.navigation.compose.hiltViewModel()
@@ -1449,7 +1467,7 @@ fun DidiContent(padding: PaddingValues, navController: NavHostController, userNa
             .fillMaxSize()
             .background(PageBackground)
     ) {
-        DidiHomeHeader(userName, unread, onProfileClick = { navController.navigate("profile") }, onNotificationClick = onNotificationClick)
+        DidiHomeHeader(userName, unread, onProfileClick = { navController.navigate("profile") }, onNotificationClick = onNotificationClick, remotePhoto = profilePhoto)
 
         Spacer(Modifier.height(12.dp))
 
@@ -1523,9 +1541,9 @@ private fun SectionTitle(text: String) {
 }
 
 @Composable
-fun DidiHomeHeader(userName: String, unread: Int, onProfileClick: () -> Unit, onNotificationClick: () -> Unit) {
+fun DidiHomeHeader(userName: String, unread: Int, onProfileClick: () -> Unit, onNotificationClick: () -> Unit, remotePhoto: String? = null) {
     val languageState = LocalAppLanguage.current
-    val profileImageState = LocalProfileImage.current
+    val avatar = rememberHeaderAvatar(remotePhoto)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1535,8 +1553,8 @@ fun DidiHomeHeader(userName: String, unread: Int, onProfileClick: () -> Unit, on
     ) {
         Surface(onClick = onProfileClick, color = Color(0xFFF0EAD6), shape = CircleShape, modifier = Modifier.size(52.dp)) {
             Box(contentAlignment = Alignment.Center) {
-                if (profileImageState.value != null) {
-                    AsyncImage(model = profileImageState.value, contentDescription = null, modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                if (avatar != null) {
+                    AsyncImage(model = avatar, contentDescription = null, modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
                 } else {
                     Image(painterResource(R.drawable.avatar_didi), null, modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
                 }
@@ -4099,7 +4117,7 @@ fun FarmerDashboard(navController: NavHostController, sessionManager: SessionMan
                 bottomBar = { FarmerBottomBar(navController) },
                 contentWindowInsets = WindowInsets(0, 0, 0, 0)
             ) { padding ->
-                FarmerContent(padding, navController, userName, policies, schedule) { showNotifications = true }
+                FarmerContent(padding, navController, userName, policies, schedule, dbProfile?.photo) { showNotifications = true }
             }
         },
         expanded = {
@@ -4142,14 +4160,14 @@ fun FarmerDashboard(navController: NavHostController, sessionManager: SessionMan
                         )
                     )
                 }
-                FarmerContent(PaddingValues(0.dp), navController, userName, policies, schedule) { showNotifications = true }
+                FarmerContent(PaddingValues(0.dp), navController, userName, policies, schedule, dbProfile?.photo) { showNotifications = true }
             }
         }
     )
 }
 
 @Composable
-fun FarmerContent(padding: PaddingValues, navController: NavHostController, userName: String, policies: List<PolicyOut>, schedule: List<VaccinationScheduleItem>, onNotificationClick: () -> Unit) {
+fun FarmerContent(padding: PaddingValues, navController: NavHostController, userName: String, policies: List<PolicyOut>, schedule: List<VaccinationScheduleItem>, profilePhoto: String? = null, onNotificationClick: () -> Unit) {
     val languageState = LocalAppLanguage.current
     val lang = languageState.value
     val inr = remember { java.text.NumberFormat.getInstance(java.util.Locale("en", "IN")) }
@@ -4167,7 +4185,8 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
             name = userName,
             unreadCount = unread,
             onNotificationClick = onNotificationClick,
-            onProfileClick = { navController.navigate("profile") }
+            onProfileClick = { navController.navigate("profile") },
+            remotePhoto = profilePhoto
         )
 
         Column(
@@ -4384,11 +4403,12 @@ private fun FarmerPolicyStat(icon: ImageVector, label: String, value: String, mo
 }
 
 // Mirrors DidiHomeHeader's dimensions and styling (kept as its own function so the
-// two dashboards stay independent).
+// two dashboards stay independent). Avatar prefers the local pick, else the remote
+// profile photo (rememberHeaderAvatar), else the packaged farmer illustration.
 @Composable
-fun FarmerHeader(name: String, unreadCount: Int, onNotificationClick: () -> Unit = {}, onProfileClick: () -> Unit = {}) {
+fun FarmerHeader(name: String, unreadCount: Int, onNotificationClick: () -> Unit = {}, onProfileClick: () -> Unit = {}, remotePhoto: String? = null) {
     val languageState = LocalAppLanguage.current
-    val profileImageState = LocalProfileImage.current
+    val avatar = rememberHeaderAvatar(remotePhoto)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -4398,8 +4418,8 @@ fun FarmerHeader(name: String, unreadCount: Int, onNotificationClick: () -> Unit
     ) {
         Surface(onClick = onProfileClick, color = Color(0xFFF0EAD6), shape = CircleShape, modifier = Modifier.size(52.dp)) {
             Box(contentAlignment = Alignment.Center) {
-                if (profileImageState.value != null) {
-                    AsyncImage(model = profileImageState.value, contentDescription = null, modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                if (avatar != null) {
+                    AsyncImage(model = avatar, contentDescription = null, modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
                 } else {
                     Image(painterResource(R.drawable.avatar_farmer), null, modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
                 }

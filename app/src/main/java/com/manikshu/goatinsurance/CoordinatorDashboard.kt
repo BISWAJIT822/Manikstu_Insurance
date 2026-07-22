@@ -96,7 +96,8 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
                 navController,
                 userName,
                 stringResource(R.string.role_coordinator),
-                onProfileClick = { navController.navigate("profile") }
+                onProfileClick = { navController.navigate("profile") },
+                remotePhoto = dbProfile?.photo
             )
 
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
@@ -151,9 +152,9 @@ fun CoordinatorDashboard(navController: NavHostController, sessionManager: Sessi
 }
 
 @Composable
-fun CoordinatorHeader(navController: NavHostController, name: String, role: String, onProfileClick: () -> Unit) {
+fun CoordinatorHeader(navController: NavHostController, name: String, role: String, onProfileClick: () -> Unit, remotePhoto: String? = null) {
     var expanded by remember { mutableStateOf(false) }
-    val profileImage = LocalProfileImage.current.value
+    val profileImage = rememberHeaderAvatar(remotePhoto)
     val todayLabel = stringResource(R.string.date_today)
     val yesterdayLabel = stringResource(R.string.date_yesterday)
     val thisWeekLabel = stringResource(R.string.date_this_week)
