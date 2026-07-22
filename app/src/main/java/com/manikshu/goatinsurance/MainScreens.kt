@@ -4287,7 +4287,14 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
 
             Spacer(Modifier.height(14.dp))
 
-            if (policies.isEmpty()) {
+            // Home shows only active goats, newest enrolled first. Dead/claimed/inactive
+            // goats never appear here — they live on the My Goats list (View All).
+            // Sequential policy numbers (…-0003 > …-0002) give the newest first.
+            val activeHomeGoats = policies
+                .filter { it.status == "active" }
+                .sortedByDescending { it.policyNumber }
+
+            if (activeHomeGoats.isEmpty()) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -4301,14 +4308,13 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                     ) {
                         Icon(painterResource(R.drawable.ic_ewe_custom), null, tint = Color.LightGray, modifier = Modifier.size(40.dp))
                         Spacer(Modifier.height(8.dp))
-                        Text(lang.getT("No policies yet", "अभी तक कोई नीति नहीं", "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ନୀତି ନାହିଁ"), color = Color.Gray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        Text(lang.getT("No active goats", "कोई सक्रिय बकरी नहीं", "କୌଣସି ସକ୍ରିୟ ଛେଳି ନାହିଁ"), color = Color.Gray, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                         Text(lang.getT("Your enrolled goats will appear here.", "आपकी नामांकित बकरियां यहां दिखाई देंगी।", "ଆପଣଙ୍କ ପଞ୍ଜିକୃତ ଛେଳି ଏଠାରେ ଦେଖାଯିବ।"), color = Color.LightGray, fontSize = 12.sp, textAlign = TextAlign.Center)
                     }
                 }
             } else {
-                // Home shows just the first goat; View All opens the full list.
-                // Same card component as the My Goats list, for UI consistency.
-                policies.first().let { p ->
+                // Home previews the most recently enrolled active goat; View All shows the rest.
+                activeHomeGoats.first().let { p ->
                     FarmerGoatListCard(
                         policy = p,
                         money = { "₹ " + inr.format(it.toLong()) },
@@ -6001,6 +6007,15 @@ private fun FarmerGoatListContent(
     val lang = LocalAppLanguage.current.value
     val inr = remember { java.text.NumberFormat.getInstance(java.util.Locale("en", "IN")) }
     val statusFilter = when (selectedTab) { 1 -> "active"; 2 -> "claimed"; 3 -> "expired"; else -> null }
+    // Alive goats float to the top, dead/claimed sink to the bottom; the list reorders
+    // automatically because it re-derives from `policies` whenever a status changes.
+    fun statusRank(status: String) = when (status) {
+        "active" -> 0
+        "expired" -> 1
+        "dead" -> 2
+        "claimed" -> 3
+        else -> 4
+    }
     val filtered = policies.filter { p ->
         val statusOk = when (statusFilter) {
             null -> true
@@ -6009,7 +6024,7 @@ private fun FarmerGoatListContent(
         }
         val searchOk = searchQuery.isBlank() || p.earTagNumber.contains(searchQuery, true) || p.breed.contains(searchQuery, true)
         statusOk && searchOk
-    }
+    }.sortedBy { statusRank(it.status) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -6145,24 +6160,19 @@ private fun FarmerGoatsTabRow(selected: Int, onTabChange: (Int) -> Unit) {
 @Composable
 private fun FarmerGoatsSearchRow(searchQuery: String, onSearchChange: (String) -> Unit) {
     val lang = LocalAppLanguage.current.value
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = onSearchChange,
-            modifier = Modifier.weight(1f),
-            placeholder = { Text(lang.getT("Search Goat ID / Ear Tag", "बकरी आईडी / कान टैग खोजें", "ଛେଳି ID / କାନ ଟ୍ୟାଗ୍ ଖୋଜନ୍ତୁ"), fontSize = 14.sp) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
-            shape = RoundedCornerShape(16.dp),
-            singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.White, unfocusedContainerColor = Color.White,
-                unfocusedBorderColor = Color(0xFFE3E7DE), focusedBorderColor = PrimaryGreen
-            )
+    OutlinedTextField(
+        value = searchQuery,
+        onValueChange = onSearchChange,
+        modifier = Modifier.fillMaxWidth(),
+        placeholder = { Text(lang.getT("Search Goat ID / Ear Tag", "बकरी आईडी / कान टैग खोजें", "ଛେଳି ID / କାନ ଟ୍ୟାଗ୍ ଖୋଜନ୍ତୁ"), fontSize = 14.sp) },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
+        shape = RoundedCornerShape(16.dp),
+        singleLine = true,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = Color.White, unfocusedContainerColor = Color.White,
+            unfocusedBorderColor = Color(0xFFE3E7DE), focusedBorderColor = PrimaryGreen
         )
-        Surface(shape = RoundedCornerShape(16.dp), color = Color.White, border = BorderStroke(1.dp, Color(0xFFE3E7DE)), modifier = Modifier.size(56.dp)) {
-            Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.FilterList, contentDescription = null, tint = PrimaryGreen) }
-        }
-    }
+    )
 }
 
 @Composable
@@ -9060,6 +9070,7 @@ private fun ClaimDetailsBody(
 
         Spacer(Modifier.height(18.dp))
         Button(
+            
             onClick = onContactSupport,
             modifier = Modifier.fillMaxWidth().height(54.dp),
             shape = RoundedCornerShape(14.dp),
