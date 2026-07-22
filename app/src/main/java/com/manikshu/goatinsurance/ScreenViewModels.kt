@@ -386,17 +386,30 @@ class VaccinationViewModel @Inject constructor(
         }
     }
 
-    fun record(req: RecordVaccinationRequest) {
+    fun record(req: RecordVaccinationRequest) = recordMany(listOf(req))
+
+    /**
+     * Records one or more vaccinations for a goat (the redesigned screen lets the Didi
+     * tick several at once). Each is a separate POST; success is reported only if all
+     * succeed, so a partial failure surfaces rather than silently dropping vaccines.
+     */
+    fun recordMany(reqs: List<RecordVaccinationRequest>) {
+        if (reqs.isEmpty()) return
         viewModelScope.launch {
             _submit.value = SubmitState.Submitting
-            repo.safeCall { recordVaccination(req) }
-                .onSuccess {
-                    if (it.status == "success") {
-                        _submit.value = SubmitState.Success("Vaccination recorded")
-                        load()
-                    } else _submit.value = SubmitState.Error(it.reason ?: "Failed to record")
+            for (req in reqs) {
+                val result = repo.safeCall { recordVaccination(req) }
+                val failure = result.exceptionOrNull()?.message
+                    ?: result.getOrNull()?.takeIf { it.status != "success" }?.reason
+                if (failure != null) {
+                    _submit.value = SubmitState.Error(failure)
+                    return@launch
                 }
-                .onFailure { _submit.value = SubmitState.Error(it.message ?: "Failed to record") }
+            }
+            _submit.value = SubmitState.Success(
+                if (reqs.size == 1) "Vaccination recorded" else "${reqs.size} vaccinations recorded"
+            )
+            load()
         }
     }
 
