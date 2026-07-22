@@ -529,6 +529,9 @@ class EnrollmentViewModel @Inject constructor(
         farmerName: String,
         farmerMobile: String,
         village: String?,
+        block: String?,
+        district: String?,
+        state: String?,
         gpsLocation: String?,
         aadhaarId: String?,
         goats: List<GoatDraft>,
@@ -571,7 +574,8 @@ class EnrollmentViewModel @Inject constructor(
                     }
                     val request = EnrollGoatRequest(
                         farmerName = farmerName, farmerMobile = farmerMobile,
-                        village = village, gpsLocation = gpsLocation, aadhaarId = aadhaarId,
+                        village = village, block = block, district = district, state = state,
+                        gpsLocation = gpsLocation, aadhaarId = aadhaarId,
                         earTagNumber = goat.earTag, breed = goat.breed, gender = goat.genderRaw,
                         ageMonths = goat.ageMonths, weightKg = goat.weightKg, color = goat.color.ifBlank { null },
                         photos = photos, vaccines = vaccinesFor(goat),
