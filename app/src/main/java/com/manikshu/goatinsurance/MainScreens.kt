@@ -4307,13 +4307,14 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                 }
             } else {
                 // Home shows just the first goat; View All opens the full list.
+                // Same card component as the My Goats list, for UI consistency.
                 policies.first().let { p ->
-                    FarmerGoatCard(
+                    FarmerGoatListCard(
                         policy = p,
                         money = { "₹ " + inr.format(it.toLong()) },
-                        onViewPolicy = { navController.navigate("goat_details/${p.policyNumber}") },
                         onReportDeath = { navController.navigate("farmer_report_death") },
                         onTrackClaim = { navController.navigate("claim_list") },
+                        onViewDetails = { navController.navigate("goat_details/${p.policyNumber}") },
                     )
                     Spacer(Modifier.height(14.dp))
                 }
@@ -4336,132 +4337,19 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
     }
 }
 
-/** Insured-goat card for the farmer dashboard, matching the reference layout. */
 @Composable
-private fun FarmerGoatCard(
-    policy: PolicyOut,
-    money: (Double) -> String,
-    onViewPolicy: () -> Unit,
-    onReportDeath: () -> Unit,
-    onTrackClaim: () -> Unit = {},
-) {
-    val lang = LocalAppLanguage.current.value
-    val isActive = policy.status == "active"
-    // A dead-reported or claimed goat is already in the claim pipeline: reporting
-    // again is blocked server-side, so the action becomes tracking that claim.
-    val inClaim = policy.status == "dead" || policy.status == "claimed"
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(18.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(1.dp, Color(0xFFEDF0EA))
-    ) {
-        Column {
-            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier.size(56.dp).clip(CircleShape).background(Color(0xFFEDF4E4)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val goatPhoto = policy.photo?.takeIf { it.isNotBlank() }?.let { absoluteMediaUrl(it) }
-                    if (goatPhoto != null) {
-                        AsyncImage(
-                            model = goatPhoto,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize().clip(CircleShape),
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                        )
-                    } else {
-                        Icon(Icons.Default.VerifiedUser, null, tint = PrimaryGreen, modifier = Modifier.size(28.dp))
-                    }
-                }
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(lang.getT("GOAT ID", "बकरी आईडी", "ଛେଳି ID"), fontSize = 11.sp, color = Color(0xFF8A908A), letterSpacing = 0.6.sp)
-                    Text(policy.earTagNumber, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), maxLines = 1)
-                    Spacer(Modifier.height(4.dp))
-                    Surface(color = Color(0xFFEFF2EC), shape = RoundedCornerShape(8.dp)) {
-                        Text(policy.breed, fontSize = 12.sp, color = Color(0xFF5B6660), modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
-                    }
-                }
-                Surface(
-                    color = Color.White,
-                    shape = RoundedCornerShape(50),
-                    border = BorderStroke(1.dp, if (isActive) PrimaryGreen else Color(0xFFD32F2F))
-                ) {
-                    Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(7.dp).clip(CircleShape).background(if (isActive) PrimaryGreen else Color(0xFFD32F2F)))
-                        Spacer(Modifier.width(5.dp))
-                        Text(
-                            if (isActive) lang.getT("Active", "सक्रिय", "ସକ୍ରିୟ") else policy.status.replaceFirstChar { it.uppercase() },
-                            fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (isActive) PrimaryGreen else Color(0xFFD32F2F)
-                        )
-                    }
-                }
-            }
-
-            HorizontalDivider(color = Color(0xFFEDF0EA))
-
-            Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                FarmerPolicyStat(Icons.Default.CalendarToday, lang.getT("Valid Till", "मान्यता तक", "ବୈଧତା ପର୍ଯ୍ୟନ୍ତ"), policy.validTo, Modifier.weight(1f))
-                Box(Modifier.height(38.dp).width(1.dp).background(Color(0xFFEDF0EA)))
-                Spacer(Modifier.width(12.dp))
-                FarmerPolicyStat(Icons.Default.Shield, lang.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), money(policy.sumInsured), Modifier.weight(1f))
-            }
-
-            HorizontalDivider(color = Color(0xFFEDF0EA))
-
-            Row(
-                modifier = Modifier.fillMaxWidth().background(Color(0xFFF9FBF7)).padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable { onViewPolicy() }.padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Icon(Icons.Default.Description, null, tint = PrimaryGreen, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(lang.getT("View Policy Details", "नीति विवरण देखें", "ନୀତି ବିବରଣୀ ଦେଖନ୍ତୁ"), color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = PrimaryGreen, modifier = Modifier.size(18.dp))
-                }
-                Button(
-                    onClick = if (inClaim) onTrackClaim else onReportDeath,
-                    modifier = Modifier.weight(1f).height(46.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF15501C)),
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(0.dp)
-                ) {
-                    Icon(
-                        if (inClaim) Icons.AutoMirrored.Filled.FactCheck else Icons.Default.NotificationsActive,
-                        null, tint = Color.White, modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        if (inClaim) lang.getT("Track Claim", "दावा ट्रैक करें", "ଦାବି ଟ୍ରାକ୍ କରନ୍ତୁ")
-                        else lang.getT("Report Death", "मृत्यु रिपोर्ट", "ମୃତ୍ୟୁ ରିପୋର୍ଟ"),
-                        color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun FarmerPolicyStat(icon: ImageVector, label: String, value: String, modifier: Modifier = Modifier) {
+private fun FarmerPolicyStat(icon: ImageVector, label: String, value: String, modifier: Modifier = Modifier, tint: Color = PrimaryGreen) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         Box(
-            modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFEDF4E4)),
+            modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(tint.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, null, tint = PrimaryGreen, modifier = Modifier.size(20.dp))
+            Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(10.dp))
         Column {
             Text(label, fontSize = 12.sp, color = Color(0xFF8A908A))
-            Text(value, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen, maxLines = 1)
+            Text(value, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = tint, maxLines = 1)
         }
     }
 }
@@ -6278,9 +6166,9 @@ private fun FarmerGoatsSearchRow(searchQuery: String, onSearchChange: (String) -
 }
 
 @Composable
-private fun FarmerGoatInfoCell(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String, modifier: Modifier = Modifier) {
+private fun FarmerGoatInfoCell(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String, modifier: Modifier = Modifier, tint: Color = Color(0xFF7C8A79)) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = Color(0xFF7C8A79), modifier = Modifier.size(16.dp))
+        Icon(icon, null, tint = tint, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(6.dp))
         Column {
             Text(label, fontSize = 11.sp, color = Color(0xFF8A908A))
@@ -6375,18 +6263,18 @@ private fun FarmerGoatListCard(
 
             Spacer(Modifier.height(14.dp))
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                FarmerGoatInfoCell(Icons.Default.Label, lang.getT("Ear Tag", "कान का टैग", "କାନ ଟ୍ୟାଗ୍"), policy.earTagNumber, Modifier.weight(1f))
-                FarmerGoatInfoCell(genderIcon, lang.getT("Gender", "लिंग", "ଲିଙ୍ଗ"), genderLabel, Modifier.weight(1f))
-                FarmerGoatInfoCell(Icons.Default.Schedule, lang.getT("Age", "उम्र", "ବୟସ"), ageLabelYears(lang, policy.ageMonths), Modifier.weight(1f))
+                FarmerGoatInfoCell(Icons.Default.Label, lang.getT("Ear Tag", "कान का टैग", "କାନ ଟ୍ୟାଗ୍"), policy.earTagNumber, Modifier.weight(1f), tint = IconBlue)
+                FarmerGoatInfoCell(genderIcon, lang.getT("Gender", "लिंग", "ଲିଙ୍ଗ"), genderLabel, Modifier.weight(1f), tint = IconPurple)
+                FarmerGoatInfoCell(Icons.Default.Schedule, lang.getT("Age", "उम्र", "ବୟସ"), ageLabelYears(lang, policy.ageMonths), Modifier.weight(1f), tint = IconAmber)
             }
             Spacer(Modifier.height(14.dp))
             HorizontalDivider(color = Color(0xFFEDF0EA))
 
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                FarmerPolicyStat(Icons.Default.CalendarToday, lang.getT("Valid Till", "मान्यता तक", "ବୈଧତା ପର୍ଯ୍ୟନ୍ତ"), prettyGoatDate(policy.validTo), Modifier.weight(1f))
+                FarmerPolicyStat(Icons.Default.CalendarToday, lang.getT("Valid Till", "मान्यता तक", "ବୈଧତା ପର୍ଯ୍ୟନ୍ତ"), prettyGoatDate(policy.validTo), Modifier.weight(1f), tint = IconBlue)
                 Box(Modifier.height(38.dp).width(1.dp).background(Color(0xFFEDF0EA)))
                 Spacer(Modifier.width(12.dp))
-                FarmerPolicyStat(Icons.Default.Shield, lang.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), money(policy.sumInsured), Modifier.weight(1f))
+                FarmerPolicyStat(Icons.Default.Shield, lang.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), money(policy.sumInsured), Modifier.weight(1f), tint = IconGreen)
             }
             HorizontalDivider(color = Color(0xFFEDF0EA))
 
