@@ -4119,6 +4119,17 @@ fun FarmerDashboard(navController: NavHostController, sessionManager: SessionMan
     val schedule by farmerVm.schedule.collectAsState()
     val policies = (policiesState as? UiState.Success)?.data?.policies ?: emptyList()
 
+    // Re-fetch whenever the dashboard returns to the foreground, so the insured
+    // count drops right after a death report instead of waiting for a restart.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) farmerVm.refresh()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     ResponsiveLayout(
         compact = {
             Scaffold(
@@ -4203,11 +4214,15 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
         ) {
+            // Only alive, actively insured goats count on this screen: a reported-dead
+            // goat comes back as "dead" (then "claimed") and drops out of both counts.
+            val activeGoats = policies.count { it.status == "active" }
+
             // ---- hero: My Insured Goats (matches the Didi hero card's dimensions) ----
             Card(shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth().height(138.dp), elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
                 Box(Modifier.fillMaxSize()) {
                     Image(
-                        painterResource(R.drawable.goat_banner), null,
+                        painterResource(R.drawable.claim_banner), null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                         alignment = Alignment.TopEnd
@@ -4217,7 +4232,7 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                     ))
                     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.SpaceBetween) {
                         Text(lang.getT("My Insured Goats", "मेरी बीमित बकरियां", "ମୋର ବୀମାକୃତ ଛେଳି"), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                        Text("${policies.size}", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Bold)
+                        Text("$activeGoats", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Bold)
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { navController.navigate("goat_list") }) {
                             Text(lang.getT("View all", "सभी देखें", "ସବୁ ଦେଖନ୍ତୁ"), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                             Icon(Icons.Default.ChevronRight, null, tint = Color.White, modifier = Modifier.size(20.dp))
@@ -4228,13 +4243,13 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
 
             Spacer(Modifier.height(24.dp))
 
-            // ---- My GOAT header ----
+            // ---- My Goat header ----
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(lang.getT("My GOAT (${policies.size})", "मेरी बकरी (${policies.size})", "ମୋର ଛେଳି (${policies.size})"), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A))
+                Text(lang.getT("My Goat ($activeGoats)", "मेरी बकरी ($activeGoats)", "ମୋର ଛେଳି ($activeGoats)"), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A))
                 Text(
                     lang.getT("View All", "सभी देखें", "ସବୁ ଦେଖନ୍ତୁ"),
                     color = PrimaryGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp,
@@ -4263,12 +4278,14 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
                     }
                 }
             } else {
-                policies.forEach { p ->
+                // Home shows just the first goat; View All opens the full list.
+                policies.first().let { p ->
                     FarmerGoatCard(
                         policy = p,
                         money = { "₹ " + inr.format(it.toLong()) },
                         onViewPolicy = { navController.navigate("goat_details/${p.policyNumber}") },
                         onReportDeath = { navController.navigate("farmer_report_death") },
+                        onTrackClaim = { navController.navigate("claim_list") },
                     )
                     Spacer(Modifier.height(14.dp))
                 }
@@ -4276,26 +4293,15 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
 
             Spacer(Modifier.height(6.dp))
 
-            // ---- reassurance banner ----
-            Box(
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
-                    .background(Color(0xFFF6EAD0)).padding(20.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        lang.getT("Keep your goats insured for a worry-free future", "एक चिंता-मुक्त भविष्य के लिए अपनी बकरियों का बीमा कराएं", "ଚିନ୍ତାମୁକ୍ତ ଭବିଷ୍ୟତ ପାଇଁ ଆପଣଙ୍କ ଛେଳିର ବୀମା କରନ୍ତୁ"),
-                        modifier = Modifier.weight(1f), fontSize = 16.sp, fontWeight = FontWeight.Bold,
-                        color = Color(0xFF3D3016), lineHeight = 22.sp
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Box(
-                        modifier = Modifier.size(64.dp).clip(CircleShape).background(Color(0xFFEFD9A6)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.VerifiedUser, null, tint = Color(0xFFC8A02E), modifier = Modifier.size(38.dp))
-                    }
-                }
-            }
+            // ---- reassurance banner (text is baked into the artwork) ----
+            Image(
+                painter = painterResource(R.drawable.farmer_bannerlower),
+                contentDescription = lang.getT("Keep your goats insured for a worry-free future", "एक चिंता-मुक्त भविष्य के लिए अपनी बकरियों का बीमा कराएं", "ଚିନ୍ତାମୁକ୍ତ ଭବିଷ୍ୟତ ପାଇଁ ଆପଣଙ୍କ ଛେଳିର ବୀମା କରନ୍ତୁ"),
+                modifier = Modifier.fillMaxWidth()
+                    .aspectRatio(1024f / 278f)
+                    .clip(RoundedCornerShape(18.dp)),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            )
 
             Spacer(Modifier.height(24.dp))
         }
@@ -4309,9 +4315,13 @@ private fun FarmerGoatCard(
     money: (Double) -> String,
     onViewPolicy: () -> Unit,
     onReportDeath: () -> Unit,
+    onTrackClaim: () -> Unit = {},
 ) {
     val lang = LocalAppLanguage.current.value
     val isActive = policy.status == "active"
+    // A dead-reported or claimed goat is already in the claim pipeline: reporting
+    // again is blocked server-side, so the action becomes tracking that claim.
+    val inClaim = policy.status == "dead" || policy.status == "claimed"
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -4379,15 +4389,22 @@ private fun FarmerGoatCard(
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = PrimaryGreen, modifier = Modifier.size(18.dp))
                 }
                 Button(
-                    onClick = onReportDeath,
+                    onClick = if (inClaim) onTrackClaim else onReportDeath,
                     modifier = Modifier.weight(1f).height(46.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF15501C)),
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    Icon(Icons.Default.NotificationsActive, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Icon(
+                        if (inClaim) Icons.AutoMirrored.Filled.FactCheck else Icons.Default.NotificationsActive,
+                        null, tint = Color.White, modifier = Modifier.size(16.dp)
+                    )
                     Spacer(Modifier.width(6.dp))
-                    Text(lang.getT("Report Death", "मृत्यु रिपोर्ट", "ମୃତ୍ୟୁ ରିପୋର୍ଟ"), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(
+                        if (inClaim) lang.getT("Track Claim", "दावा ट्रैक करें", "ଦାବି ଟ୍ରାକ୍ କରନ୍ତୁ")
+                        else lang.getT("Report Death", "मृत्यु रिपोर्ट", "ମୃତ୍ୟୁ ରିପୋର୍ଟ"),
+                        color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp
+                    )
                 }
             }
         }
@@ -6015,18 +6032,17 @@ private fun ageLabelYears(lang: AppLanguage, months: Int): String {
 private fun FarmerGoatListTopBar(onBack: () -> Unit) {
     val lang = LocalAppLanguage.current.value
     Surface(color = Color.White) {
-        Row(
-            modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(start = 6.dp, end = 16.dp, top = 8.dp, bottom = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Box(
+            modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 6.dp, vertical = 10.dp)
         ) {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color(0xFF14231A))
             }
-            Column(Modifier.weight(1f)) {
-                Text(lang.getT("My Goats", "मेरी बकरियां", "ମୋର ଛେଳି"), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A))
-                Text(lang.getT("Manage all your insured goats", "अपनी सभी बीमित बकरियों को प्रबंधित करें", "ଆପଣଙ୍କ ସମସ୍ତ ବୀମାକୃତ ଛେଳି ପରିଚାଳନା କରନ୍ତୁ"), fontSize = 13.sp, color = Color(0xFF8A908A))
-            }
-            Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF14231A), modifier = Modifier.size(26.dp))
+            Text(
+                lang.getT("My Goats", "मेरी बकरियां", "ମୋର ଛେଳି"),
+                modifier = Modifier.align(Alignment.Center),
+                fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A)
+            )
         }
     }
 }
@@ -6743,7 +6759,11 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
                             Image(
                                 painter = painterResource(R.drawable.goat_banner),
                                 contentDescription = null,
-                                modifier = Modifier.matchParentSize(),
+                                // Zoomed a touch so the goat reads larger on the right.
+                                modifier = Modifier.matchParentSize().graphicsLayer {
+                                    scaleX = 1.25f
+                                    scaleY = 1.25f
+                                },
                                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                                 alignment = Alignment.CenterStart
                             )

@@ -684,6 +684,15 @@ class FarmerHomeViewModel @Inject constructor(
             repo.safeCall { farmerVaccinationSchedule() }.onSuccess { _schedule.value = it }
         }
     }
+
+    /** Silent re-fetch (no Loading flash) so the dashboard counts stay right when the
+     *  screen returns to the foreground — e.g. straight after a death report. */
+    fun refresh() {
+        viewModelScope.launch {
+            repo.safeCall { farmerPolicies() }.onSuccess { _policies.value = UiState.Success(it) }
+            repo.safeCall { farmerVaccinationSchedule() }.onSuccess { _schedule.value = it }
+        }
+    }
 }
 
 @HiltViewModel
