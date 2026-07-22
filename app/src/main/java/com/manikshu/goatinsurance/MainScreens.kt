@@ -6791,10 +6791,11 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
                             Image(
                                 painter = painterResource(R.drawable.goat_banner),
                                 contentDescription = null,
-                                // Zoomed a touch so the goat reads larger on the right.
+                                // Zoomed a touch so the goat reads larger, and nudged down.
                                 modifier = Modifier.matchParentSize().graphicsLayer {
                                     scaleX = 1.25f
                                     scaleY = 1.25f
+                                    translationY = size.height * 0.10f
                                 },
                                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                                 alignment = Alignment.CenterStart
