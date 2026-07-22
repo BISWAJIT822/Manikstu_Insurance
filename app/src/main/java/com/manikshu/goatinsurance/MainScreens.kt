@@ -6928,14 +6928,20 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
 @Composable
 fun PolicyDetailsScreen(navController: NavHostController, tag: String, userRole: UserRole?, onBack: () -> Unit) {
     val lang = LocalAppLanguage.current.value
+    val context = LocalContext.current
     val isFarmer = userRole == UserRole.FARMER
+
+    // One PolicyDetailViewModel drives the certificate download for every role (the
+    // /farmer/policy_certificate endpoint accepts any authenticated user); for a farmer
+    // it also loads the policy shown on this screen.
+    val certVm: PolicyDetailViewModel = hiltViewModel()
+    val certState by certVm.certificate.collectAsState()
 
     var detail by remember { mutableStateOf<GoatDetail?>(null) }
     var farmerPolicy by remember { mutableStateOf<PolicyDetail?>(null) }
     if (isFarmer) {
-        val vm: PolicyDetailViewModel = hiltViewModel()
-        val st by vm.state.collectAsState()
-        LaunchedEffect(tag) { vm.load(tag) }
+        val st by certVm.state.collectAsState()
+        LaunchedEffect(tag) { certVm.load(tag) }
         farmerPolicy = (st as? UiState.Success)?.data
     } else {
         val vm: GoatDetailViewModel = hiltViewModel()
@@ -6962,6 +6968,32 @@ fun PolicyDetailsScreen(navController: NavHostController, tag: String, userRole:
     val inr = remember { java.text.NumberFormat.getInstance(java.util.Locale("en", "IN")) }
     fun money(v: Double?) = v?.let { "₹ " + inr.format(it.toLong()) } ?: "—"
 
+    // Open the downloaded certificate PDF, or report a failure.
+    LaunchedEffect(certState) {
+        when (val s = certState) {
+            is SubmitState.Success -> {
+                s.message?.let { path ->
+                    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", File(path))
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, "application/pdf")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    try {
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        Toast.makeText(context, lang.getT("No PDF viewer installed", "कोई पीडीएफ व्यूअर नहीं मिला", "କୌଣସି PDF ଭ୍ୟୁଅର୍ ନାହିଁ"), Toast.LENGTH_LONG).show()
+                    }
+                }
+                certVm.resetCertificate()
+            }
+            is SubmitState.Error -> {
+                Toast.makeText(context, s.message ?: lang.getT("Download failed", "डाउनलोड विफल", "ଡାଉନଲୋଡ୍ ବିଫଳ"), Toast.LENGTH_LONG).show()
+                certVm.resetCertificate()
+            }
+            else -> {}
+        }
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = PageBackground,
@@ -6984,6 +7016,25 @@ fun PolicyDetailsScreen(navController: NavHostController, tag: String, userRole:
                     modifier = Modifier.align(Alignment.Center),
                     fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A)
                 )
+                // Download this goat's policy certificate PDF and open it.
+                IconButton(
+                    onClick = {
+                        val earTag = goatTag
+                        if (earTag.isNullOrBlank()) {
+                            Toast.makeText(context, lang.getT("Loading policy, please wait…", "पॉलिसी लोड हो रही है, प्रतीक्षा करें…", "ନୀତି ଲୋଡ୍ ହେଉଛି, ଅପେକ୍ଷା କରନ୍ତୁ…"), Toast.LENGTH_SHORT).show()
+                        } else {
+                            certVm.downloadCertificate(earTag, context.cacheDir)
+                        }
+                    },
+                    enabled = certState !is SubmitState.Submitting,
+                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 6.dp)
+                ) {
+                    if (certState is SubmitState.Submitting) {
+                        CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp, color = PrimaryGreen)
+                    } else {
+                        Icon(Icons.Default.FileDownload, contentDescription = "Download policy certificate", tint = Color(0xFF14231A))
+                    }
+                }
             }
 
             Column(
