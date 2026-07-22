@@ -4233,38 +4233,42 @@ fun FarmerContent(padding: PaddingValues, navController: NavHostController, user
             remotePhoto = profilePhoto
         )
 
+        // Only alive, actively insured goats count on this screen: a reported-dead
+        // goat comes back as "dead" (then "claimed") and drops out of both counts.
+        val activeGoats = policies.count { it.status == "active" }
+
+        // Matches the Didi dashboard's header ↔ hero gap.
+        Spacer(Modifier.height(12.dp))
+
+        // ---- hero: My Insured Goats — pinned above the scroll, like the Didi hero ----
+        Card(shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).height(138.dp), elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
+            Box(Modifier.fillMaxSize()) {
+                Image(
+                    painterResource(R.drawable.claim_banner), null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    alignment = Alignment.TopEnd
+                )
+                Box(Modifier.fillMaxSize().background(
+                    Brush.horizontalGradient(0.0f to Color(0xCC1B5230), 0.45f to Color(0x881B5230), 1.0f to Color(0x001B5230))
+                ))
+                Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                    Text(lang.getT("My Insured Goats", "मेरी बीमित बकरियां", "ମୋର ବୀମାକୃତ ଛେଳି"), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text("$activeGoats", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { navController.navigate("goat_list") }) {
+                        Text(lang.getT("View all", "सभी देखें", "ସବୁ ଦେଖନ୍ତୁ"), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        Icon(Icons.Default.ChevronRight, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
+                }
+            }
+        }
+
+        // ---- everything below the hero scrolls ----
         Column(
             modifier = Modifier.weight(1f).fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
         ) {
-            // Only alive, actively insured goats count on this screen: a reported-dead
-            // goat comes back as "dead" (then "claimed") and drops out of both counts.
-            val activeGoats = policies.count { it.status == "active" }
-
-            // ---- hero: My Insured Goats (matches the Didi hero card's dimensions) ----
-            Card(shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth().height(138.dp), elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)) {
-                Box(Modifier.fillMaxSize()) {
-                    Image(
-                        painterResource(R.drawable.claim_banner), null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                        alignment = Alignment.TopEnd
-                    )
-                    Box(Modifier.fillMaxSize().background(
-                        Brush.horizontalGradient(0.0f to Color(0xCC1B5230), 0.45f to Color(0x881B5230), 1.0f to Color(0x001B5230))
-                    ))
-                    Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                        Text(lang.getT("My Insured Goats", "मेरी बीमित बकरियां", "ମୋର ବୀମାକୃତ ଛେଳି"), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                        Text("$activeGoats", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Bold)
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { navController.navigate("goat_list") }) {
-                            Text(lang.getT("View all", "सभी देखें", "ସବୁ ଦେଖନ୍ତୁ"), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                            Icon(Icons.Default.ChevronRight, null, tint = Color.White, modifier = Modifier.size(20.dp))
-                        }
-                    }
-                }
-            }
-
             Spacer(Modifier.height(24.dp))
 
             // ---- My Goat header ----
@@ -5846,6 +5850,15 @@ fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack
     if (isFarmer) {
         val farmerVm: FarmerHomeViewModel = hiltViewModel()
         val policiesState by farmerVm.policies.collectAsState()
+        // Re-fetch on return so the counts follow a fresh death report / claim update.
+        val lifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) farmerVm.refresh()
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        }
         LaunchedEffect(policiesState) {
             when (val s = policiesState) {
                 is UiState.Loading -> { isLoading = true; errorMsg = null }
@@ -5862,6 +5875,7 @@ fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack
                         "active" to ps.count { it.status == "active" },
                         "expired" to ps.count { it.status == "expired" },
                         "claimed" to ps.count { it.status == "claimed" },
+                        "dead" to ps.count { it.status == "dead" },
                     )
                 }
             }
@@ -6112,7 +6126,9 @@ private fun FarmerGoatListContent(
             FarmerGoatsHeroCard(
                 total = counts["all"] ?: policies.size,
                 active = counts["active"] ?: 0,
-                claims = counts["claimed"] ?: 0,
+                expired = counts["expired"] ?: 0,
+                // A settled (claimed) death is still a dead goat, so it stays counted.
+                dead = (counts["dead"] ?: 0) + (counts["claimed"] ?: 0),
             )
         }
         item { FarmerGoatsTabRow(selectedTab, onTabChange) }
@@ -6141,38 +6157,55 @@ private fun FarmerGoatListContent(
 }
 
 @Composable
-private fun FarmerGoatsHeroCard(total: Int, active: Int, claims: Int) {
+private fun FarmerGoatsHeroCard(total: Int, active: Int, expired: Int, dead: Int) {
     val lang = LocalAppLanguage.current.value
-    Box(modifier = Modifier.fillMaxWidth().height(188.dp).clip(RoundedCornerShape(22.dp))) {
-        Image(
-            painterResource(R.drawable.goat_banner), null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-            alignment = Alignment.CenterEnd
-        )
-        Box(Modifier.fillMaxSize().background(
-            Brush.horizontalGradient(0.0f to Color(0xFF1B5230), 0.55f to Color(0xE81B5230), 1.0f to Color(0x22143D22))
-        ))
-        Column(Modifier.fillMaxHeight().fillMaxWidth(0.64f).padding(20.dp), verticalArrangement = Arrangement.Center) {
-            Text(lang.getT("Total Insured Goats", "कुल बीमित बकरियां", "ମୋଟ ବୀମାକୃତ ଛେଳି"), color = Color.White.copy(alpha = 0.92f), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Text("$total", color = Color.White, fontSize = 46.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(10.dp))
-            Box(Modifier.fillMaxWidth(0.9f).height(1.dp).background(Color.White.copy(alpha = 0.3f)))
-            Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.VerifiedUser, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(lang.getT("Active Policies", "सक्रिय नीतियां", "ସକ୍ରିୟ ନୀତି"), color = Color.White.copy(alpha = 0.92f), fontSize = 13.sp, modifier = Modifier.weight(1f))
-                Text("$active", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+    Box(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
+            .background(Brush.linearGradient(listOf(Color(0xFF2E7D32), Color(0xFF15501C))))
+            .padding(vertical = 20.dp, horizontal = 20.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Left: the three policy/mortality stats.
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                FarmerHeroStat(Icons.Default.VerifiedUser, lang.getT("Active Policies", "सक्रिय नीतियां", "ସକ୍ରିୟ ନୀତି"), active)
+                FarmerHeroStat(Icons.Default.Schedule, lang.getT("Expired Policies", "समाप्त नीतियां", "ମିଆଦ ସରିଥିବା ନୀତି"), expired)
+                FarmerHeroStat(Icons.Default.Warning, lang.getT("Dead Goats", "मृत बकरियां", "ମୃତ ଛେଳି"), dead)
             }
-            Spacer(Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Description, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(lang.getT("Claims Pending", "लंबित दावे", "ବିଚାରାଧୀନ ଦାବି"), color = Color.White.copy(alpha = 0.92f), fontSize = 13.sp, modifier = Modifier.weight(1f))
-                Text("$claims", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.width(16.dp))
+            Box(Modifier.width(1.dp).height(120.dp).background(Color.White.copy(alpha = 0.25f)))
+            Spacer(Modifier.width(16.dp))
+            // Right: total-enrolled highlight.
+            Column(
+                modifier = Modifier.width(120.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    lang.getT("Total Insured Goats", "कुल बीमित बकरियां", "ମୋଟ ବୀମାକୃତ ଛେଳି"),
+                    color = Color.White.copy(alpha = 0.92f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center, lineHeight = 16.sp
+                )
+                Spacer(Modifier.height(6.dp))
+                Text("$total", color = Color.White, fontSize = 46.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    lang.getT("Total Goats", "कुल बकरियां", "ମୋଟ ଛେଳି"),
+                    color = Color.White.copy(alpha = 0.75f), fontSize = 12.sp, textAlign = TextAlign.Center
+                )
             }
         }
+    }
+}
+
+/** One "label ........ value" row for the farmer goats hero card. */
+@Composable
+private fun FarmerHeroStat(icon: ImageVector, label: String, value: Int) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = Color.White, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(label, color = Color.White.copy(alpha = 0.92f), fontSize = 13.sp, modifier = Modifier.weight(1f), maxLines = 1)
+        Spacer(Modifier.width(8.dp))
+        Text("$value", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
     }
 }
 
