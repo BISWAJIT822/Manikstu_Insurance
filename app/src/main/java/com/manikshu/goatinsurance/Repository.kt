@@ -82,6 +82,7 @@ class Repository @Inject constructor(
     // ---------------- suraksha didi ----------------
     suspend fun sdProfile() = api.sdProfile()
     suspend fun sdDashboard() = api.sdDashboard()
+    suspend fun farmerLookup(mobile: String) = api.farmerLookup(mobile)
     suspend fun enrollGoat(body: EnrollGoatRequest) = api.enrollGoat(body)
     suspend fun sdGoats(tab: String = "all", search: String? = null, page: Int = 1, pageSize: Int = 20) =
         api.sdGoats(tab, search, page, pageSize)

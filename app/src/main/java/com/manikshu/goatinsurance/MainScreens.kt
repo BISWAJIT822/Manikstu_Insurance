@@ -2890,12 +2890,34 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
     var aadhaar by rememberSaveable { mutableStateOf("") }
 
     // Cascading location dropdowns (State -> District -> Block), served by the backend.
+    // The reset-on-change lives in the field callbacks below, so a programmatic
+    // auto-fill (from the farmer lookup) can set all three without being wiped.
     val locationVm: LocationViewModel = hiltViewModel()
     val stateOptions by locationVm.states.collectAsState()
     val districtOptions by locationVm.districts.collectAsState()
     val blockOptions by locationVm.blocks.collectAsState()
-    LaunchedEffect(farmerState) { farmerDistrict = ""; farmerBlock = ""; locationVm.loadDistricts(farmerState) }
-    LaunchedEffect(farmerDistrict) { farmerBlock = ""; locationVm.loadBlocks(farmerState, farmerDistrict) }
+
+    // Step 1: the farmer's mobile must already be registered. Look it up as the
+    // Didi types; auto-fill the farmer's details when found, warn (and block Next)
+    // when not. Re-runs after a process restart because the saved mobile re-keys it.
+    val farmerLookup by enrollVm.farmerLookup.collectAsState()
+    var showNotRegisteredDialog by remember { mutableStateOf(false) }
+    LaunchedEffect(mobileNumber) { enrollVm.lookupFarmer(mobileNumber) }
+    LaunchedEffect(farmerLookup) {
+        when (val fl = farmerLookup) {
+            is FarmerLookup.Found -> {
+                val f = fl.farmer
+                f.fullName?.let { farmerName = it }
+                f.village?.let { village = it }
+                f.aadhaarId?.let { aadhaar = it }
+                if (!f.state.isNullOrBlank()) { farmerState = f.state!!; locationVm.loadDistricts(f.state!!) }
+                if (!f.district.isNullOrBlank()) { farmerDistrict = f.district!!; locationVm.loadBlocks(f.state ?: "", f.district!!) }
+                if (!f.block.isNullOrBlank()) farmerBlock = f.block!!
+            }
+            is FarmerLookup.NotFound -> showNotRegisteredDialog = true
+            else -> {}
+        }
+    }
     
     // Current goat form (one goat being added/edited).
     // Breed and gender start empty so the Didi has to choose: a pre-filled default
@@ -2973,6 +2995,29 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
         languageState.value.getT("Policy Generated", "पॉलिसी जेनरेट हुई", "ନୀତି ପ୍ରସ୍ତୁତ ହୋଇଛି")
     )
 
+    if (showNotRegisteredDialog) {
+        AlertDialog(
+            onDismissRequest = { showNotRegisteredDialog = false },
+            icon = { Icon(Icons.Default.Warning, null, tint = Color(0xFFD32F2F)) },
+            title = { Text(languageState.value.getT("Farmer not registered", "किसान पंजीकृत नहीं है", "କୃଷକ ପଞ୍ଜିକୃତ ନୁହେଁ"), fontWeight = FontWeight.Bold, color = Color.Black) },
+            text = {
+                Text(
+                    languageState.value.getT(
+                        "This mobile number is not registered yet. Please register the farmer first.",
+                        "यह मोबाइल नंबर अभी तक पंजीकृत नहीं है। कृपया पहले किसान को पंजीकृत करें।",
+                        "ଏହି ମୋବାଇଲ୍ ନମ୍ବର ଏପର୍ଯ୍ୟନ୍ତ ପଞ୍ଜିକୃତ ନୁହେଁ। ଦୟାକରି ପ୍ରଥମେ କୃଷକଙ୍କୁ ପଞ୍ଜିକୃତ କରନ୍ତୁ।"
+                    ),
+                    color = Color(0xFF5B6660)
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showNotRegisteredDialog = false }) {
+                    Text(languageState.value.getT("OK", "ठीक है", "ଠିକ୍ ଅଛି"), color = PrimaryGreen, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
     Scaffold(
         // background before the inset padding, so white also covers the area behind
         // the transparent system nav bar instead of leaving the window showing.
@@ -3017,12 +3062,13 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
                     1 -> EnrollmentFarmerStep(
                         farmerName, { if (it.all { char -> char.isLetter() || char.isWhitespace() }) farmerName = it },
                         mobileNumber, { if (it.length <= 10) mobileNumber = it },
-                        farmerState, { farmerState = it }, stateOptions,
-                        farmerDistrict, { farmerDistrict = it }, districtOptions,
+                        farmerState, { farmerState = it; farmerDistrict = ""; farmerBlock = ""; locationVm.loadDistricts(it) }, stateOptions,
+                        farmerDistrict, { farmerDistrict = it; farmerBlock = ""; locationVm.loadBlocks(farmerState, it) }, districtOptions,
                         farmerBlock, { farmerBlock = it }, blockOptions,
                         village, { if (it.all { char -> char.isLetter() || char.isWhitespace() }) village = it },
                         location, { location = it },
-                        aadhaar, { if (it.length <= 12) aadhaar = it }
+                        aadhaar, { if (it.length <= 12) aadhaar = it },
+                        mobileLookup = farmerLookup
                     )
                     2 -> EnrollmentGoatStep(breed, { breed = it }, gender, { gender = it }, age, { age = it }, ageUnit, { ageUnit = it }, weight, { weight = it }, colorMarks, { colorMarks = it }, earTagNumber, { earTagNumber = it })
                     3 -> EnrollmentPhotoStep(
@@ -3056,7 +3102,7 @@ fun EnrollmentStepper(onBack: () -> Unit, onComplete: () -> Unit) {
             val tagIsUnique = goats.filterIndexed { i, _ -> i != editingIndex }
                 .none { it.earTag.equals(earTagNumber.trim(), ignoreCase = true) }
             val isStepValid = when(currentStep) {
-                1 -> farmerName.isNotBlank() && mobileNumber.length == 10 && farmerState.isNotBlank() && farmerDistrict.isNotBlank() && farmerBlock.isNotBlank() && village.isNotBlank() && location.isNotBlank() && aadhaar.length == 12
+                1 -> farmerLookup is FarmerLookup.Found && farmerName.isNotBlank() && mobileNumber.length == 10 && farmerState.isNotBlank() && farmerDistrict.isNotBlank() && farmerBlock.isNotBlank() && village.isNotBlank() && location.isNotBlank() && aadhaar.length == 12
                 2 -> breed.isNotBlank() && gender.isNotBlank() && age.isNotBlank() && weight.isNotBlank() && colorMarks.isNotBlank() && earTagNumber.isNotBlank() && tagIsUnique
                 3 -> leftPhotoUri != null && rightPhotoUri != null && frontPhotoUri != null && tagPhotoUri != null
                 6 -> (premiumAmount.toIntOrNull() ?: 0) > 0
@@ -3151,13 +3197,24 @@ fun EnrollmentFarmerStep(
     block: String, onBlockChange: (String) -> Unit, blockOptions: List<String>,
     village: String, onVillageChange: (String) -> Unit,
     location: String, onLocationChange: (String) -> Unit,
-    aadhaar: String, onAadhaarChange: (String) -> Unit
+    aadhaar: String, onAadhaarChange: (String) -> Unit,
+    mobileLookup: FarmerLookup = FarmerLookup.Idle
 ) {
     val languageState = LocalAppLanguage.current
     val fetchGps = rememberGpsFetcher(onResult = { onLocationChange(it) })
+    val mobileError = mobileLookup is FarmerLookup.NotFound || mobileLookup is FarmerLookup.Error
     Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
         EnrollmentTextField(label = languageState.value.getT("Farmer Name *", "किसान का नाम *", "କୃଷକଙ୍କ ନାମ *"), value = name, onValueChange = onNameChange, placeholder = "Full Name", leadingIcon = Icons.Default.Person, iconTint = IconGreen)
-        EnrollmentTextField(label = languageState.value.getT("Mobile Number *", "मोबाइल नंबर *", "ମୋବାଇଲ୍ ନମ୍ବର *"), value = phone, onValueChange = onPhoneChange, placeholder = "10-digit number", keyboardType = KeyboardType.Phone, prefix = "+91 ", leadingIcon = Icons.Default.Phone, iconTint = IconBlue)
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            EnrollmentTextField(label = languageState.value.getT("Mobile Number *", "मोबाइल नंबर *", "ମୋବାଇଲ୍ ନମ୍ବର *"), value = phone, onValueChange = onPhoneChange, placeholder = "10-digit number", keyboardType = KeyboardType.Phone, prefix = "+91 ", leadingIcon = Icons.Default.Phone, borderColor = if (mobileError) Color(0xFFD32F2F) else PrimaryGreen, iconTint = if (mobileError) Color(0xFFD32F2F) else IconBlue)
+            when (val fl = mobileLookup) {
+                is FarmerLookup.Loading -> Text(languageState.value.getT("Checking registration…", "पंजीकरण जांच हो रही है…", "ପଞ୍ଜିକରଣ ଯାଞ୍ଚ ହେଉଛି…"), fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(start = 4.dp))
+                is FarmerLookup.Found -> Text("✓ " + languageState.value.getT("Registered", "पंजीकृत", "ପଞ୍ଜିକୃତ") + ": ${fl.farmer.fullName ?: "-"}", fontSize = 12.sp, color = PrimaryGreen, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp))
+                is FarmerLookup.NotFound -> Text(languageState.value.getT("This mobile number is not registered yet. Please register the farmer first.", "यह मोबाइल नंबर अभी तक पंजीकृत नहीं है। कृपया पहले किसान को पंजीकृत करें।", "ଏହି ମୋବାଇଲ୍ ନମ୍ବର ଏପର୍ଯ୍ୟନ୍ତ ପଞ୍ଜିକୃତ ନୁହେଁ। ଦୟାକରି ପ୍ରଥମେ କୃଷକଙ୍କୁ ପଞ୍ଜିକୃତ କରନ୍ତୁ।"), fontSize = 12.sp, color = Color(0xFFD32F2F), modifier = Modifier.padding(start = 4.dp))
+                is FarmerLookup.Error -> Text(fl.message, fontSize = 12.sp, color = Color(0xFFD32F2F), modifier = Modifier.padding(start = 4.dp))
+                else -> {}
+            }
+        }
         EnrollmentDropdownField(label = languageState.value.getT("State *", "राज्य *", "ରାଜ୍ୟ *"), selectedValue = state, options = stateOptions, onValueChange = onStateChange, placeholder = languageState.value.getT("Select State", "राज्य चुनें", "ରାଜ୍ୟ ବାଛନ୍ତୁ"), leadingIcon = Icons.Default.Public, iconTint = IconIndigo)
         EnrollmentDropdownField(label = languageState.value.getT("District *", "जिला *", "ଜିଲ୍ଲା *"), selectedValue = district, options = districtOptions, onValueChange = onDistrictChange, placeholder = languageState.value.getT("Select District", "जिला चुनें", "ଜିଲ୍ଲା ବାଛନ୍ତୁ"), leadingIcon = Icons.Default.LocationCity, iconTint = IconBlue)
         EnrollmentDropdownField(label = languageState.value.getT("Block *", "ब्लॉक *", "ବ୍ଲକ୍ *"), selectedValue = block, options = blockOptions, onValueChange = onBlockChange, placeholder = languageState.value.getT("Select Block", "ब्लॉक चुनें", "ବ୍ଲକ୍ ବାଛନ୍ତୁ"), leadingIcon = Icons.Default.Business, iconTint = IconTeal)

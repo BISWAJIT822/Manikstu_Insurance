@@ -140,6 +140,9 @@ interface ApiService {
     @GET("sd/dashboard")
     suspend fun sdDashboard(): SdDashboard
 
+    @GET("sd/farmer_lookup")
+    suspend fun farmerLookup(@Query("mobile") mobile: String): FarmerLookupResponse
+
     @POST("sd/enroll_goat")
     suspend fun enrollGoat(@Body body: EnrollGoatRequest): EnrollGoatResponse
 
