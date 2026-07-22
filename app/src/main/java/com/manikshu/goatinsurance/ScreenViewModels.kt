@@ -961,6 +961,16 @@ class CoordinatorClaimsViewModel @Inject constructor(
         }
     }
 
+    /** Same claim detail, fetched via the farmer-scoped endpoint (Farmer Claim Details). */
+    fun loadFarmerReview(claimNumber: String) {
+        viewModelScope.launch {
+            _review.value = UiState.Loading
+            repo.safeCall { farmerClaimReview(claimNumber) }
+                .onSuccess { _review.value = UiState.Success(it) }
+                .onFailure { _review.value = UiState.Error(it.message ?: "Failed to load claim") }
+        }
+    }
+
     fun review(claimNumber: String, action: String, amount: Double? = null) {
         viewModelScope.launch {
             _submit.value = SubmitState.Submitting

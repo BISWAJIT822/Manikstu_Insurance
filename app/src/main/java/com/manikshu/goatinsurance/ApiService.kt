@@ -205,6 +205,9 @@ interface ApiService {
     @GET("farmer/claims")
     suspend fun farmerClaims(): FarmerClaimListResponse
 
+    @GET("farmer/claims/{claimNumber}")
+    suspend fun farmerClaimReview(@Path("claimNumber") claimNumber: String): ClaimReview
+
     // ----------------- COORDINATOR -----------------
     @GET("coordinator/profile")
     suspend fun coProfile(): ProfileResponse
