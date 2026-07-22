@@ -1587,21 +1587,32 @@ fun HeroAssignedFarmersCard(count: Int?, showViewAll: Boolean = true, onViewAll:
         Box(Modifier.fillMaxSize()) {
             Image(
                 painterResource(R.drawable.farmer_banner), null,
-                modifier = Modifier.fillMaxSize(),
+                // Slight zoom + right shift crops the empty margin after the third
+                // farmer, so his arm meets the card's right border.
+                modifier = Modifier.fillMaxSize().graphicsLayer {
+                    scaleX = 1.15f
+                    scaleY = 1.15f
+                    translationX = size.width * 0.05f
+                },
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                 alignment = Alignment.TopEnd
             )
             val heroText = Color(0xFF0C3218) // deep green, reads clearly on the banner
-            Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                Text(languageState.value.getT("My Assigned Farmers", "मेरे सौंपे गए किसान", "ମୋର ନ୍ୟସ୍ତ କୃଷକ"), color = heroText, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                Text(count?.toString() ?: "…", color = heroText, fontSize = 38.sp, fontWeight = FontWeight.Bold)
+            // Reference layout: title with the count tight beneath it, View all pinned
+            // to the bottom-left with clear air in between. The column stays on the left
+            // 55% of the card so the text never runs into the farmer artwork.
+            Column(Modifier.fillMaxWidth(0.58f).fillMaxHeight().padding(horizontal = 20.dp, vertical = 14.dp)) {
+                Text(
+                    languageState.value.getT("My Assigned Farmers", "मेरे सौंपे गए किसान", "ମୋର ନ୍ୟସ୍ତ କୃଷକ"),
+                    color = heroText, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1
+                )
+                Text(count?.toString() ?: "…", color = heroText, fontSize = 40.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.weight(1f))
                 if (showViewAll) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onViewAll() }) {
-                        Text(languageState.value.getT("View all", "सभी देखें", "ସବୁ ଦେଖନ୍ତୁ"), color = heroText, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        Icon(Icons.Default.ChevronRight, null, tint = heroText, modifier = Modifier.size(20.dp))
+                        Text(languageState.value.getT("View all", "सभी देखें", "ସବୁ ଦେଖନ୍ତୁ"), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Icon(Icons.Default.ChevronRight, null, tint = Color.White, modifier = Modifier.size(20.dp))
                     }
-                } else {
-                    Spacer(Modifier.height(2.dp))
                 }
             }
         }
@@ -8266,17 +8277,33 @@ fun ClaimListScreen(navController: NavHostController, userRole: UserRole?, onBac
                     Image(
                         painter = painterResource(R.drawable.claim_banner),
                         contentDescription = null,
-                        modifier = Modifier.matchParentSize(),
+                        // Shifted down so the goat's face sits clear of the top edge.
+                        modifier = Modifier.matchParentSize().graphicsLayer {
+                            scaleX = 1.25f
+                            scaleY = 1.25f
+                            translationY = size.height * 0.04f
+                        },
                         contentScale = ContentScale.Crop,
                         alignment = Alignment.CenterEnd
                     )
-                    Box(Modifier.matchParentSize().background(
-                        Brush.horizontalGradient(0.0f to Color(0xCC12401F), 0.55f to Color(0x8012401F), 1.0f to Color(0x3312401F))
-                    ))
-                    
+                    // Green fade along the bottom so the status row reads over the grass.
+                    Box(
+                        Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(100.dp)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color.Transparent,
+                                        Color(0x8812401F),
+                                        Color(0xD912401F),
+                                        Color(0xFF12401F),
+                                    )
+                                )
+                            )
+                    )
+
                     Column(modifier = Modifier.padding(20.dp)) {
-                        Text(lang.getT("Total Claims", "कुल दावे", "ମୋଟ ଦାବି"), color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
-                        Text("${counts["all"]}", color = Color.White, fontSize = 48.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(lang.getT("Total Claims", "कुल दावे", "ମୋଟ ଦାବି"), color = Color(0xFF0C3218), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text("${counts["all"]}", color = Color(0xFF0C3218), fontSize = 48.sp, fontWeight = FontWeight.ExtraBold)
                         
                         Spacer(modifier = Modifier.weight(1f))
                         
@@ -8868,66 +8895,59 @@ private fun ClaimDetailsBody(
         ) {
             Box(Modifier.fillMaxWidth()) {
                 Image(
-                    painter = painterResource(R.drawable.claim_banner2),
+                    painter = painterResource(R.drawable.claim_banner),
                     contentDescription = null,
-                    // The goat sits dead centre in this artwork, right where the claim
-                    // id is drawn. ContentScale alone can't shift it (Crop scales to the
-                    // width here, so horizontal alignment is a no-op), so zoom slightly
-                    // and translate right to keep the left half clear for the text.
+                    // Same banner and framing as the My Claims summary card.
                     modifier = Modifier.matchParentSize().graphicsLayer {
-                        scaleX = 1.35f
-                        scaleY = 1.35f
-                        translationX = size.width * 0.16f
-                        translationY = size.height * 0.10f
+                        scaleX = 1.25f
+                        scaleY = 1.25f
+                        translationY = size.height * 0.06f
                     },
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                     alignment = Alignment.CenterEnd
                 )
-                // Fade the banner out to white along the bottom so the reported-on /
-                // reported-by stats read against the grass instead of over it.
+                // Green fade along the bottom, matching the My Claims card, so the
+                // reported-on / reported-by stats read over the grass.
                 Box(
-                    Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(86.dp)
+                    Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(100.dp)
                         .background(
                             Brush.verticalGradient(
                                 listOf(
                                     Color.Transparent,
-                                    Color.White.copy(alpha = 0.75f),
-                                    Color.White.copy(alpha = 0.95f),
+                                    Color(0x8812401F),
+                                    Color(0xD912401F),
+                                    Color(0xFF12401F),
                                 )
                             )
                         )
                 )
                 Column(Modifier.fillMaxWidth().padding(14.dp)) {
                     Row(Modifier.fillMaxWidth(0.7f), verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            Modifier.size(52.dp).clip(RoundedCornerShape(14.dp)).background(Color.White),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Description, null, tint = PrimaryGreen, modifier = Modifier.size(34.dp))
-                        }
-                        Spacer(Modifier.width(12.dp))
                         Column {
-                            Text(lang.getT("Claim ID", "दावा आईडी", "ଦାବି ID"), fontSize = 10.sp, color = Color(0xFF5B6660))
+                            Text(lang.getT("Claim ID", "दावा आईडी", "ଦାବି ID"), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF5B6660))
                             Text(review.claimNumber, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), maxLines = 1)
                             Spacer(Modifier.height(4.dp))
                             ClaimStatusPill(review.status, lang)
                         }
                     }
                     Spacer(Modifier.height(12.dp))
-                    HorizontalDivider(color = Color(0x33000000), modifier = Modifier.fillMaxWidth(0.7f))
+                    HorizontalDivider(color = Color(0x4DFFFFFF), modifier = Modifier.fillMaxWidth(0.7f))
                     Spacer(Modifier.height(10.dp))
-                    Row(Modifier.fillMaxWidth(0.72f)) {
+                    // These sit on the green fade, so they render in white.
+                    Row(Modifier.fillMaxWidth()) {
                         ClaimHeroStat(
                             Icons.Default.CalendarToday,
                             lang.getT("Claim Reported On", "दावा दर्ज", "ଦାବି ଦାଖଲ"),
-                            claimDate(review.claimReportedOn), Modifier.weight(1f), accent = IconBlue
+                            claimDate(review.claimReportedOn), Modifier.weight(1f),
+                            accent = Color(0xFF9BC7FF), onDark = true
                         )
-                        Box(Modifier.height(34.dp).width(1.dp).background(Color(0x22000000)))
+                        Box(Modifier.height(34.dp).width(1.dp).background(Color(0x33FFFFFF)))
                         Spacer(Modifier.width(10.dp))
                         ClaimHeroStat(
                             Icons.Default.Person,
                             lang.getT("Reported By", "रिपोर्ट कर्ता", "ରିପୋର୍ଟକର୍ତ୍ତା"),
-                            review.reportedBy ?: review.farmer ?: "—", Modifier.weight(1f), accent = IconPurple
+                            review.reportedBy ?: review.farmer ?: "—", Modifier.weight(1f),
+                            accent = Color(0xFFD3B8FF), onDark = true
                         )
                     }
                 }
@@ -9036,7 +9056,8 @@ private fun ClaimStatusPill(status: String, lang: AppLanguage) {
         "approved", "claimed" -> Triple(lang.getT("Approved", "स्वीकृत", "ଅନୁମୋଦିତ"), Color(0xFFE3F3E4), Color(0xFF2E7D32))
         "rejected" -> Triple(lang.getT("Rejected", "अस्वीकृत", "ପ୍ରତ୍ୟାଖ୍ୟାନ"), Color(0xFFFBE7E7), Color(0xFFC62828))
         "hold" -> Triple(lang.getT("On Hold", "होल्ड पर", "ହୋଲ୍ଡ"), Color(0xFFE6EFFA), Color(0xFF1565C0))
-        else -> Triple(lang.getT("Pending", "लंबित", "ବାକି"), Color(0xFFFCEEDA), Color(0xFFC68A2E))
+        // Solid amber: the old pale cream vanished against the banner sky.
+        else -> Triple(lang.getT("Pending", "लंबित", "ବାକି"), Color(0xFFD98200), Color.White)
     }
     Surface(color = bg, shape = RoundedCornerShape(50)) {
         Text(label, color = fg, fontSize = 11.sp, fontWeight = FontWeight.Bold,
@@ -9045,13 +9066,14 @@ private fun ClaimStatusPill(status: String, lang: AppLanguage) {
 }
 
 @Composable
-private fun ClaimHeroStat(icon: ImageVector, label: String, value: String, modifier: Modifier, accent: Color = PrimaryGreen) {
+private fun ClaimHeroStat(icon: ImageVector, label: String, value: String, modifier: Modifier, accent: Color = PrimaryGreen, onDark: Boolean = false) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = accent, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(6.dp))
+        Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(7.dp))
         Column {
-            Text(label, fontSize = 9.sp, color = Color(0xFF5B6660), maxLines = 1)
-            Text(value, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF14231A), maxLines = 1)
+            Text(label, fontSize = 11.sp, lineHeight = 12.sp, color = if (onDark) Color.White.copy(alpha = 0.8f) else Color(0xFF5B6660), maxLines = 1)
+            Spacer(Modifier.height(3.dp))
+            Text(value, fontSize = 13.sp, lineHeight = 14.sp, fontWeight = FontWeight.Bold, color = if (onDark) Color.White else Color(0xFF14231A), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
