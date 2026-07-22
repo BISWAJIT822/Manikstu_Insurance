@@ -1591,16 +1591,14 @@ fun HeroAssignedFarmersCard(count: Int?, showViewAll: Boolean = true, onViewAll:
                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                 alignment = Alignment.TopEnd
             )
-            Box(Modifier.fillMaxSize().background(
-                Brush.horizontalGradient(0.0f to Color(0x661B5230), 0.45f to Color(0x331B5230), 1.0f to Color(0x001B5230))
-            ))
+            val heroText = Color(0xFF0C3218) // deep green, reads clearly on the banner
             Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                Text(languageState.value.getT("My Assigned Farmers", "मेरे सौंपे गए किसान", "ମୋର ନ୍ୟସ୍ତ କୃଷକ"), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                Text(count?.toString() ?: "…", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Bold)
+                Text(languageState.value.getT("My Assigned Farmers", "मेरे सौंपे गए किसान", "ମୋର ନ୍ୟସ୍ତ କୃଷକ"), color = heroText, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text(count?.toString() ?: "…", color = heroText, fontSize = 38.sp, fontWeight = FontWeight.Bold)
                 if (showViewAll) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { onViewAll() }) {
-                        Text(languageState.value.getT("View all", "सभी देखें", "ସବୁ ଦେଖନ୍ତୁ"), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                        Icon(Icons.Default.ChevronRight, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                        Text(languageState.value.getT("View all", "सभी देखें", "ସବୁ ଦେଖନ୍ତୁ"), color = heroText, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Icon(Icons.Default.ChevronRight, null, tint = heroText, modifier = Modifier.size(20.dp))
                     }
                 } else {
                     Spacer(Modifier.height(2.dp))
@@ -7052,9 +7050,13 @@ fun VaccineListScreen(navController: NavHostController, onBack: () -> Unit, onRe
         val name = when (it.vaccineType) {
             "et_tt" -> "ET + TT Vaccine"; "fmd" -> "FMD Vaccine"; "goat_pox" -> "Goat Pox Vaccine"; else -> "PPR Vaccine"
         }
+        // Completed rows show the date it was given and by whom; pending rows show the due date.
+        val isDone = it.status == "done"
+        val shownDate = if (isDone) (it.vaccinationDate ?: "") else (it.nextVaccinationDate ?: "")
         mapOf(
             "name" to name, "tag" to (it.earTag ?: "—"),
-            "date" to (it.nextVaccinationDate ?: ""),
+            "date" to shownDate,
+            "vaccinatedBy" to (it.vaccinatedBy ?: ""),
             "farmer" to (it.farmer ?: languageState.value.getT("Unknown farmer", "अज्ञात किसान", "ଅଜ୍ଞାତ କୃଷକ")),
             "village" to (it.village ?: ""),
             "status" to it.status, "goatId" to it.goatId.toString(),
@@ -7081,8 +7083,8 @@ fun VaccineListScreen(navController: NavHostController, onBack: () -> Unit, onRe
                         },
                         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                             containerColor = Color.White,
-                            titleContentColor = PrimaryGreen,
-                            navigationIconContentColor = PrimaryGreen
+                            titleContentColor = Color(0xFF14231A),
+                            navigationIconContentColor = Color(0xFF14231A)
                         )
                     )
                 },
@@ -7129,7 +7131,7 @@ fun VaccineListScreen(navController: NavHostController, onBack: () -> Unit, onRe
                             title = { Text(languageState.value.getT("Vaccinations", "टीकाकरण", "ଟୀକାକରଣ"), fontWeight = FontWeight.Bold) },
                             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                                 containerColor = Color.White,
-                                titleContentColor = PrimaryGreen
+                                titleContentColor = Color(0xFF14231A)
                             )
                         )
                     },
@@ -7326,7 +7328,17 @@ fun VaccineListContent(
                                                         )
                                                     }
                                                     if ((vaccine["date"] ?: "").isNotBlank()) {
-                                                        Text(vaccine["date"] ?: "", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 2.dp))
+                                                        Text(
+                                                            (if (isCompleted) languageState.value.getT("Given ", "दिया गया ", "ଦିଆଯାଇଛି ") else languageState.value.getT("Due ", "देय ", "ଦେୟ ")) + (vaccine["date"] ?: ""),
+                                                            fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 2.dp)
+                                                        )
+                                                    }
+                                                    if (isCompleted && (vaccine["vaccinatedBy"] ?: "").isNotBlank()) {
+                                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+                                                            Icon(Icons.Default.Person, null, tint = Color.Gray, modifier = Modifier.size(12.dp))
+                                                            Spacer(Modifier.width(3.dp))
+                                                            Text(languageState.value.getT("By ", "द्वारा ", "ଦ୍ଵାରା ") + (vaccine["vaccinatedBy"] ?: ""), fontSize = 11.sp, color = Color.Gray)
+                                                        }
                                                     }
                                                 }
                                                 OutlinedButton(
@@ -7384,15 +7396,23 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
             Icons.Default.Vaccines, IconGreen),
         VaccineOption("et_tt", lang.getT("ET Plus + TT Vaccine", "ईटी प्लस + टीटी टीका", "ET Plus + TT ଟୀକା"),
             lang.getT("Enterotoxaemia + Tetanus Toxoid Vaccine", "एंटरोटॉक्सिमिया + टेटनस टॉक्साइड टीका", "ଏଣ୍ଟେରୋଟକ୍ସେମିଆ + ଟିଟାନସ୍ ଟକ୍ସଏଡ୍ ଟୀକା"),
-            Icons.Default.HealthAndSafety, IconGreen),
+            Icons.Default.HealthAndSafety, IconBlue),
         VaccineOption("fmd", lang.getT("FMD Vaccine", "एफएमडी टीका", "FMD ଟୀକା"),
             lang.getT("Foot and Mouth Disease Vaccine", "फुट एंड माउथ रोग टीका", "ପାଦ ଓ ମୁଖ ରୋଗ ଟୀକା"),
-            Icons.Default.Shield, IconGreen),
+            Icons.Default.Shield, IconAmber),
         VaccineOption("goat_pox", lang.getT("Goat Pox Vaccine", "बकरी पॉक्स टीका", "ଛେଳି ପକ୍ସ ଟୀକା"),
             lang.getT("Goat Pox Vaccine", "बकरी पॉक्स टीका", "ଛେଳି ପକ୍ସ ଟୀକା"),
-            Icons.Default.Coronavirus, IconGreen),
+            Icons.Default.Coronavirus, IconRose),
     )
+    // Vaccines already completed for this goat: they show checked and locked, and are
+    // never re-submitted. Derived from the goat's stored vaccination records.
+    val lockedCodes = goat?.vaccinations?.filter { it.status == "done" }?.map { it.type }?.toSet() ?: emptySet()
+    // Ticked vaccines. Completed ones are seeded in (so they render checked) once the
+    // goat loads; the user can only add pending ones on top.
     val selected = remember { mutableStateListOf<String>() }
+    LaunchedEffect(lockedCodes) {
+        lockedCodes.forEach { if (it !in selected) selected.add(it) }
+    }
     var batchNumber by remember { mutableStateOf("") }
     var vaccinationDate by remember { mutableStateOf("") }
     var vaccinationDateIso by remember { mutableStateOf("") }
@@ -7427,6 +7447,12 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
         }
     }
 
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? -> if (uri != null) capturedPhotoUri = uri }
+
+    var showPhotoSource by remember { mutableStateOf(false) }
+
     fun launchCamera() {
         val directory = File(context.cacheDir, "vaccine_photos")
         if (!directory.exists()) directory.mkdirs()
@@ -7441,18 +7467,54 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
         }
     }
 
+    if (showPhotoSource) {
+        AlertDialog(
+            onDismissRequest = { showPhotoSource = false },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(20.dp),
+            title = { Text(lang.getT("Add Photo", "फोटो जोड़ें", "ଫଟୋ ଯୋଡ଼ନ୍ତୁ"), fontWeight = FontWeight.Bold, color = Color.Black) },
+            text = {
+                Column {
+                    Surface(color = Color.Transparent, onClick = { showPhotoSource = false; launchCamera() }) {
+                        Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CameraAlt, null, tint = PrimaryGreen, modifier = Modifier.size(26.dp))
+                            Spacer(Modifier.width(16.dp))
+                            Text(lang.getT("Take Photo", "फोटो लें", "ଫଟୋ ନିଅନ୍ତୁ"), fontSize = 16.sp, color = Color.Black)
+                        }
+                    }
+                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f))
+                    Surface(color = Color.Transparent, onClick = { showPhotoSource = false; galleryLauncher.launch("image/*") }) {
+                        Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.PhotoLibrary, null, tint = PrimaryGreen, modifier = Modifier.size(26.dp))
+                            Spacer(Modifier.width(16.dp))
+                            Text(lang.getT("Choose from Gallery", "गैलरी से चुनें", "ଗ୍ୟାଲେରୀରୁ ବାଛନ୍ତୁ"), fontSize = 16.sp, color = Color.Black)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showPhotoSource = false }) {
+                    Text(lang.getT("Cancel", "रद्द करें", "ବାତିଲ୍"), color = Color.Gray)
+                }
+            }
+        )
+    }
+
     fun submit() {
         if (goatId == null) {
             Toast.makeText(context, "Invalid goat reference", Toast.LENGTH_SHORT).show(); return
         }
-        if (selected.isEmpty()) {
-            Toast.makeText(context, lang.getT("Select at least one vaccine", "कम से कम एक टीका चुनें", "ଅତି କମରେ ଗୋଟିଏ ଟୀକା ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show(); return
+        // Only the newly ticked (pending) vaccines are saved; completed ones are locked.
+        val toRecord = selected.filter { it !in lockedCodes }
+        if (toRecord.isEmpty()) {
+            Toast.makeText(context, lang.getT("Select a pending vaccine to record", "रिकॉर्ड करने के लिए एक लंबित टीका चुनें", "ରେକର୍ଡ କରିବାକୁ ଏକ ବାକି ଥିବା ଟୀକା ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show(); return
         }
         if (vaccinationDateIso.isBlank()) {
             Toast.makeText(context, lang.getT("Please select the vaccination date", "कृपया टीकाकरण की तारीख चुनें", "ଦୟାକରି ଟୀକାକରଣ ତାରିଖ ବାଛନ୍ତୁ"), Toast.LENGTH_SHORT).show(); return
         }
         vaccVm.recordMany(
-            selected.map { code ->
+            toRecord.map { code ->
                 RecordVaccinationRequest(
                     goatId = goatId, vaccineType = code,
                     batchNumber = batchNumber.ifBlank { null }, vaccinationDate = vaccinationDateIso,
@@ -7464,10 +7526,10 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(lang.getT("Vaccination Records", "टीकाकरण रिकॉर्ड", "ଟୀକାକରଣ ରେକର୍ଡ"), fontWeight = FontWeight.Bold, fontSize = 20.sp, color = PrimaryGreen) },
+                title = { Text(lang.getT("Vaccination Records", "टीकाकरण रिकॉर्ड", "ଟୀକାକରଣ ରେକର୍ଡ"), fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color(0xFF14231A)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PrimaryGreen)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color(0xFF14231A))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -7532,11 +7594,11 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             val gender = goat?.gender?.replaceFirstChar { it.uppercase() }
-                            VaccineGoatStat(if (goat?.gender == "male") Icons.Default.Male else Icons.Default.Female, gender ?: "—")
+                            VaccineGoatStat(if (goat?.gender == "male") Icons.Default.Male else Icons.Default.Female, gender ?: "—", tint = IconPurple)
                             Spacer(Modifier.width(14.dp))
-                            VaccineGoatStat(Icons.Default.Schedule, goat?.ageMonths?.let { goatAgeLabel(it, lang) } ?: "—")
+                            VaccineGoatStat(Icons.Default.Schedule, goat?.ageMonths?.let { goatAgeLabel(it, lang) } ?: "—", tint = IconBlue)
                             Spacer(Modifier.width(14.dp))
-                            VaccineGoatStat(Icons.Default.MonitorWeight, goat?.weightKg?.let { "${it.toInt()} kg" } ?: "—")
+                            VaccineGoatStat(Icons.Default.MonitorWeight, goat?.weightKg?.let { "${it.toInt()} kg" } ?: "—", tint = IconTeal)
                         }
                     }
                 }
@@ -7551,12 +7613,14 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(14.dp))
 
             options.forEach { opt ->
+                val isLocked = opt.code in lockedCodes            // already completed
                 val isChecked = opt.code in selected
-                fun toggle() { if (isChecked) selected.remove(opt.code) else selected.add(opt.code) }
+                fun toggle() { if (!isLocked) { if (isChecked) selected.remove(opt.code) else selected.add(opt.code) } }
+                val cardModifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                    .let { if (isLocked) it else it.clickable { toggle() } }
                 Card(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                    onClick = { toggle() },
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    modifier = cardModifier,
+                    colors = CardDefaults.cardColors(containerColor = if (isLocked) Color(0xFFF3F7EF) else Color.White),
                     shape = RoundedCornerShape(16.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                     border = BorderStroke(if (isChecked) 1.5.dp else 1.dp, if (isChecked) PrimaryGreen else Color(0xFFEDF0EA))
@@ -7571,13 +7635,25 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
                         Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(opt.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF14231A))
-                            Text(opt.subtitle, fontSize = 12.sp, color = Color(0xFF8A908A), lineHeight = 15.sp)
+                            if (isLocked) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.CheckCircle, null, tint = PrimaryGreen, modifier = Modifier.size(13.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(lang.getT("Completed", "पूर्ण", "ସମ୍ପୂର୍ଣ୍ଣ"), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen)
+                                }
+                            } else {
+                                Text(opt.subtitle, fontSize = 12.sp, color = Color(0xFF8A908A), lineHeight = 15.sp)
+                            }
                         }
                         Spacer(modifier = Modifier.width(10.dp))
                         Checkbox(
                             checked = isChecked,
-                            onCheckedChange = { toggle() },
-                            colors = CheckboxDefaults.colors(checkedColor = PrimaryGreen, uncheckedColor = Color(0xFFC7D2C2))
+                            onCheckedChange = if (isLocked) null else ({ toggle() }),
+                            enabled = !isLocked,
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = PrimaryGreen, uncheckedColor = Color(0xFFC7D2C2),
+                                disabledCheckedColor = PrimaryGreen
+                            )
                         )
                     }
                 }
@@ -7627,7 +7703,7 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().height(150.dp),
                 shape = RoundedCornerShape(14.dp),
                 color = Color(0xFFF7F9F5),
-                onClick = { launchCamera() }
+                onClick = { showPhotoSource = true }
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize().dashedBorder(1.dp, Color(0xFFC7D2C2), 14.dp),
@@ -7665,9 +7741,9 @@ fun Modifier.dashedBorder(width: Dp, color: Color, cornerRadius: Dp): Modifier =
 }
 
 @Composable
-private fun VaccineGoatStat(icon: ImageVector, value: String) {
+private fun VaccineGoatStat(icon: ImageVector, value: String, tint: Color = PrimaryGreen) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = PrimaryGreen, modifier = Modifier.size(16.dp))
+        Icon(icon, null, tint = tint, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(4.dp))
         Text(value, fontSize = 13.sp, color = Color(0xFF3D473E), maxLines = 1)
     }

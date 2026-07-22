@@ -314,6 +314,8 @@ data class VaccinationItem(
     val farmer: String? = null,
     val village: String? = null,
     @SerialName("vaccine_type") val vaccineType: String,
+    @SerialName("vaccination_date") val vaccinationDate: String? = null,
+    @SerialName("vaccinated_by") val vaccinatedBy: String? = null,
     @SerialName("next_vaccination_date") val nextVaccinationDate: String? = null,
     val status: String,
 )
