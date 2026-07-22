@@ -446,6 +446,7 @@ data class PolicyOut(
     val breed: String,
     val gender: String = "",
     @SerialName("age_months") val ageMonths: Int = 0,
+    val photo: String? = null,
     @SerialName("valid_from") val validFrom: String,
     @SerialName("valid_to") val validTo: String,
     @SerialName("sum_insured") val sumInsured: Double,

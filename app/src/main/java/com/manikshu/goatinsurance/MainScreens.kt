@@ -6296,7 +6296,17 @@ private fun FarmerGoatListCard(
             Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(contentAlignment = Alignment.TopStart) {
                     Box(Modifier.size(64.dp).clip(CircleShape).background(statusColor.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
-                        Icon(painterResource(R.drawable.ic_ewe_custom), null, tint = statusColor, modifier = Modifier.size(34.dp))
+                        val goatPhoto = policy.photo?.takeIf { it.isNotBlank() }?.let { absoluteMediaUrl(it) }
+                        if (goatPhoto != null) {
+                            AsyncImage(
+                                model = goatPhoto,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            )
+                        } else {
+                            Icon(painterResource(R.drawable.ic_ewe_custom), null, tint = statusColor, modifier = Modifier.size(34.dp))
+                        }
                     }
                     Box(Modifier.size(22.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.VerifiedUser, null, tint = statusColor, modifier = Modifier.size(18.dp))
