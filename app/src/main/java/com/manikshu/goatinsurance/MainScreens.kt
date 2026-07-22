@@ -6681,7 +6681,7 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
     val gender = detail?.gender ?: policy?.goat?.gender
     val ageMonths = detail?.ageMonths ?: policy?.goat?.ageMonths
     val statusStr = detail?.status ?: policy?.status ?: ""
-    val photoUrls = detail?.photos.orEmpty().map { it.url }
+    val photoUrls = (detail?.photos ?: policy?.photos).orEmpty().map { it.url }
 
     val policyNumber = detail?.policy?.policyNumber ?: policy?.policyNumber
     val validFrom = detail?.policy?.validFrom ?: policy?.validFrom
@@ -6806,7 +6806,7 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
                     Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
                         GoatInfoCell(Icons.Default.CalendarToday, lang.getT("Age", "आयु", "ବୟସ"), ageMonths?.let { goatAgeLabel(it, lang) } ?: "—", IconAmber, Modifier.weight(1f))
                         GoatCellDivider()
-                        GoatInfoCell(Icons.Default.Scale, lang.getT("Weight", "वज़न", "ଓଜନ"), detail?.weightKg?.let { "${it.toInt()} kg" } ?: "—", IconTeal, Modifier.weight(1f))
+                        GoatInfoCell(Icons.Default.Scale, lang.getT("Weight", "वज़न", "ଓଜନ"), (detail?.weightKg ?: policy?.weightKg)?.let { "${it.toInt()} kg" } ?: "—", IconTeal, Modifier.weight(1f))
                     }
                     GoatRowDivider()
                     Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
@@ -6830,7 +6830,7 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
                     }
                     GoatRowDivider()
                     Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
-                        GoatInfoCell(Icons.Default.VerifiedUser, lang.getT("Insured By", "बीमाकृत", "ବୀମାଭୁକ୍ତ"), detail?.farmer?.name ?: "—", IconGreen, Modifier.weight(1f))
+                        GoatInfoCell(Icons.Default.VerifiedUser, lang.getT("Insured By", "बीमाकृत", "ବୀମାଭୁକ୍ତ"), (detail?.farmer?.name ?: policy?.farmer?.name) ?: "—", IconGreen, Modifier.weight(1f))
                         GoatCellDivider()
                         GoatInfoCell(Icons.Default.Business, lang.getT("Issued By", "जारीकर्ता", "ଜାରିକର୍ତ୍ତା"), "AjahFi Goat Insurance", IconBlue, Modifier.weight(1f))
                     }

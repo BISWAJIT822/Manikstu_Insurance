@@ -471,6 +471,9 @@ data class PolicyDetail(
     @SerialName("receipt_number") val receiptNumber: String? = null,
     @SerialName("paid_at") val paidAt: String? = null,
     val goat: PolicyGoatInfo? = null,
+    @SerialName("weight_kg") val weightKg: Double? = null,
+    val farmer: GoatFarmerInfo? = null,
+    val photos: List<GoatPhotoOut> = emptyList(),
     val vaccinations: List<GoatVaccinationOut> = emptyList(),
     @SerialName("next_vaccination_date") val nextVaccinationDate: String? = null,
 )
