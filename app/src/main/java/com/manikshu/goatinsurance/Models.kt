@@ -439,6 +439,8 @@ data class PolicyOut(
     @SerialName("goat_id") val goatId: Int = 0,
     @SerialName("ear_tag_number") val earTagNumber: String,
     val breed: String,
+    val gender: String = "",
+    @SerialName("age_months") val ageMonths: Int = 0,
     @SerialName("valid_from") val validFrom: String,
     @SerialName("valid_to") val validTo: String,
     @SerialName("sum_insured") val sumInsured: Double,
