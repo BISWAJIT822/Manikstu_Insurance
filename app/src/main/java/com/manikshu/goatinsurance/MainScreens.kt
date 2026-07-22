@@ -1347,8 +1347,42 @@ private fun ForgotPasswordDialog(
     )
 }
 
+/**
+ * Back-press exit confirmation for a top-level dashboard. It must live INSIDE the
+ * dashboard (composed after the NavHost) so its BackHandler wins over the NavHost's
+ * own back handling - otherwise a stale back-stack entry gets popped and the exit
+ * dialog never shows.
+ */
+@Composable
+fun ExitConfirmationHandler() {
+    val context = LocalContext.current
+    val lang = LocalAppLanguage.current
+    var show by remember { mutableStateOf(false) }
+    BackHandler(enabled = true) { show = true }
+    if (show) {
+        AlertDialog(
+            onDismissRequest = { show = false },
+            title = { Text(lang.value.getT("Exit App", "ऐप से बाहर निकलें", "ଆପ୍ ରୁ ବାହାରନ୍ତୁ"), fontWeight = FontWeight.Bold, color = Color.Black) },
+            text = { Text(lang.value.getT("Are you sure you want to exit?", "क्या आप वाकई बाहर निकलना चाहते हैं?", "ଆପଣ ନିଶ୍ଚିତ ଭାବରେ ବାହାରିବାକୁ ଚାହୁଁଛନ୍ତି କି?"), color = Color.Black) },
+            confirmButton = {
+                TextButton(onClick = { (context as? Activity)?.finish() }) {
+                    Text(lang.value.getT("Yes", "हाँ", "ହଁ"), fontWeight = FontWeight.Bold, color = Color.Black)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { show = false }) {
+                    Text(lang.value.getT("No", "नहीं", "ନା"), fontWeight = FontWeight.Bold, color = Color.Black)
+                }
+            },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+}
+
 @Composable
 fun DidiDashboard(navController: NavHostController, sessionManager: SessionManager) {
+    ExitConfirmationHandler()
     var showNotifications by remember { mutableStateOf(false) }
     if (showNotifications) NotificationSheet(
         userRole = UserRole.SURAKSHA_DIDI, themeColor = PrimaryGreen,
@@ -4186,6 +4220,7 @@ fun PolicyDetailRow(label: String, value: String, isBold: Boolean = false) {
 
 @Composable
 fun FarmerDashboard(navController: NavHostController, sessionManager: SessionManager) {
+    ExitConfirmationHandler()
     var showNotifications by remember { mutableStateOf(false) }
     if (showNotifications) NotificationSheet(userRole = UserRole.FARMER, themeColor = PrimaryBlue) { showNotifications = false }
     val languageState = LocalAppLanguage.current

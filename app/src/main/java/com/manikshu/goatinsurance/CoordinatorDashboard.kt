@@ -54,6 +54,7 @@ val CoordinatorLightOrange = Color(0xFFFFF3E0)
 
 @Composable
 fun CoordinatorDashboard(navController: NavHostController, sessionManager: SessionManager) {
+    ExitConfirmationHandler()
     val languageState = LocalAppLanguage.current
     val savedName by sessionManager.userName.collectAsState(initial = null)
     // Canonical name from the backend (also re-syncs the session cache).
