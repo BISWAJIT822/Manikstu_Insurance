@@ -486,8 +486,19 @@ fun MortalityDetailScreen(
                             Spacer(modifier = Modifier.height(16.dp))
                             
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                MortalityStatItem(Icons.Default.Shield, languageState.value.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), "₹ 20,000", Modifier.weight(1f), accent = IconTeal)
-                                MortalityStatItem(Icons.Default.Description, languageState.value.getT("Policy No.", "पॉलिसी संख्या", "ପଲିସି ନମ୍ବର"), d.claimNumber ?: "POL/25/07321", Modifier.weight(1f), accent = IconIndigo)
+                                // Real cover and policy number from the report payload.
+                                MortalityStatItem(
+                                    Icons.Default.Shield,
+                                    languageState.value.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"),
+                                    d.sumInsured?.let { "₹ " + java.text.NumberFormat.getInstance(java.util.Locale("en", "IN")).format(it.toLong()) } ?: "—",
+                                    Modifier.weight(1f), accent = IconTeal
+                                )
+                                MortalityStatItem(
+                                    Icons.Default.Description,
+                                    languageState.value.getT("Policy No.", "पॉलिसी संख्या", "ପଲିସି ନମ୍ବର"),
+                                    d.policyNumber ?: d.claimNumber ?: "—",
+                                    Modifier.weight(1f), accent = IconIndigo
+                                )
                             }
                         }
                     }

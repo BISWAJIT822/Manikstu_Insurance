@@ -2211,6 +2211,9 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
     val goats = policies.map { Triple(it.earTagNumber, it.breed, it.policyNumber) }
     var selectedIndex by remember { mutableStateOf(0) }
     val selectedGoat = goats.getOrNull(selectedIndex) ?: Triple("—", "—", "—")
+    // The selected goat's real policy — the cover and expiry below come from it
+    // rather than the placeholder figures this card used to show.
+    val selectedPolicy = policies.getOrNull(selectedIndex)
     var expandedGoatSelector by remember { mutableStateOf(false) }
 
     // Photo state for 4 slots
@@ -2341,8 +2344,8 @@ fun FarmerReportDeathScreen(onBack: () -> Unit, onComplete: () -> Unit) {
                     Spacer(modifier = Modifier.height(16.dp))
                     
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        MortalityStatBox(Icons.Default.CalendarToday, languageState.value.getT("Valid Till", "कब तक मान्य", "ବୈଧତା ଅବଧି"), "16 Jul 2027", Modifier.weight(1f))
-                        MortalityStatBox(Icons.Default.Shield, languageState.value.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), "₹ 20,000", Modifier.weight(1f))
+                        MortalityStatBox(Icons.Default.CalendarToday, languageState.value.getT("Valid Till", "कब तक मान्य", "ବୈଧତା ଅବଧି"), selectedPolicy?.validTo?.let { prettyGoatDate(it) } ?: "—", Modifier.weight(1f))
+                        MortalityStatBox(Icons.Default.Shield, languageState.value.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), selectedPolicy?.sumInsured?.let { "₹ " + java.text.NumberFormat.getInstance(java.util.Locale("en", "IN")).format(it.toLong()) } ?: "—", Modifier.weight(1f))
                         MortalityStatBox(Icons.Default.Description, languageState.value.getT("Policy No.", "पॉलिसी संख्या", "ପଲିସି ନମ୍ବର"), selectedGoat.third, Modifier.weight(1f))
                     }
                 }
@@ -3682,7 +3685,7 @@ fun EnrollmentPolicyStep(farmer: String, tag: String, result: EnrollGoatResponse
                 PolicyDetailRow(languageState.value.getT("Policy Number", "पॉलिसी नंबर", "ନୀତି ନମ୍ବର"), result?.policyNumber ?: "—")
                 PolicyDetailRow(languageState.value.getT("Farmer Name", "किसान का नाम", "କୃଷକଙ୍କ ନାମ"), farmer.ifBlank { "—" })
                 PolicyDetailRow(languageState.value.getT("Ear Tag", "कान का टैग", "କାନ ଟ୍ୟାଗ୍"), tag.ifBlank { "—" })
-                PolicyDetailRow(languageState.value.getT("Premium Paid", "प्रीमियम भुगतान", "ଦିଆଯାଇଥିବା ପ୍ରିମିୟମ"), "₹ 350")
+                PolicyDetailRow(languageState.value.getT("Premium Paid", "प्रीमियम भुगतान", "ଦିଆଯାଇଥିବା ପ୍ରିମିୟମ"), result?.amountPaid?.let { "₹ ${it.toInt()}" } ?: "—")
                 PolicyDetailRow(languageState.value.getT("Validity", "वैधता", "ବୈଧତା"), "${result?.validFrom ?: "—"} - ${result?.validTo ?: "—"}")
                 HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
                 PolicyDetailRow(languageState.value.getT("Sum Insured", "बीमा राशि", "ବୀମା ରାଶି"), result?.sumInsured?.let { "₹ ${it.toInt()}" } ?: "—", true)

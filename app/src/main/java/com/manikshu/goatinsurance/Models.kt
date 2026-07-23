@@ -236,6 +236,7 @@ data class EnrollGoatResponse(
     @SerialName("valid_from") val validFrom: String? = null,
     @SerialName("valid_to") val validTo: String? = null,
     @SerialName("sum_insured") val sumInsured: Double? = null,
+    @SerialName("amount_paid") val amountPaid: Double? = null,
     @SerialName("receipt_number") val receiptNumber: String? = null,
     val reason: String? = null,
 )
@@ -654,6 +655,8 @@ data class MortalityReportDetail(
     val notes: String? = null,
     val status: String,
     @SerialName("claim_number") val claimNumber: String? = null,
+    @SerialName("policy_number") val policyNumber: String? = null,
+    @SerialName("sum_insured") val sumInsured: Double? = null,
     val photos: List<MortalityPhotoOut> = emptyList(),
     @SerialName("reported_at") val reportedAt: String,
 )
