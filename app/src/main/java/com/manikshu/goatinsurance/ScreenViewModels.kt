@@ -627,7 +627,7 @@ class EnrollmentViewModel @Inject constructor(
                         ageMonths = goat.ageMonths, weightKg = goat.weightKg, color = goat.color.ifBlank { null },
                         photos = photos, vaccines = vaccinesFor(goat),
                         paymentMode = paymentMode, amount = amount,
-                        receiptNumber = "RCP-${System.currentTimeMillis()}-$index",
+                        // receiptNumber omitted: the backend generates RCT-YYYYMMDD-NNNNNN.
                     )
                     val res = repo.enrollGoat(request)
                     if (res.status != "success") {

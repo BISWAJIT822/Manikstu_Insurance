@@ -3654,7 +3654,7 @@ fun EnrollmentPaymentStep(
         Spacer(modifier = Modifier.height(24.dp))
         EnrollmentTextField(label = languageState.value.getT("Premium Amount", "प्रीमियम राशि", "ପ୍ରିମିୟମ ପରିମାଣ"), value = amount, onValueChange = onAmountChange, keyboardType = KeyboardType.Number, prefix = "₹", leadingIcon = Icons.Default.Payments, iconTint = IconGreen)
         Spacer(modifier = Modifier.height(16.dp))
-        EnrollmentTextField(label = languageState.value.getT("Receipt Number", "रसीद संख्या", "ରସିଦ ନମ୍ବର"), value = "RCP-240801-001", onValueChange = {}, leadingIcon = Icons.Default.Receipt, iconTint = IconAmber)
+        EnrollmentTextField(label = languageState.value.getT("Receipt Number", "रसीद संख्या", "ରସିଦ ନମ୍ବର"), value = "", onValueChange = {}, readOnly = true, placeholder = languageState.value.getT("Auto-generated after enrollment", "नामांकन के बाद स्वतः जनरेट", "ପଞ୍ଜିକରଣ ପରେ ସ୍ୱୟଂ ପ୍ରସ୍ତୁତ"), leadingIcon = Icons.Default.Receipt, iconTint = IconAmber)
     }
 }
 
@@ -3865,7 +3865,7 @@ fun EnrollmentPoliciesStep(farmer: String, results: List<EnrollGoatResponse>, go
     val certState by enrollVm.certificate.collectAsState()
 
     val policyNumber = results.firstOrNull()?.policyNumber ?: "—"
-    val receiptNumber = results.firstOrNull()?.policyNumber?.replaceFirst(Regex("^[A-Za-z]+"), "RCP") ?: "—"
+    val receiptNumber = results.firstOrNull()?.receiptNumber ?: "—"
     val totalPremium = 350 * results.size.coerceAtLeast(1)
 
     LaunchedEffect(certState) {
@@ -4872,7 +4872,7 @@ fun NotificationSheet(userRole: UserRole?, themeColor: Color = PrimaryGreen, onO
     LaunchedEffect(Unit) { vm.load(); vm.markAllRead() }
 
     fun toNotification(n: NotificationOut): AppNotification {
-        val time = n.createdAt.take(16).replace("T", " ")
+        val time = AppTime.dateTime(n.createdAt)
         return AppNotification(n.title, n.body ?: "", time)
     }
 
@@ -7282,7 +7282,7 @@ fun PolicyDetailsScreen(navController: NavHostController, tag: String, userRole:
                     PolicyRowDivider()
                     PolicyRow(lang.getT("Premium Amount", "प्रीमियम राशि", "ପ୍ରିମିୟମ ରାଶି"), money(premium))
                     PolicyRowDivider()
-                    PolicyRow(lang.getT("Payment Date", "भुगतान तिथि", "ଦେୟ ତାରିଖ"), formatPolicyDate(paidAt?.take(10)))
+                    PolicyRow(lang.getT("Payment Date", "भुगतान तिथि", "ଦେୟ ତାରିଖ"), AppTime.dateTime(paidAt, fallback = "—"))
                     PolicyRowDivider()
                     PolicyRow(lang.getT("Payment Mode", "भुगतान माध्यम", "ଦେୟ ମାଧ୍ୟମ"), paymentMode?.uppercase() ?: "—")
                     PolicyRowDivider()
@@ -9394,15 +9394,8 @@ private fun FarmerClaimDetailsBody(
     }
 }
 
-/** "17 Jul 2026" from the API's yyyy-MM-dd (or a full timestamp). */
-private fun claimDate(raw: String?): String {
-    if (raw.isNullOrBlank()) return "—"
-    val parts = raw.take(10).split("-")
-    if (parts.size != 3) return raw.take(10)
-    val months = arrayOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-    val m = parts[1].toIntOrNull() ?: return raw.take(10)
-    return "${parts[2]} ${months.getOrElse(m - 1) { parts[1] }} ${parts[0]}"
-}
+/** "17 Jul 2026" (IST) from the API's yyyy-MM-dd or a full UTC timestamp. */
+private fun claimDate(raw: String?): String = AppTime.date(raw)
 
 @Composable
 private fun ClaimStatusPill(status: String, lang: AppLanguage) {
@@ -11307,7 +11300,7 @@ fun EarningHistoryScreen(navController: NavHostController, onBack: () -> Unit) {
                     title = e.detail ?: (if (isVacc) "Vaccination" else "Field Services"),
                     subtitle = e.earTagNumber ?: "—",
                     amount = "₹ ${e.amount.toInt()}",
-                    time = e.earnedOn ?: "",
+                    time = AppTime.date(e.earnedOn, fallback = ""),
                 )
             }
 

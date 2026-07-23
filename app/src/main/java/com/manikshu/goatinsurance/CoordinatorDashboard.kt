@@ -477,7 +477,7 @@ fun LiveActivitySection(navController: NavHostController, language: AppLanguage,
                     val isClaim = item.type == "claim"
                     LiveActivityItem(
                         title = "${item.actor}: ${item.detail}",
-                        time = item.time.take(16).replace("T", " "),
+                        time = AppTime.timeAgo(item.time),
                         status = if (isClaim) "Claim" else "New",
                         statusColor = if (isClaim) Color(0xFFFFB74D) else Color(0xFF4FC3F7),
                         icon = if (isClaim) Icons.AutoMirrored.Filled.Assignment else Icons.Default.PersonAdd
