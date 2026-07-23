@@ -6803,6 +6803,7 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
     val gender = detail?.gender ?: policy?.goat?.gender
     val ageMonths = detail?.ageMonths ?: policy?.goat?.ageMonths
     val statusStr = detail?.status ?: policy?.status ?: ""
+    val birthDate = detail?.dateOfBirth ?: policy?.goat?.dateOfBirth
     val photoUrls = (detail?.photos ?: policy?.photos).orEmpty().map { it.url }
 
     val policyNumber = detail?.policy?.policyNumber ?: policy?.policyNumber
@@ -6864,6 +6865,17 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
                                 },
                                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                                 alignment = Alignment.CenterStart
+                            )
+                            // Soft wash on the left so the dark id text stays crisp over
+                            // the artwork; clears well before the goat on the right.
+                            Box(
+                                Modifier.matchParentSize().background(
+                                    Brush.horizontalGradient(
+                                        0.0f to Color(0xF2EDF4E4),
+                                        0.40f to Color(0xB3EDF4E4),
+                                        0.72f to Color(0x00EDF4E4),
+                                    )
+                                )
                             )
                             // Shield sits beside the ID block, with breed and status
                             // stacked under it so every label shares one left edge.
@@ -6939,7 +6951,14 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
                     Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
                         GoatInfoCell(Icons.Default.Pets, lang.getT("Breed", "नस्ल", "ଜାତି"), breed ?: "—", IconRose, Modifier.weight(1f))
                         GoatCellDivider()
-                        GoatInfoCell(Icons.Default.CalendarToday, lang.getT("Date of Birth", "जन्म तिथि", "ଜନ୍ମ ତାରିଖ"), ageMonths?.let { goatBirthDateLabel(it) } ?: "—", IconIndigo, Modifier.weight(1f))
+                        // Prefer the backend's stable birth date; only fall back to the
+                        // age-based estimate if an older server doesn't send one.
+                        GoatInfoCell(
+                            Icons.Default.CalendarToday,
+                            lang.getT("Date of Birth", "जन्म तिथि", "ଜନ୍ମ ତାରିଖ"),
+                            birthDate?.let { prettyGoatDate(it) } ?: ageMonths?.let { goatBirthDateLabel(it) } ?: "—",
+                            IconIndigo, Modifier.weight(1f)
+                        )
                     }
                     Spacer(Modifier.height(10.dp))
                 }

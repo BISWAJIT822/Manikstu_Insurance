@@ -312,6 +312,8 @@ data class GoatDetail(
     val breed: String,
     val gender: String,
     @SerialName("age_months") val ageMonths: Int,
+    @SerialName("date_of_birth") val dateOfBirth: String? = null,
+    @SerialName("enrolled_on") val enrolledOn: String? = null,
     @SerialName("weight_kg") val weightKg: Double,
     val color: String? = null,
     @SerialName("identification_mark") val identificationMark: String? = null,
@@ -475,6 +477,9 @@ data class PolicyGoatInfo(
     val breed: String,
     val gender: String,
     @SerialName("age_months") val ageMonths: Int,
+    val color: String? = null,
+    @SerialName("identification_mark") val identificationMark: String? = null,
+    @SerialName("date_of_birth") val dateOfBirth: String? = null,
 )
 
 @Serializable
