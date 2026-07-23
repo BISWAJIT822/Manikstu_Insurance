@@ -225,7 +225,7 @@ data class EnrollGoatRequest(
     // premium
     @SerialName("payment_mode") val paymentMode: String,  // cash / upi / wallet / other
     val amount: Double,
-    @SerialName("receipt_number") val receiptNumber: String,
+    @SerialName("receipt_number") val receiptNumber: String? = null,  // backend-generated
 )
 
 @Serializable
@@ -236,6 +236,7 @@ data class EnrollGoatResponse(
     @SerialName("valid_from") val validFrom: String? = null,
     @SerialName("valid_to") val validTo: String? = null,
     @SerialName("sum_insured") val sumInsured: Double? = null,
+    @SerialName("receipt_number") val receiptNumber: String? = null,
     val reason: String? = null,
 )
 
