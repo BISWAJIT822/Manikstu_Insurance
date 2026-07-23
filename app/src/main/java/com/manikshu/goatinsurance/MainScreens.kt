@@ -1400,6 +1400,17 @@ fun DidiDashboard(navController: NavHostController, sessionManager: SessionManag
     val dashState by dashVm.state.collectAsState()
     val stats = (dashState as? UiState.Success)?.data
 
+    // Re-read the dashboard counts on return, so a death reported elsewhere is
+    // reflected here instead of showing stale numbers.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) dashVm.refresh()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     ResponsiveLayout(
         compact = {
             val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -5884,6 +5895,16 @@ fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack
         val goatVm: GoatListViewModel = hiltViewModel()
         val goatState by goatVm.state.collectAsState()
         LaunchedEffect(searchQuery) { goatVm.setSearch(searchQuery) }
+        // Re-read status from the backend on return, so a goat reported dead by the
+        // farmer stops showing as active here.
+        val listLifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(listLifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) { goatVm.refresh(); dashVm.load() }
+            }
+            listLifecycleOwner.lifecycle.addObserver(observer)
+            onDispose { listLifecycleOwner.lifecycle.removeObserver(observer) }
+        }
         LaunchedEffect(goatState) {
             when (val s = goatState) {
                 is UiState.Loading -> { isLoading = true; errorMsg = null }
@@ -5899,6 +5920,7 @@ fun GoatListScreen(navController: NavHostController, userRole: UserRole?, onBack
                         "active" to (s.data.counts["active"] ?: 0),
                         "expired" to (s.data.counts["expired"] ?: 0),
                         "claimed" to (s.data.counts["claimed"] ?: 0),
+                        "dead" to (s.data.counts["dead"] ?: 0),
                     )
                 }
             }
@@ -6696,7 +6718,16 @@ fun GoatListContent(
                                     Spacer(modifier = Modifier.height(12.dp))
 
                                     goats.forEachIndexed { index, goat ->
-                                        val isExpired = statusByTag[goat.first] == "expired"
+                                        // Render the goat's real status. This used to test
+                                        // only "expired", so a dead or claimed goat fell
+                                        // through and was labelled "Policy Active".
+                                        val goatStatus = statusByTag[goat.first]
+                                        val (statusLabel, statusTint) = when (goatStatus) {
+                                            "expired" -> languageState.value.getT("Policy Expired", "पॉलिसी समाप्त", "ନୀତି ସମାପ୍ତ") to Color.Red
+                                            "dead" -> languageState.value.getT("Reported Dead", "मृत घोषित", "ମୃତ ରିପୋର୍ଟ") to Color(0xFFD32F2F)
+                                            "claimed" -> languageState.value.getT("Claim Settled", "दावा निपटा", "ଦାବି ନିଷ୍ପତ୍ତି") to Color(0xFFE29B0B)
+                                            else -> languageState.value.getT("Policy Active", "पॉलिसी सक्रिय", "ନୀତି ସକ୍ରିୟ") to SuccessGreen
+                                        }
                                         Surface(
                                             onClick = { onGoatClick(clickIdByTag[goat.first] ?: goat.first) },
                                             modifier = Modifier.fillMaxWidth(),
@@ -6720,9 +6751,8 @@ fun GoatListContent(
                                                 Column(modifier = Modifier.weight(1f)) {
                                                     Text(goat.first, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                                     Text(
-                                                        if (isExpired) languageState.value.getT("Policy Expired", "पॉलिसी समाप्त", "ନୀତି ସମାପ୍ତ") 
-                                                        else languageState.value.getT("Policy Active", "पॉलिसी सक्रिय", "ନୀତି ସକ୍ରିୟ"),
-                                                        color = if (isExpired) Color.Red else SuccessGreen,
+                                                        statusLabel,
+                                                        color = statusTint,
                                                         fontWeight = FontWeight.Bold,
                                                         fontSize = 12.sp
                                                     )

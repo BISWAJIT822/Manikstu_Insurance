@@ -269,6 +269,13 @@ class DidiDashboardViewModel @Inject constructor(
                 .onFailure { _state.value = UiState.Error(it.message ?: "Failed to load dashboard") }
         }
     }
+
+    /** Silent re-fetch (no Loading flash) so counts follow a death report elsewhere. */
+    fun refresh() {
+        viewModelScope.launch {
+            repo.safeCall { sdDashboard() }.onSuccess { _state.value = UiState.Success(it) }
+        }
+    }
 }
 
 @HiltViewModel
@@ -292,6 +299,15 @@ class GoatListViewModel @Inject constructor(
             repo.safeCall { sdGoats(tab = tab, search = search) }
                 .onSuccess { _state.value = UiState.Success(it) }
                 .onFailure { _state.value = UiState.Error(it.message ?: "Failed to load goats") }
+        }
+    }
+
+    /** Silent re-fetch (no Loading flash) so a goat reported dead elsewhere shows
+     *  its new status as soon as this screen comes back to the foreground. */
+    fun refresh() {
+        viewModelScope.launch {
+            repo.safeCall { sdGoats(tab = tab, search = search) }
+                .onSuccess { _state.value = UiState.Success(it) }
         }
     }
 }
