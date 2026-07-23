@@ -7831,19 +7831,31 @@ fun VaccineListContent(
                                 HorizontalDivider(color = Color(0xFFEDF0EA))
                                 Spacer(modifier = Modifier.height(12.dp))
 
-                                vaccines.forEachIndexed { index, vaccine ->
-                                    val isCompleted = vaccine["status"] == "done"
+                                // One card per goat — a goat with several vaccinations
+                                // must not repeat. Tapping opens its vaccination details.
+                                val goatGroups = vaccines.groupBy { it["goatId"] ?: "" }.values.toList()
+                                goatGroups.forEachIndexed { index, goatVaccines ->
+                                    val first = goatVaccines.first()
+                                    val goatId = first["goatId"] ?: ""
+                                    val dueCount = goatVaccines.count { it["status"] != "done" }
+                                    val doneCount = goatVaccines.count { it["status"] == "done" }
+                                    // Soonest due date if anything is pending, else the latest given date.
+                                    val dueDate = goatVaccines.filter { it["status"] != "done" }
+                                        .mapNotNull { it["date"]?.takeIf { d -> d.isNotBlank() } }.minOrNull()
+                                    val givenDate = goatVaccines.filter { it["status"] == "done" }
+                                        .mapNotNull { it["date"]?.takeIf { d -> d.isNotBlank() } }.maxOrNull()
+
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         // Timeline dot + connector (reference style).
                                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(16.dp)) {
                                             Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(PrimaryGreen))
-                                            if (index < vaccines.size - 1) {
+                                            if (index < goatGroups.size - 1) {
                                                 Box(modifier = Modifier.width(2.dp).height(52.dp).background(Color(0xFFD8E0D4)))
                                             }
                                         }
                                         Spacer(modifier = Modifier.width(10.dp))
                                         Surface(
-                                            onClick = { onRecord(vaccine["goatId"] ?: "") },
+                                            onClick = { onRecord(goatId) },
                                             modifier = Modifier.weight(1f),
                                             color = Color.Transparent,
                                             shape = RoundedCornerShape(12.dp)
@@ -7857,35 +7869,39 @@ fun VaccineListContent(
                                                 }
                                                 Spacer(modifier = Modifier.width(12.dp))
                                                 Column(modifier = Modifier.weight(1f)) {
-                                                    Text(vaccine["tag"] ?: "", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF14231A))
-                                                    Spacer(modifier = Modifier.height(2.dp))
-                                                    Surface(
-                                                        color = if (isCompleted) SuccessGreen.copy(alpha = 0.12f) else AccentOrange.copy(alpha = 0.14f),
-                                                        shape = RoundedCornerShape(8.dp)
-                                                    ) {
-                                                        Text(
-                                                            "${vaccine["name"]} • ${if (isCompleted) "Done" else "Due"}",
-                                                            fontWeight = FontWeight.Bold, fontSize = 11.sp,
-                                                            color = if (isCompleted) SuccessGreen else AccentOrange,
-                                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                                        )
-                                                    }
-                                                    if ((vaccine["date"] ?: "").isNotBlank()) {
-                                                        Text(
-                                                            (if (isCompleted) languageState.value.getT("Given ", "दिया गया ", "ଦିଆଯାଇଛି ") else languageState.value.getT("Due ", "देय ", "ଦେୟ ")) + (vaccine["date"] ?: ""),
-                                                            fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 2.dp)
-                                                        )
-                                                    }
-                                                    if (isCompleted && (vaccine["vaccinatedBy"] ?: "").isNotBlank()) {
-                                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
-                                                            Icon(Icons.Default.Person, null, tint = Color.Gray, modifier = Modifier.size(12.dp))
-                                                            Spacer(Modifier.width(3.dp))
-                                                            Text(languageState.value.getT("By ", "द्वारा ", "ଦ୍ଵାରା ") + (vaccine["vaccinatedBy"] ?: ""), fontSize = 11.sp, color = Color.Gray)
+                                                    Text(first["tag"] ?: "", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF14231A))
+                                                    Spacer(modifier = Modifier.height(3.dp))
+                                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                        if (dueCount > 0) {
+                                                            Surface(color = AccentOrange.copy(alpha = 0.14f), shape = RoundedCornerShape(8.dp)) {
+                                                                Text(
+                                                                    "$dueCount " + languageState.value.getT("Due", "देय", "ଦେୟ"),
+                                                                    fontWeight = FontWeight.Bold, fontSize = 11.sp, color = AccentOrange,
+                                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                                )
+                                                            }
                                                         }
+                                                        if (doneCount > 0) {
+                                                            Surface(color = SuccessGreen.copy(alpha = 0.12f), shape = RoundedCornerShape(8.dp)) {
+                                                                Text(
+                                                                    "$doneCount " + languageState.value.getT("Done", "पूर्ण", "ସମ୍ପୂର୍ଣ୍ଣ"),
+                                                                    fontWeight = FontWeight.Bold, fontSize = 11.sp, color = SuccessGreen,
+                                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                    val dateLine = when {
+                                                        dueCount > 0 && dueDate != null -> languageState.value.getT("Due ", "देय ", "ଦେୟ ") + dueDate
+                                                        givenDate != null -> languageState.value.getT("Given ", "दिया गया ", "ଦିଆଯାଇଛି ") + givenDate
+                                                        else -> ""
+                                                    }
+                                                    if (dateLine.isNotBlank()) {
+                                                        Text(dateLine, fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 3.dp))
                                                     }
                                                 }
                                                 OutlinedButton(
-                                                    onClick = { onRecord(vaccine["goatId"] ?: "") },
+                                                    onClick = { onRecord(goatId) },
                                                     modifier = Modifier.height(34.dp),
                                                     shape = RoundedCornerShape(10.dp),
                                                     border = BorderStroke(1.dp, PrimaryGreen),
@@ -7902,8 +7918,14 @@ fun VaccineListContent(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(painterResource(R.drawable.ic_ewe_custom), null, tint = PrimaryGreen, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(6.dp))
+                                    // Count distinct goats, not vaccination rows.
+                                    val goatCount = vaccines.map { it["goatId"] }.distinct().size
                                     Text(
-                                        text = "${vaccines.size} " + languageState.value.getT("Vaccinations Pending/Scheduled", "टीकाकरण लंबित/निर्धारित", "ଟୀକାକରଣ ବାକି ଅଛି"),
+                                        text = "$goatCount " + languageState.value.getT(
+                                            if (goatCount == 1) "Goat" else "Goats",
+                                            if (goatCount == 1) "बकरी" else "बकरियां",
+                                            "ଛେଳି"
+                                        ),
                                         fontSize = 13.sp,
                                         color = PrimaryGreen,
                                         fontWeight = FontWeight.Medium
@@ -8178,14 +8200,25 @@ fun RecordVaccinationScreen(tag: String, onBack: () -> Unit) {
                         Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(opt.title, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF14231A))
+                            // This goat's stored record for this vaccine, if any.
+                            val record = goat?.vaccinations?.firstOrNull { it.type == opt.code }
                             if (isLocked) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.CheckCircle, null, tint = PrimaryGreen, modifier = Modifier.size(13.dp))
                                     Spacer(Modifier.width(4.dp))
                                     Text(lang.getT("Completed", "पूर्ण", "ସମ୍ପୂର୍ଣ୍ଣ"), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = PrimaryGreen)
                                 }
+                                record?.date?.takeIf { it.isNotBlank() }?.let {
+                                    Text(lang.getT("Given ", "दिया गया ", "ଦିଆଯାଇଛି ") + it, fontSize = 11.sp, color = Color(0xFF8A908A))
+                                }
+                                record?.next?.takeIf { it.isNotBlank() }?.let {
+                                    Text(lang.getT("Next due ", "अगली देय ", "ପରବର୍ତ୍ତୀ ଦେୟ ") + it, fontSize = 11.sp, color = Color(0xFF8A908A))
+                                }
                             } else {
                                 Text(opt.subtitle, fontSize = 12.sp, color = Color(0xFF8A908A), lineHeight = 15.sp)
+                                record?.next?.takeIf { it.isNotBlank() }?.let {
+                                    Text(lang.getT("Due ", "देय ", "ଦେୟ ") + it, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AccentOrange)
+                                }
                             }
                         }
                         Spacer(modifier = Modifier.width(10.dp))

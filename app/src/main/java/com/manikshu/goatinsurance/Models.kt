@@ -287,7 +287,8 @@ data class GoatPhotoOut(val type: String, val url: String)
 data class GoatVaccinationOut(
     val type: String,
     val status: String,
-    val next: String? = null,
+    val date: String? = null,   // when it was given
+    val next: String? = null,   // when it is due again
 )
 
 @Serializable
