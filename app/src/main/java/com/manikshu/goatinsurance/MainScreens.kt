@@ -6810,7 +6810,11 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
     val validFrom = detail?.policy?.validFrom ?: policy?.validFrom
     val validTo = detail?.policy?.validTo ?: policy?.validTo
     val sumInsured = detail?.policy?.sumInsured ?: policy?.sumInsured
-    val premium = policy?.annualPremium
+    // Premium paid: whatever was actually collected, else the policy's annual premium.
+    // This used to read the farmer payload only, so it rendered blank for the Didi
+    // and Coordinator, who load the goat-detail payload instead.
+    val premium = detail?.policy?.amountPaid ?: policy?.amountPaid
+        ?: detail?.policy?.annualPremium ?: policy?.annualPremium
 
     val inr = remember { java.text.NumberFormat.getInstance(java.util.Locale("en", "IN")) }
     fun money(v: Double?) = v?.let { "₹ " + inr.format(it.toLong()) } ?: "—"
