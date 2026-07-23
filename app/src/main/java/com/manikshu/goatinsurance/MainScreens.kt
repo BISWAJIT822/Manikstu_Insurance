@@ -6810,6 +6810,9 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
     val validFrom = detail?.policy?.validFrom ?: policy?.validFrom
     val validTo = detail?.policy?.validTo ?: policy?.validTo
     val sumInsured = detail?.policy?.sumInsured ?: policy?.sumInsured
+    // Insurer shown as "Issued By"; the app only falls back if an older server
+    // doesn't send it.
+    val issuedBy = detail?.policy?.issuedBy ?: policy?.issuedBy ?: "AjahFi Goat Insurance"
     // Premium paid: whatever was actually collected, else the policy's annual premium.
     // This used to read the farmer payload only, so it rendered blank for the Didi
     // and Coordinator, who load the goat-detail payload instead.
@@ -6982,7 +6985,8 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
                     Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
                         GoatInfoCell(Icons.Default.VerifiedUser, lang.getT("Insured By", "बीमाकृत", "ବୀମାଭୁକ୍ତ"), (detail?.farmer?.name ?: policy?.farmer?.name) ?: "—", IconGreen, Modifier.weight(1f))
                         GoatCellDivider()
-                        GoatInfoCell(Icons.Default.Business, lang.getT("Issued By", "जारीकर्ता", "ଜାରିକର୍ତ୍ତା"), "AjahFi Goat Insurance", IconBlue, Modifier.weight(1f))
+                        // Insurer name comes from the backend setting, not hardcoded here.
+                        GoatInfoCell(Icons.Default.Business, lang.getT("Issued By", "जारीकर्ता", "ଜାରିକର୍ତ୍ତା"), issuedBy, IconBlue, Modifier.weight(1f))
                     }
                     Spacer(Modifier.height(10.dp))
                 }
