@@ -6873,14 +6873,14 @@ fun GoatDetailsScreen(navController: NavHostController, tag: String, userRole: U
                                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                                 alignment = Alignment.CenterStart
                             )
-                            // Soft wash on the left so the dark id text stays crisp over
+                            // Green wash on the left so the dark id text stays crisp over
                             // the artwork; clears well before the goat on the right.
                             Box(
                                 Modifier.matchParentSize().background(
                                     Brush.horizontalGradient(
-                                        0.0f to Color(0xF2EDF4E4),
-                                        0.40f to Color(0xB3EDF4E4),
-                                        0.72f to Color(0x00EDF4E4),
+                                        0.0f to Color(0xF0CBE4BB),
+                                        0.42f to Color(0xADCBE4BB),
+                                        0.75f to Color(0x00CBE4BB),
                                     )
                                 )
                             )
