@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,17 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+}
+
+// Backend the app talks to. Defaults to production (Render). To point a local
+// build at a tunnel/LAN backend, add a line to local.properties (gitignored) —
+// no source change, so it never shows up as an uncommitted git diff:
+//   BASE_URL=https://<your-subdomain>.ngrok-free.dev/
+val backendBaseUrl: String = run {
+    val props = Properties()
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { props.load(it) }
+    (props.getProperty("BASE_URL") ?: "https://backend-goat.onrender.com/").trim()
 }
 
 android {
@@ -19,9 +32,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
-        // Real device on same Wi-Fi -> this PC's LAN IP. (Emulator alias was http://10.0.2.2:8000/)
-        buildConfigField("String", "BASE_URL", "\"https://backend-goat.onrender.com/\"")
+
+        // Read from local.properties (see backendBaseUrl above); falls back to Render.
+        buildConfigField("String", "BASE_URL", "\"$backendBaseUrl\"")
     }
 
     buildFeatures {
